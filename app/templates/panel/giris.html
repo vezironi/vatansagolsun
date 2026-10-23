@@ -1,0 +1,11 @@
+{% extends "panel/base.html" %}
+{% block baslik %}Giriş{% endblock %}
+{% block icerik %}
+<form method="post" action="/panel/giris" class="kart giris">
+  <h1 class="serif">Panel girişi</h1>
+  {% if hata %}<p class="hata" role="alert">{{ hata }}</p>{% endif %}
+  <label>Kullanıcı adı <input name="kullanici" autocomplete="username" required autofocus></label>
+  <label>Şifre <input name="sifre" type="password" autocomplete="current-password" required></label>
+  <button type="submit">Giriş yap</button>
+</form>
+{% endblock %}

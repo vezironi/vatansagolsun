@@ -55,3 +55,36 @@ def app(session):
 @pytest.fixture
 def client(app):
     return TestClient(app)
+
+
+@pytest.fixture
+def ayarli_sifre(app, monkeypatch):
+    from app.admin import sifre_hashle
+
+    monkeypatch.setattr(app.state.settings, "admin_sifre_hash", sifre_hashle("test-sifre"))
+
+
+@pytest.fixture
+def panel_client(app, ayarli_sifre):
+    # Aynı uygulamaya bağlı ikinci istemci: çerez kabı ayrı, `client` giriş yapmaz.
+    istemci = TestClient(app)
+    yanit = istemci.post(
+        "/panel/giris",
+        data={"kullanici": "admin", "sifre": "test-sifre"},
+        follow_redirects=False,
+    )
+    assert yanit.status_code == 303
+    return istemci
+
+
+@pytest.fixture
+def csrf():
+    import re
+
+    def _oku(istemci: TestClient) -> str:
+        sayfa = istemci.get("/panel").text
+        eslesme = re.search(r'name="csrf"\s+value="([^"]+)"', sayfa)
+        assert eslesme, "panel sayfasında csrf alanı yok"
+        return eslesme.group(1)
+
+    return _oku

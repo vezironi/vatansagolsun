@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block baslik %}Panel{% endblock %} · Vatan Sağ Olsun</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/site.css">
+<link rel="stylesheet" href="/static/panel.css">
+</head>
+<body class="panel">
+<header>
+  <div class="wrap">
+    <a class="logo" href="/panel">VATAN<b>SAĞOLSUN</b> · Panel</a>
+    {% if kullanici %}
+    <form method="post" action="/panel/cikis" class="cikis">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit">Çıkış</button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+<main class="wrap">{% block icerik %}{% endblock %}</main>
+</body>
+</html>

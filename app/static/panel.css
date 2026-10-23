@@ -1,0 +1,13 @@
+body.panel main { padding-top: 32px; padding-bottom: 48px; }
+.kart { background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+.giris { max-width: 360px; margin: 48px auto; display: grid; gap: 14px; }
+.giris h1 { margin: 0; font-size: 30px; }
+.giris label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.giris input { background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 10px; border-radius: 4px; font: inherit; }
+.giris input:focus { outline: 1px solid var(--red); }
+button { background: var(--red); color: #fff; border: 0; border-radius: 4px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+button:hover { background: var(--red-soft); }
+.hata { color: var(--red-soft); margin: 0; }
+.soluk { color: var(--muted); }
+.cikis { margin: 0; }
+.cikis button { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 6px 12px; }

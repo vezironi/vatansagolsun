@@ -9,6 +9,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import sessionmaker
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.admin import GirisGerekli, giris_gerekli_isleyici, panel_router_olustur
 from app.api import api_router_olustur
 from app.config import Settings, get_settings
 from app.db import motor_olustur
@@ -33,13 +34,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.limiter = Limiter(key_func=get_remote_address)
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    app.add_middleware(SessionMiddleware, secret_key=settings.secret_key)
+    app.add_exception_handler(GirisGerekli, giris_gerekli_isleyici)
+
+    # Görev 10: üretimde https_only=True (TestClient http://testserver kullanır).
+    app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, same_site="lax")
 
     static_dizini = PAKET_DIZINI / "static"
     if static_dizini.is_dir():
         app.mount("/static", StaticFiles(directory=static_dizini), name="static")
 
     app.include_router(api_router_olustur(app.state.limiter, settings.istek_siniri))
+    app.include_router(panel_router_olustur(app.state.limiter))
     app.include_router(site_router)
     return app
 

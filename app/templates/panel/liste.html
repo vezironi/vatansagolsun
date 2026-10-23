@@ -1,0 +1,10 @@
+{% extends "panel/base.html" %}
+{% block baslik %}Onay bekleyenler{% endblock %}
+{% block icerik %}
+<h1 class="serif">Onay bekleyenler</h1>
+{% if kayitlar %}
+<ul>{% for k in kayitlar %}<li>{{ k }}</li>{% endfor %}</ul>
+{% else %}
+<p class="soluk">Onay bekleyen kayıt yok.</p>
+{% endif %}
+{% endblock %}
