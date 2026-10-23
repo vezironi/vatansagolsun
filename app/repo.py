@@ -105,12 +105,18 @@ def _alanlari_uygula(sehit: Sehit, veri: SehitVeri) -> None:
         setattr(sehit, alan, deger)
 
 
-def yeni_sehit(s: Session, veri: SehitVeri, *, durum: Durum = Durum.onay_bekliyor) -> Sehit:
+def yeni_sehit(
+    s: Session, veri: SehitVeri, *, durum: Durum = Durum.onay_bekliyor, commit: bool = True
+) -> Sehit:
+    """commit=False: yalnızca flush eder (çağıran savepoint/işlem sınırını yönetir)."""
     sehit = Sehit(durum=durum)
     _alanlari_uygula(sehit, veri)
     sehit.alanlari_yenile()
     s.add(sehit)
-    s.commit()
+    if commit:
+        s.commit()
+    else:
+        s.flush()
     return sehit
 
 

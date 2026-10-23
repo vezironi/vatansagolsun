@@ -36,3 +36,8 @@ def gorunen_ad(ad: str, soyad: str | None, lakap: str | None) -> str:
     if lakap:
         return f"{ad} — {lakap}"
     return ad
+
+
+def isim_anahtari(ad: str, soyad: str | None, lakap: str | None) -> str:
+    """Eşleştirme için ham isim anahtarı (Sehit.isim_anahtari ile aynı formül)."""
+    return katla(" ".join([ad, soyad or "", lakap or ""]).strip())[:400]

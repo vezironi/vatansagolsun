@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
-from app.text import ad_duzenle, gorunen_ad, katla, slug, soyad_duzenle
+from app.text import ad_duzenle, gorunen_ad, isim_anahtari, katla, slug, soyad_duzenle
 
 
 class Durum(StrEnum):
@@ -88,7 +88,7 @@ class Sehit(Base):
         parcalar = [self.ad, self.soyad, self.lakap, self.memleket, self.gorev, self.kurum]
         self.arama_metni = katla(" ".join(p for p in parcalar if p))
 
-        self.isim_anahtari = katla(" ".join([self.ad, self.soyad or "", self.lakap or ""]).strip())[:400]
+        self.isim_anahtari = isim_anahtari(self.ad, self.soyad, self.lakap)
 
         hassasiyet = Hassasiyet(self.tarih_hassasiyeti)
         if hassasiyet == Hassasiyet.tam and self.sehadet_tarihi:
