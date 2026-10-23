@@ -17,9 +17,14 @@ class Settings(BaseSettings):
     kaynak_izinleri: list[str] = ["egm", "sg", "kahramanlar", "sehitlerimiz", "hurriyet", "sabah"]
     istek_araligi_sn: float = 2.0
     zamanlayici_aktif: bool = False  # docker-compose'ta True: 12 saatlik sehitlerimiz kontrolü
-    analiz_modeli: str = "claude-haiku-5-5"
+    analiz_sirasi: list[str] = ["openai", "gemini", "claude"]  # anahtarı olmayan sağlayıcı zincire girmez
+    analiz_modeli: str = "claude-haiku-5-5"  # Claude
+    openai_modeli: str = "gpt-6-luna"
+    gemini_modeli: str = "gemini-3.1-flash-lite"
     gunluk_analiz_siniri: int = 200
     anthropic_api_key: str = ""  # boşsa SDK kendi kimlik çözümüne bırakılır
+    openai_api_key: str = ""  # boşsa OPENAI_API_KEY ortam değişkenine bakılır
+    gemini_api_key: str = ""  # boşsa GEMINI_API_KEY / GOOGLE_API_KEY ortam değişkenine bakılır
     oturum_https: bool = False  # üretimde True: oturum çerezi yalnızca HTTPS ile gider
 
 

@@ -19,6 +19,8 @@ dependencies = [
     "selectolax>=0.3,<1",
     "apscheduler>=3.10,<4",
     "anthropic>=2,<3",
+    "openai>=3,<4",
+    "google-genai>=2,<3",
 ]
 
 [project.optional-dependencies]

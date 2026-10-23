@@ -135,10 +135,10 @@ def test_istemci_60_saniye_zaman_asimiyla_kurulur(monkeypatch):
         return object()
     monkeypatch.setattr(anthropic, "Anthropic", sahte)
     ClaudeAnalizci(model="m", api_anahtari="sk-x")
-    assert kurulan == {"api_key": "sk-x", "timeout": 60.0}
+    assert kurulan == {"api_key": "sk-x", "timeout": 60.0, "max_retries": 2}
     kurulan.clear()
     ClaudeAnalizci(model="m")
-    assert kurulan == {"timeout": 60.0}
+    assert kurulan == {"timeout": 60.0, "max_retries": 2}
 
 
 def test_analiz_yapilandirildi_mi_istemci_kurmaz(monkeypatch):

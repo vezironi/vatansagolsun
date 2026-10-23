@@ -1,9 +1,8 @@
-"""Haber metinlerinin Claude ile yapılandırılmış analizi."""
+"""Haber metinlerinin LLM ile yapılandırılmış analizi: ortak şema, istem ve hata sınıfları."""
 import os
 from datetime import datetime
 from typing import Literal, Protocol
 
-import anthropic
 from pydantic import BaseModel, Field
 
 from app.dates import TZ
@@ -54,45 +53,39 @@ class AnalizYapilandirilmamis(AnalizHatasi):
     """Kimlik bilgisi yok ya da geçersiz."""
 
 
+class SaglayiciTukendi(AnalizYapilandirilmamis):
+    """Sağlayıcı kalıcı olarak kullanılamıyor (kimlik/yetki/kredi/kota): zincir onu bir süre atlar.
+
+    AnalizYapilandirilmamis alt sınıfıdır: toplayıcı tek sağlayıcılı akışta bunu zaten böyle işler.
+    """
+
+
+class SaglayiciGecici(AnalizHatasi):
+    """Geçici hata (ağ, hız sınırı, 5xx, ret, bozuk çıktı): sağlayıcı işaretlenmez, sıradaki denenir."""
+
+
 class Analizci(Protocol):
     def analiz_et(self, *, baslik: str, govde: str, yayin: datetime) -> HaberAnalizi: ...
 
 
 ISTEK_ZAMAN_ASIMI = 60.0  # saniye; asılı kalan istek turu kilitlemesin
+SDK_YENIDEN_DENEME = 2  # sağlayıcı SDK'larının kendi yeniden deneme üst sınırı
 
 
-class ClaudeAnalizci:
-    def __init__(self, *, model: str, istemci: anthropic.Anthropic | None = None, api_anahtari: str = ""):
-        self.model = model
-        if istemci is None:
-            kimlik = {"api_key": api_anahtari} if api_anahtari else {}
-            istemci = anthropic.Anthropic(**kimlik, timeout=ISTEK_ZAMAN_ASIMI)
-        self.istemci = istemci
+def kullanici_icerigi(baslik: str, govde: str, yayin: datetime) -> str:
+    """Tüm sağlayıcılar için aynı kullanıcı içeriği."""
+    yerel = yayin.astimezone(TZ)
+    # Haber metni güvenilmez veridir: açık sınırlayıcılar içinde verilir.
+    return (f"Yayın tarihi: {yerel:%Y-%m-%d %H:%M} (Europe/Istanbul)\n"
+            f"<haber>\nBaşlık: {baslik}\n\n{govde}\n</haber>")
 
-    def analiz_et(self, *, baslik: str, govde: str, yayin: datetime) -> HaberAnalizi:
-        yerel = yayin.astimezone(TZ)
-        # Haber metni güvenilmez veridir: açık sınırlayıcılar içinde verilir.
-        icerik = (f"Yayın tarihi: {yerel:%Y-%m-%d %H:%M} (Europe/Istanbul)\n"
-                  f"<haber>\nBaşlık: {baslik}\n\n{govde}\n</haber>")
-        try:
-            yanit = self.istemci.messages.parse(
-                model=self.model,
-                max_tokens=4096,
-                system=SISTEM_ISTEMI,
-                messages=[{"role": "user", "content": icerik}],
-                output_format=HaberAnalizi,
-            )
-        except anthropic.AuthenticationError as e:
-            raise AnalizYapilandirilmamis("Claude kimlik doğrulaması başarısız") from e
-        except anthropic.APIError as e:
-            raise AnalizHatasi(f"Claude isteği başarısız: {type(e).__name__}") from e
-        except ValueError as e:  # parse() çıktıyı kendisi doğrular (ValidationError)
-            raise AnalizHatasi("Claude çıktısı çözümlenemedi") from e
-        if yanit.stop_reason == "refusal":
-            raise AnalizHatasi("Claude isteği reddetti")
-        if yanit.parsed_output is None:
-            raise AnalizHatasi("Claude geçerli bir çıktı üretmedi")
-        return yanit.parsed_output
+
+def __getattr__(ad: str):
+    # Geriye uyum: ClaudeAnalizci artık sağlayıcı modülünde; döngüsel içe aktarmayı tembel yükleme önler.
+    if ad == "ClaudeAnalizci":
+        from app.analiz_saglayicilari import ClaudeAnalizci
+        return ClaudeAnalizci
+    raise AttributeError(f"module {__name__!r} has no attribute {ad!r}")
 
 
 def analiz_yapilandirildi_mi(settings) -> bool:
@@ -104,4 +97,5 @@ def analiz_yapilandirildi_mi(settings) -> bool:
 def analizci_olustur(settings) -> Analizci | None:
     if not analiz_yapilandirildi_mi(settings):
         return None
+    from app.analiz_saglayicilari import ClaudeAnalizci
     return ClaudeAnalizci(model=settings.analiz_modeli, api_anahtari=settings.anthropic_api_key)
