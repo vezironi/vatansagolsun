@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>TRT Haber</title>
+<link>https://www.trthaber.com/</link>
+<description>Haber ve son dakika güncel gelişmeler, spor ve ekonomi haberleri, dünyadan haberler ile hava durumu Türkiye’nin güvenilir haber kaynağı TRT Haber`de.</description>
+<language>tr</language>
+<copyright>TRT Haber</copyright>
+<managingEditor>trthaber@trthaber.com (Editor)</managingEditor>
+<pubDate>Fri, 23 Oct 2026 10:08:01 +0300</pubDate>
+<atom:link href="https://www.trthaber.com/sondakika.rss" rel="self" type="application/rss+xml" />
+<image>
+<title>TRT Haber</title>
+<width>180</width>
+<height>90</height>
+<link>https://www.trthaber.com/</link>
+<url>https://trthaberstatic.cdn.wp.trt.com.tr/static/images/logo.jpg</url>
+</image>
+<item>
+<title>Hafta sonu hava nasıl olacak?</title>
+<link>https://www.trthaber.com/haber/gundem/hafta-sonu-hava-nasil-olacak-960972.html</link>
+<imageUrl>https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2478000/ankara-saganak-2478119_2.jpg</imageUrl>
+<description>
+            <!--<img src="https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2478000/ankara-saganak-2478119_2.jpg" border="0" alt="Hafta sonu hava nasıl olacak?" />-->
+            <![CDATA[
+                Hafta sonunun ilk günü kuzey ve iç kesimlerde görülmesi beklenen yerel gök gürültülü yağışların, pazar günü batı bölgelerinde etkisini kaybederek Doğu ve Güneydoğu Anadolu'ya kayması öngörülüyor.
+            ]]>
+            </description>
+<category>Gündem</category>
+<guid>https://www.trthaber.com/haber/gundem/hafta-sonu-hava-nasil-olacak-960972.html</guid>
+<pubDate>Fri, 23 Oct 2026 09:48:00 +0300</pubDate>
+</item>
+<item>
+<title>İstanbul trafiğine Cumhuriyet Bayramı düzenlemesi</title>
+<link>https://www.trthaber.com/haber/turkiye/istanbul-trafigine-cumhuriyet-bayrami-duzenlemesi-960971.html</link>
+<imageUrl>https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2456000/istanbul-trafik-2457602_2.jpg</imageUrl>
+<description>
+            <!--<img src="https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2456000/istanbul-trafik-2457602_2.jpg" border="0" alt="İstanbul trafiğine Cumhuriyet Bayramı düzenlemesi" />-->
+            <![CDATA[
+                İstanbul Valiliği, Cumhuriyet Bayramı kutlamaları ve provası kapsamında 24 ve 29 Ekim tarihlerinde trafiğe kapatılacak yolları ve alternatif güzergahları duyurdu.
+            ]]>
+            </description>
+<category>Türkiye</category>
+<guid>https://www.trthaber.com/haber/turkiye/istanbul-trafigine-cumhuriyet-bayrami-duzenlemesi-960971.html</guid>
+<pubDate>Fri, 23 Oct 2026 09:48:00 +0300</pubDate>
+</item>
+<item>
+<title>Şehit ve gazi çocuklarına 609 milyon TL'lik eğitim desteği</title>
+<link>https://www.trthaber.com/haber/egitim/sehit-ve-gazi-cocuklarina-609-milyon-tllik-egitim-destegi-960930.html</link>
+<imageUrl>https://trthaberstatic.cdn.wp.trt.com.tr/resimler/1474000/egitimokul-1475427_2.jpg</imageUrl>
+<description>
+            <!--<img src="https://trthaberstatic.cdn.wp.trt.com.tr/resimler/1474000/egitimokul-1475427_2.jpg" border="0" alt="Şehit ve gazi çocuklarına 609 milyon TL'lik eğitim desteği" />-->
+            <![CDATA[
+                Çalışma ve Sosyal Güvenlik Bakanı Vedat Işıkhan, şehit çocuklarına, harpvazife malullerine ve çocuklarına yönelik 609 milyon liralık eğitimöğretim yardımı ödemelerinin yarın yapılacağını açıkladı.
+            ]]>
+            </description>
+<category>Eğitim</category>
+<guid>https://www.trthaber.com/haber/egitim/sehit-ve-gazi-cocuklarina-609-milyon-tllik-egitim-destegi-960930.html</guid>
+<pubDate>Thu, 22 Oct 2026 18:42:00 +0300</pubDate>
+</item>
+</channel>
+</rss>
