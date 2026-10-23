@@ -1,6 +1,6 @@
 """Aktarım çekirdeği: ham kaydı eşleştir, öncelikle birleştir, kaydet; kaldığı yerden devam et."""
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Literal
@@ -9,7 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import repo
-from app.kaynaklar import HamKayit, KaynakHatasi
+from app.kaynaklar import HamKayit, KaynakHatasi, egm, kahramanlar, sehitlerimiz, sg
+from app.kaynaklar.getirici import Getirici
 from app.models import Durum, Hassasiyet, Kaynak, KaynakDurumu, Kategori, Sehit
 from app.schemas import SehitVeri
 from app.text import isim_anahtari, katla
@@ -269,3 +270,52 @@ def kaynak_calistir(
     durum.son_durum, durum.son_mesaj, durum.son_calisma = "basarili", son_hata, _simdi()
     s.commit()
     return durum
+
+
+OKUYUCULAR: dict[str, Callable[[Getirici, str | None], Iterator[tuple[str, list[HamKayit]]]]] = {
+    "egm": lambda g, imlec: egm.sayfalar(g, baslangic=imlec),
+    "sg": lambda g, imlec: sg.sayfalar(g, baslangic=imlec),
+    "kahramanlar": lambda g, imlec: kahramanlar.sayfalar(g, baslangic=imlec),
+    "sehitlerimiz": lambda g, imlec: sehitlerimiz.sayfalar(g, baslangic=imlec),
+}
+
+KONTROL_KODU = "sehitlerimiz_kontrol"
+
+
+def _en_buyuk_izle(sayfalar: Iterable[tuple[str, list[HamKayit]]], en_buyuk: list[int]) -> Iterator[tuple[str, list[HamKayit]]]:
+    """Sayfayı olduğu gibi geçirir; en büyük sayısal dış kimliği, sayfa işlenip commit
+    edildikten sonra (yani tüketici bir sonraki sayfayı isteyince) `en_buyuk[0]`a işler."""
+    for imlec, kayitlar in sayfalar:
+        yield imlec, kayitlar
+        for ham in kayitlar:
+            if ham.dis_kimlik.isdigit():
+                en_buyuk[0] = max(en_buyuk[0], int(ham.dis_kimlik))
+
+
+def _kontrol_imlecini_ilerlet(s: Session, en_buyuk: int) -> None:
+    if en_buyuk <= 0:
+        return
+    kontrol = kaynak_durumu(s, KONTROL_KODU)
+    eski = int(kontrol.imlec) if kontrol.imlec and kontrol.imlec.isdigit() else 0
+    if en_buyuk > eski:
+        kontrol.imlec = str(en_buyuk)
+    s.commit()
+
+
+def kaynagi_aktar(s: Session, kod: str, g: Getirici, *, bastan: bool = False) -> KaynakDurumu:
+    durum = kaynak_durumu(s, kod)
+    if bastan:
+        durum.imlec = None
+        durum.tamamlandi = False
+        s.commit()
+    elif durum.tamamlandi:
+        return durum
+    sayfalar = OKUYUCULAR[kod](g, durum.imlec)
+    if kod != "sehitlerimiz":
+        return kaynak_calistir(s, kod, sayfalar)
+    en_buyuk = [0]
+    try:
+        return kaynak_calistir(s, kod, _en_buyuk_izle(sayfalar, en_buyuk))
+    finally:  # başarı, hata ya da Ctrl+C: işlenen sayfalara kadarki en büyük kimlik saklanır
+        s.rollback()
+        _kontrol_imlecini_ilerlet(s, en_buyuk[0])

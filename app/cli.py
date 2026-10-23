@@ -1,4 +1,4 @@
-"""Komut satırı araçları: `sifre-olustur`, `ornek-veri`."""
+"""Komut satırı araçları: `sifre-olustur`, `ornek-veri`, `aktar`, `aktarim-durumu`."""
 import argparse
 import getpass
 import random
@@ -8,11 +8,13 @@ from datetime import date, timedelta
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
+from app import aktarim
 from app.admin import BCRYPT_EN_COK_BAYT, sifre_hashle
 from app.config import get_settings
 from app.dates import bugun
 from app.db import motor_olustur
-from app.models import Bildirim, Kaynak, Sehit
+from app.kaynaklar.getirici import Getirici
+from app.models import Bildirim, Kaynak, KaynakDurumu, Sehit
 
 ORNEK_KAYNAK = "ornek"
 ADLAR = ["Ahmet", "Mehmet", "Mustafa", "Ali", "Hasan", "Hüseyin", "İbrahim", "Ömer", "Yusuf",
@@ -121,6 +123,63 @@ def sifre_olustur() -> int:
     return 0
 
 
+HEPSI_SIRASI = ["egm", "sg", "sehitlerimiz", "kahramanlar"]
+
+
+def _ozet(kod: str, d: KaynakDurumu) -> str:
+    return (f"{kod}: eklenen={d.eklenen or 0} birlesen={d.birlesen or 0} atlanan={d.atlanan or 0} "
+            f"hatali={d.hatali or 0} durum={d.son_durum} imlec={d.imlec}")
+
+
+def aktar(argv: list[str]) -> int:
+    ayril = argparse.ArgumentParser(prog="python -m app.cli aktar")
+    ayril.add_argument("kaynak", choices=[*HEPSI_SIRASI, "hepsi"])
+    ayril.add_argument("--bastan", action="store_true", help="imleci sıfırlayıp baştan başla")
+    secenekler = ayril.parse_args(argv)
+    kodlar = HEPSI_SIRASI if secenekler.kaynak == "hepsi" else [secenekler.kaynak]
+    ayarlar = get_settings()
+    izinli = [k for k in kodlar if k in ayarlar.kaynak_izinleri]
+    for kod in kodlar:
+        if kod not in izinli:
+            print(f"{kod}: atlandı: izin yok (KAYNAK_IZINLERI)")
+    if not izinli:
+        return 0
+    hata_var = False
+    getirici = Getirici()
+    with sessionmaker(motor_olustur(ayarlar.database_url))() as session:
+        for kod in izinli:
+            try:
+                durum = aktarim.kaynagi_aktar(session, kod, getirici, bastan=secenekler.bastan)
+            except KeyboardInterrupt:
+                session.rollback()
+                print(f"\n{kod}: durduruldu — kaldığı yerden devam için aynı komutu çalıştırın.")
+                return 130
+            except Exception as hata:  # noqa: BLE001 - diğer kaynaklar yine de çalışsın
+                session.rollback()
+                print(f"{kod}: beklenmeyen hata: {type(hata).__name__}: {hata}", file=sys.stderr)
+                hata_var = True
+                continue
+            print(_ozet(kod, durum))
+            if durum.son_durum == "hata":
+                print(f"{kod}: hata: {durum.son_mesaj}", file=sys.stderr)
+                hata_var = True
+    if hata_var:
+        print("Kaldığı yerden devam etmek için aynı komutu tekrar çalıştırın.", file=sys.stderr)
+        return 1
+    return 0
+
+
+def aktarim_durumu() -> int:
+    with sessionmaker(motor_olustur(get_settings().database_url))() as session:
+        satirlar = list(session.scalars(select(KaynakDurumu).order_by(KaynakDurumu.kaynak_kodu)))
+        if not satirlar:
+            print("Henüz aktarım yapılmadı.")
+        for d in satirlar:
+            print(f"{_ozet(d.kaynak_kodu, d)} tamamlandi={d.tamamlandi} son_calisma={d.son_calisma}"
+                  + (f" mesaj={d.son_mesaj}" if d.son_mesaj else ""))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     for akis in (sys.stdout, sys.stderr):  # Windows konsolu (cp1252) Türkçe harflerde çökmesin
@@ -130,7 +189,12 @@ def main(argv: list[str] | None = None) -> int:
         return sifre_olustur()
     if argv and argv[0] == "ornek-veri":
         return ornek_veri(argv[1:])
-    print("Kullanım: python -m app.cli sifre-olustur | ornek-veri [--sil] [--eminim]", file=sys.stderr)
+    if argv and argv[0] == "aktar":
+        return aktar(argv[1:])
+    if argv == ["aktarim-durumu"]:
+        return aktarim_durumu()
+    print("Kullanım: python -m app.cli sifre-olustur | ornek-veri [--sil] [--eminim] | "
+          "aktar <egm|sg|kahramanlar|sehitlerimiz|hepsi> [--bastan] | aktarim-durumu", file=sys.stderr)
     return 2
 
 
