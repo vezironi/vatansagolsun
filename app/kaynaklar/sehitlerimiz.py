@@ -8,8 +8,8 @@ from urllib.parse import urlsplit
 from selectolax.parser import HTMLParser
 
 from app.dates import bugun
-from app.kaynaklar import HamKayit, KaynakHatasi, KaynakIzniYok
-from app.kaynaklar.ayristir import isim_ayir, kategori_bul, soyadli_mi, tarih_coz
+from app.kaynaklar import HamKayit, KaynakHatasi
+from app.kaynaklar.ayristir import alan_temizle, isim_ayir, kategori_bul, soyadli_mi, tarih_coz
 from app.models import Hassasiyet
 from app.text import ad_duzenle
 
@@ -42,11 +42,6 @@ def _kimlik_ya_da_none(url: str) -> int | None:
         return None
 
 
-def _temiz(deger) -> str | None:
-    metin = " ".join(str(deger or "").split())
-    return None if metin in ("", "-") else metin
-
-
 def _kisi_json_ld(ag: HTMLParser) -> dict:
     for betik in ag.css('script[type="application/ld+json"]'):
         try:
@@ -61,7 +56,7 @@ def _kisi_json_ld(ag: HTMLParser) -> dict:
 
 def _ad_alani(sozluk, anahtar: str) -> str | None:
     deger = sozluk.get(anahtar)
-    return _temiz(deger.get("name")) if isinstance(deger, dict) else None
+    return alan_temizle(deger.get("name")) if isinstance(deger, dict) else None
 
 
 def kayit_ayristir(html: str, url: str) -> HamKayit:
@@ -70,31 +65,34 @@ def kayit_ayristir(html: str, url: str) -> HamKayit:
     alanlar = {}
     for kutu in ag.css("dl.fields div"):
         dt, dd = kutu.css_first("dt"), kutu.css_first("dd")
-        if dt is not None and dd is not None and (deger := _temiz(dd.text())):
-            alanlar[_temiz(dt.text())] = deger
+        if dt is not None and dd is not None and (deger := alan_temizle(dd.text())):
+            alanlar[alan_temizle(dt.text())] = deger
 
     h1 = ag.css_first("article.record h1") or ag.css_first("h1")
-    ham_ad = _temiz(kisi.get("name")) or (_temiz(h1.text()) if h1 else None)
+    ham_ad = alan_temizle(kisi.get("name")) or (alan_temizle(h1.text()) if h1 else None)
     if not ham_ad:
         raise KaynakHatasi(f"kayıt sayfasında ad bulunamadı: {url}")
 
     tarih, hassasiyet, yil = None, Hassasiyet.bilinmiyor, None
-    for aday in (_temiz(kisi.get("deathDate")), alanlar.get("Şehadet Tarihi")):
+    for aday in (alan_temizle(kisi.get("deathDate")), alanlar.get("Şehadet Tarihi")):
         tarih, hassasiyet, yil = tarih_coz(aday)
         if hassasiyet != Hassasiyet.bilinmiyor:
             break
 
-    gorev = _temiz(kisi.get("jobTitle")) or alanlar.get("Rütbe / Görev")
+    gorev = alan_temizle(kisi.get("jobTitle")) or alanlar.get("Rütbe / Görev")
     kurum = _ad_alani(kisi, "affiliation") or alanlar.get("Kurum")
     donem = alanlar.get("Dönem / Cephe")
     baba = alanlar.get("Baba Adı")
     ad, soyad, isim_gorevi = isim_ayir(ham_ad, soyadli=soyadli_mi(yil, donem))
+    if not any(c.isalpha() for c in ad):
+        raise KaynakHatasi(f"kayıt sayfasındaki adda isim yok ({ham_ad!r}): {url}")
+    memleket = alanlar.get("Memleket") or alanlar.get("Doğum Yeri") or _ad_alani(kisi, "birthPlace")
     yol = _yol(url)
     return HamKayit(
         kaynak_kodu=KAYNAK_KODU, dis_kimlik=str(kayit_id(url)), ad=ad, soyad=soyad,
         tarih=tarih, hassasiyet=hassasiyet, yil=yil, gorev=gorev or isim_gorevi,
         kategori=kategori_bul(gorev, kurum, donem), kurum=kurum,
-        memleket=alanlar.get("Memleket") or alanlar.get("Doğum Yeri") or _ad_alani(kisi, "birthPlace"),
+        memleket=ad_duzenle(memleket) if memleket else None,
         baba_adi=ad_duzenle(baba) if baba else None, donem=donem,
         kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + yol,
     )
@@ -119,14 +117,23 @@ def son_eklenenler_ayristir(html: str) -> list[str]:
     return _liste_yollari(bolum)
 
 
+ATLANAN_DURUM_KODLARI = {404, 410}  # kayıt kaldırılmış: atlanır
+
+
 def _kayit_getir(g, yol: str) -> HamKayit | None:
-    """Tek kayıt sayfası; izin hatası dışındaki sorunlarda kaydı günlüğe yazıp atlar."""
+    """Tek kayıt sayfası. Yalnızca kaldırılmış (404/410) ya da ayrıştırılamayan kayıt atlanır;
+    diğer hatalar (429, 5xx, ağ, 403, robots, izin) yükselir: sayfa hata verir, imleç ilerlemez."""
     try:
-        return kayit_ayristir(g.metin(KAYNAK_KODU, KOK + yol), yol)
-    except KaynakIzniYok:
-        raise
+        html = g.metin(KAYNAK_KODU, KOK + yol)
     except KaynakHatasi as hata:
-        logger.warning("sehitlerimiz kaydı atlandı %s: %s", yol, hata)
+        if hata.durum_kodu not in ATLANAN_DURUM_KODLARI:
+            raise
+        logger.warning("sehitlerimiz kaydı atlandı (kaldırılmış) %s: %s", yol, hata)
+        return None
+    try:
+        return kayit_ayristir(html, yol)
+    except (KaynakHatasi, AttributeError, TypeError, ValueError) as hata:
+        logger.warning("sehitlerimiz kaydı atlandı (ayrıştırılamadı) %s: %s", yol, hata)
         return None
 
 
@@ -146,6 +153,7 @@ def sayfalar(g, *, baslangic: str | None, yillar: range | None = None) -> Iterat
         if yil < son_yil:
             continue
         sayfa = son_sayfa + 1 if yil == son_yil else 1
+        onceki: list[str] | None = None
         while True:
             try:
                 html = g.metin(KAYNAK_KODU, f"{KOK}/yil/{yil}", params={"sayfa": sayfa})
@@ -154,8 +162,9 @@ def sayfalar(g, *, baslangic: str | None, yillar: range | None = None) -> Iterat
                     break
                 raise
             yollar, devam = yil_listesi_ayristir(html)
-            if not yollar:
+            if not yollar or yollar == onceki:  # boş ya da aynı sayfa dönüyor: yıl bitti
                 break
+            onceki = yollar
             kayitlar = [h for yol in yollar if (h := _kayit_getir(g, yol)) is not None]
             yield f"{yil}:{sayfa}", kayitlar
             if not devam:
@@ -169,10 +178,17 @@ def yeni_kayitlar(g, *, son_id: int) -> tuple[list[HamKayit], int]:
     Dönen kimlik, atlanan (alınamayan) bir kayıttan öteye geçmez; böylece sonraki
     kontrol onu yeniden dener.
     """
-    yeniler = sorted(
+    listelenen = sorted(
         (kimlik, y) for y in son_eklenenler_ayristir(g.metin(KAYNAK_KODU, KOK + "/arsiv"))
-        if (kimlik := _kimlik_ya_da_none(y)) is not None and kimlik > son_id
+        if (kimlik := _kimlik_ya_da_none(y)) is not None
     )
+    if listelenen and listelenen[0][0] > son_id + 1:
+        logger.warning(
+            "sehitlerimiz: /arsiv yalnızca %s ve sonrasını listeliyor, son alınan %s; "
+            "aradaki kayıtlar kaçmış olabilir (toplu aktarım ya da yıl sayfaları bunları getirir)",
+            listelenen[0][0], son_id,
+        )
+    yeniler = [(kimlik, y) for kimlik, y in listelenen if kimlik > son_id]
     if not yeniler:
         return [], son_id
     kayitlar, en_buyuk, kesildi = [], son_id, False

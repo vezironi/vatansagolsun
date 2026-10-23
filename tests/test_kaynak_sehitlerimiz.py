@@ -88,10 +88,13 @@ def test_yeni_kayitlar():
     assert [u.rsplit("-", 1)[1] for u, _ in g2.cagrilar[1:]] == ["116824", "116825", "116826"]
 
 
-def test_yeni_kayitlar_bozuk_kayit_imleci_ilerletmez():
-    g = G({"https://sehitlerimiz.org.tr/sehit/nejdet-bayar-116825": KaynakHatasi("500")})
+def test_yeni_kayitlar_kaldirilmis_kayit_imleci_ilerletmez():
+    g = G({"https://sehitlerimiz.org.tr/sehit/nejdet-bayar-116825": KaynakHatasi("404", durum_kodu=404)})
     kayitlar, yeni_max = sh.yeni_kayitlar(g, son_id=116823)
     assert len(kayitlar) == 2 and yeni_max == 116824
+    with pytest.raises(KaynakHatasi):  # 429/5xx kaydı atlatmaz: kontrol hata verir, imleç durur
+        sh.yeni_kayitlar(G({"https://sehitlerimiz.org.tr/sehit/nejdet-bayar-116825": KaynakHatasi("500")}),
+                         son_id=116823)
     with pytest.raises(KaynakIzniYok):
         sh.yeni_kayitlar(G({"https://sehitlerimiz.org.tr/sehit/okan-guney-116824": KaynakIzniYok("kapalı")}), son_id=0)
 
@@ -101,7 +104,9 @@ KAYIT = lambda y: "https://sehitlerimiz.org.tr" + y
 
 
 def test_sayfalar_yil_ve_imlec():
-    g = G({(YIL.format(2001), 1): oku("sh_yil.html"), (YIL.format(2001), 2): oku("sh_yil_son.html"),
+    # 2. sayfa 1. sayfanın aynısı olmasın (aynı sayfa dönmesi yılı bitirir)
+    ikinci = oku("sh_yil_son.html").replace("-112982", "-112983")
+    g = G({(YIL.format(2001), 1): oku("sh_yil.html"), (YIL.format(2001), 2): ikinci,
            (YIL.format(2002), 1): oku("sh_yil_son.html")})
     sonuc = list(sh.sayfalar(g, baslangic=None, yillar=range(2001, 2003)))
     assert [i for i, _ in sonuc] == ["2001:1", "2001:2", "2002:1"]
@@ -128,7 +133,7 @@ def test_sayfalar_liste_hatasi_olumcul():
 
 def test_sayfalar_tek_kayit_hatasi_atlanir():
     g = G({(YIL.format(2001), 1): oku("sh_yil_son.html"),
-           KAYIT("/sehit/abdulalim-celikten-116006"): KaynakHatasi("500"),
+           KAYIT("/sehit/abdulalim-celikten-116006"): KaynakHatasi("410", durum_kodu=410),
            KAYIT("/sehit/abdulhamit-anli-115992"): "<html><body>bozuk</body></html>"})
     (imlec, kayitlar), = sh.sayfalar(g, baslangic=None, yillar=range(2001, 2002))
     assert imlec == "2001:1" and len(kayitlar) == 1
@@ -143,3 +148,58 @@ def test_sayfalar_izin_hatasi_olumcul():
 def test_sayfalar_gecersiz_imlec():
     with pytest.raises(KaynakHatasi):
         list(sh.sayfalar(G(), baslangic="x", yillar=range(2001, 2002)))
+
+
+def test_kayit_tek_429_sayfayi_dusurur_imlec_ilerlemez(session):
+    from app import aktarim
+    yil = YIL.format(2001)
+    ikinci = oku("sh_yil_son.html").replace("-112982", "-112983")
+    g = G({(yil, 1): oku("sh_yil.html"), (yil, 2): ikinci,
+           KAYIT("/sehit/abdil-kadir-celik-112983"): KaynakHatasi("HTTP 429 3 denemeden sonra alınamadı")})
+    d = aktarim.kaynak_calistir(session, "sehitlerimiz", sh.sayfalar(g, baslangic=None, yillar=range(2001, 2002)))
+    assert (d.son_durum, d.imlec, d.tamamlandi) == ("hata", "2001:1", False)
+    assert "429" in d.son_mesaj
+
+
+@pytest.mark.parametrize("hata", [KaynakHatasi("403", durum_kodu=403), KaynakHatasi("robots.txt yasaklıyor"),
+                                  KaynakHatasi("ağ hatası"), KaynakIzniYok("kapalı")])
+def test_kayit_getir_yalniz_404_410_atlar(hata):
+    with pytest.raises(KaynakHatasi):
+        sh._kayit_getir(G({KAYIT("/sehit/x-1"): hata}), "/sehit/x-1")
+    assert sh._kayit_getir(G({KAYIT("/sehit/x-1"): KaynakHatasi("yok", durum_kodu=404)}), "/sehit/x-1") is None
+    assert sh._kayit_getir(G({KAYIT("/sehit/x-1"): "<html><body>bozuk</body></html>"}), "/sehit/x-1") is None
+
+
+def test_ayni_yil_sayfasi_tekrar_donerse_durur():
+    cagrilar = []
+
+    class Hep(G):
+        def metin(s, kod, url, params=None):
+            if "/yil/" in url:
+                cagrilar.append(params["sayfa"])
+                assert params["sayfa"] < 10, "aynı sayfa dönerken döngü bitmedi"
+                return oku("sh_yil.html")  # her sayfada aynı liste, "sonraki" bağlantısı hep var
+            return oku("sh_kayit.html")
+    assert [i for i, _ in sh.sayfalar(Hep(), baslangic=None, yillar=range(2001, 2002))] == ["2001:1"]
+    assert cagrilar == [1, 2]
+
+
+def test_kayit_adi_yalniz_unvansa_hata():
+    html = oku("sh_kayit.html").replace('"name":"Mustafa Aslan"', '"name":"Şehit"')
+    with pytest.raises(KaynakHatasi):
+        sh.kayit_ayristir(html, "/sehit/mustafa-aslan-116814")
+
+
+def test_kayit_memleketi_duzenlenir():
+    html = oku("sh_kayit.html").replace(">Gaziantep</a></dd>", ">GAZİANTEP İSLAHİYE</a></dd>")
+    assert sh.kayit_ayristir(html, "/sehit/mustafa-aslan-116814").memleket == "Gaziantep İslahiye"
+
+
+def test_yeni_kayitlar_bosluk_uyarisi(caplog):
+    import logging
+    with caplog.at_level(logging.WARNING, logger="app.kaynaklar.sehitlerimiz"):
+        sh.yeni_kayitlar(G(), son_id=116823)  # liste 116824'ten başlıyor: boşluk yok
+    assert "kaçmış olabilir" not in caplog.text
+    with caplog.at_level(logging.WARNING, logger="app.kaynaklar.sehitlerimiz"):
+        sh.yeni_kayitlar(G(), son_id=116000)
+    assert "kaçmış olabilir" in caplog.text and "116824" in caplog.text
