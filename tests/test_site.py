@@ -52,3 +52,11 @@ def test_sayfalama_yil_ve_aramayi_korur(client, sehit_ekle, monkeypatch):
         sehit_ekle(ad=f"Kisi{i}", soyad="Aksoy", sehadet_tarihi=date(2026, 1, 1))
     h = client.get("/", params={"q": "aksoy", "sayfa": "2"}).text
     assert 'class="pager"' in h and "yil=2026" in h and "q=aksoy" in h
+
+def test_asiri_buyuk_sayfa_ve_ascii_disi_rakam_500_vermez(client, monkeypatch):
+    _sabit_gun(monkeypatch)
+    assert client.get("/", params={"sayfa": "9" * 30}).status_code == 200
+    assert client.get("/", params={"sayfa": "999999"}).status_code == 200
+    assert client.get("/", params={"sayfa": "²"}).status_code == 200
+    assert client.get("/", params={"yil": "²"}).status_code == 200
+    assert client.get("/", params={"yil": "9" * 30}).status_code == 200

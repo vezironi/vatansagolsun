@@ -40,16 +40,15 @@ def _yil_coz(ham: str | None, varsayilan: int) -> tuple[str, repo.YilFiltre]:
         return "tumu", None
     if ham == "2000-oncesi":
         return "2000-oncesi", "2000-oncesi"
-    if ham and ham.isdigit() and 1 <= int(ham) <= 9999:
+    if ham and ham.isascii() and ham.isdigit() and len(ham) <= 4 and 1 <= int(ham) <= 9999:
         return str(int(ham)), int(ham)
     return str(varsayilan), varsayilan
 
 
 def _sayfa_coz(ham: str | None) -> int:
-    try:
-        return max(int(ham), 1) if ham is not None else 1
-    except ValueError:
+    if ham is None or not (ham.isascii() and ham.isdigit()) or len(ham) > 6:
         return 1
+    return max(int(ham), 1)
 
 
 def _sayfa_numaralari(sayfa: int, sayfa_sayisi: int) -> list[int | None]:
