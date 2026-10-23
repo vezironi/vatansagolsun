@@ -8,7 +8,7 @@
 <article class="kart kayit">
   <p>{{ b.mesaj }}</p>
   <p class="sayilar">
-    {{ b.tarih.strftime("%d.%m.%Y %H:%M") }}
+    {{ b.tarih|istanbul_saati }}
     {% if b.iletisim %} · İletişim: {{ b.iletisim }}{% endif %}
     {% if b.sehit_id %} · <a href="/panel/sehit/{{ b.sehit_id }}">İlgili kayıt</a>{% endif %}
   </p>

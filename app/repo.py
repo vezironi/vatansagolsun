@@ -136,6 +136,7 @@ def birlestir(s: Session, hedef: Sehit, fazla: Sehit) -> Sehit:
     for alan in _BIRLESTIRME_ALANLARI:
         if getattr(hedef, alan) in (None, "") and getattr(fazla, alan) not in (None, ""):
             setattr(hedef, alan, getattr(fazla, alan))
+    hedef.resmi_teyit = bool(hedef.resmi_teyit or fazla.resmi_teyit)
     for kaynak in list(fazla.kaynaklar):
         kaynak.sehit = hedef
     for bildirim in s.scalars(select(Bildirim).where(Bildirim.sehit_id == fazla.id)):

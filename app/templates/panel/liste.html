@@ -43,9 +43,9 @@
     <a class="dugme" href="/panel/sehit/{{ k.id }}">Düzenle</a>
     {% if mod == "bekleyen" %}
     <form method="post" action="/panel/sehit/{{ k.id }}/onayla"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Onayla</button></form>
-    <form method="post" action="/panel/sehit/{{ k.id }}/reddet"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Reddet</button></form>
+    <form method="post" action="/panel/sehit/{{ k.id }}/reddet" onsubmit="return confirm('Bu kayıt reddedilsin mi?')"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Reddet</button></form>
     {% else %}
-    <form method="post" action="/panel/sehit/{{ k.id }}/kaldir"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Yayından kaldır</button></form>
+    <form method="post" action="/panel/sehit/{{ k.id }}/kaldir" onsubmit="return confirm('Bu kayıt yayından kaldırılsın mı?')"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Yayından kaldır</button></form>
     {% endif %}
   </div>
 </article>

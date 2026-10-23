@@ -38,9 +38,9 @@
 {% if sehit %}
 <div class="islemler">
   {% if sehit.durum.value == "yayinda" %}
-  <form method="post" action="/panel/sehit/{{ sehit.id }}/kaldir"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Yayından kaldır</button></form>
+  <form method="post" action="/panel/sehit/{{ sehit.id }}/kaldir" onsubmit="return confirm('Bu kayıt yayından kaldırılsın mı?')"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Yayından kaldır</button></form>
   {% else %}
-  <form method="post" action="/panel/sehit/{{ sehit.id }}/reddet"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Reddet</button></form>
+  <form method="post" action="/panel/sehit/{{ sehit.id }}/reddet" onsubmit="return confirm('Bu kayıt reddedilsin mi?')"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Reddet</button></form>
   {% endif %}
 </div>
 <form method="post" action="/panel/sehit/{{ sehit.id }}/birlestir" class="kart birlestir">

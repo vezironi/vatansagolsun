@@ -77,3 +77,9 @@ def test_sehitveri_dogrulama():
     from app.schemas import SehitVeri
     with pytest.raises(ValueError):
         SehitVeri(ad="Ali", kategori="asker", kaynak_kodu="panel", tarih_hassasiyeti="tam", sehadet_tarihi=None)
+
+
+def test_birlestir_resmi_teyit_korunur(session, sehit_ekle):
+    hedef = sehit_ekle(resmi_teyit=False)
+    fazla = sehit_ekle(resmi_teyit=True, durum="onay_bekliyor")
+    assert repo.birlestir(session, hedef, fazla).resmi_teyit is True

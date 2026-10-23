@@ -1,6 +1,6 @@
 """Onay paneli: giriş, oturum, CSRF, onay iş akışı."""
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlparse
@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import repo
+from app.dates import TZ
 from app.db import get_session
 from app.models import Bildirim, Durum, Hassasiyet, Kategori, Sehit
 from app.schemas import SehitVeri
@@ -27,6 +28,8 @@ SECRET_EN_AZ_UZUNLUK = 32
 KAYNAK_METIN_UZUNLUGU = 300
 YAYINDA_SAYFA_ADEDI = 50
 HEDEF_ID_EN_COK_HANE = 9
+INT4_EN_COK = 2_147_483_647  # PostgreSQL int4 sınırı
+SAYFA_EN_COK = 1_000_000
 SAYISAL_ALANLAR = {"yil": "Yıl", "dogum_yili": "Doğum yılı"}
 FORM_ALANLARI = (
     "ad", "soyad", "lakap", "tarih_hassasiyeti", "sehadet_tarihi", "yil", "gorev", "kategori",
@@ -49,6 +52,14 @@ def kisalt(metin: str | None) -> str:
     return (metin or "")[:KAYNAK_METIN_UZUNLUGU]
 
 
+def istanbul_saati(an: datetime) -> str:
+    """Saat dilimsiz (SQLite) değerler UTC sayılır; Türkiye saatiyle biçimlenir."""
+    if an.tzinfo is None:
+        an = an.replace(tzinfo=timezone.utc)
+    return an.astimezone(TZ).strftime("%d.%m.%Y %H:%M")
+
+
+templates.env.filters["istanbul_saati"] = istanbul_saati
 templates.env.filters["guvenli_url"] = guvenli_url
 templates.env.filters["kisalt"] = kisalt
 
@@ -204,7 +215,7 @@ def _giris_sayfasi(request: Request, hata: str | None = None, status_code: int =
 
 
 def _sehit_getir(s: Session, sehit_id: int) -> Sehit:
-    sehit = repo.getir(s, sehit_id, sadece_yayinda=False)
+    sehit = repo.getir(s, sehit_id, sadece_yayinda=False) if 0 < sehit_id <= INT4_EN_COK else None
     if sehit is None:
         raise HTTPException(status_code=404, detail="Kayıt bulunamadı")
     return sehit
@@ -238,7 +249,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
 
     @router.get("/giris")
     def giris_formu(request: Request):
-        if request.session.get("kullanici"):
+        if request.session.get("kullanici") and not secret_zayif_mi(request.app.state.settings):
             return RedirectResponse("/panel", status_code=303)
         return _giris_sayfasi(request)
 
@@ -288,7 +299,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
 
     @router.get("/yayinda")
     def yayinda(request: Request, kullanici: Yonetici, s: Oturum, q: str = "", sayfa: int = 1):
-        sayfa = max(sayfa, 1)
+        sayfa = min(max(sayfa, 1), SAYFA_EN_COK)
         sonuc = repo.listele(s, q=q or None, sayfa=sayfa, adet=YAYINDA_SAYFA_ADEDI)
         return _liste_sayfasi(
             request, kullanici, mod="yayinda", kayitlar=sonuc.kayitlar, q=q,
@@ -346,7 +357,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         hedef_id = hedef_id.strip()
         hedef = None
         if hedef_id.isascii() and hedef_id.isdigit() and len(hedef_id) <= HEDEF_ID_EN_COK_HANE:
-            hedef = repo.getir(s, int(hedef_id), sadece_yayinda=False)
+            hedef = repo.getir(s, int(hedef_id), sadece_yayinda=False)  # 9 hane < int4
         hata = None
         if hedef is None:
             hata = "Hedef kayıt bulunamadı; geçerli bir kayıt numarası girin."
@@ -375,7 +386,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         csrf: Annotated[str, Form()] = "",
     ):
         csrf_dogrula(request, csrf)
-        bildirim = s.get(Bildirim, bildirim_id)
+        bildirim = s.get(Bildirim, bildirim_id) if 0 < bildirim_id <= INT4_EN_COK else None
         if bildirim is None:
             raise HTTPException(status_code=404, detail="Bildirim bulunamadı")
         bildirim.kapandi = True

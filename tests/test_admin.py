@@ -373,3 +373,43 @@ def test_bildirimler_kacis_ve_koruma(panel_client, csrf, client, session, sehit_
     client.cookies.clear()
     r = client.get("/panel/bildirimler", follow_redirects=False)
     assert r.status_code == 303
+
+
+def test_panel_cok_buyuk_id_ve_sayfa_500_vermez(panel_client, csrf):
+    token = csrf(panel_client)
+    buyuk = "99999999999999999999"
+    assert panel_client.get(f"/panel/sehit/{buyuk}").status_code == 404
+    assert panel_client.post(f"/panel/sehit/{buyuk}/onayla", data={"csrf": token}).status_code == 404
+    assert panel_client.post(f"/panel/sehit/{buyuk}/reddet", data={"csrf": token}).status_code == 404
+    assert panel_client.post(f"/panel/bildirimler/{buyuk}/kapat", data={"csrf": token}).status_code == 404
+    assert panel_client.get("/panel/sehit/2147483648").status_code == 404
+    assert panel_client.get("/panel/yayinda", params={"sayfa": buyuk}).status_code == 200
+
+
+def test_giris_formu_zayif_secret_dongu_yok(panel_client, app, monkeypatch):
+    assert panel_client.get("/panel/giris", follow_redirects=False).status_code == 303
+    monkeypatch.setattr(app.state.settings, "secret_key", "kisa")
+    assert panel_client.get("/panel/giris", follow_redirects=False).status_code == 200
+
+
+def test_uzun_ad_400(panel_client, csrf):
+    r = panel_client.post("/panel/sehit/yeni", data={
+        "csrf": csrf(panel_client), "ad": "a" * 201, "tarih_hassasiyeti": "bilinmiyor",
+    })
+    assert r.status_code == 400
+
+
+def test_uzun_slug_sigar(session):
+    from app.models import Sehit
+    s = Sehit(ad="a" * 200, soyad="b" * 200, lakap="c" * 200, kaynak_kodu="t",
+              tarih_hassasiyeti="bilinmiyor")
+    s.alanlari_yenile()
+    assert len(s.slug) <= 300
+
+
+def test_bildirim_saati_istanbul(panel_client, session):
+    from datetime import datetime
+    from app.models import Bildirim
+    session.add(Bildirim(mesaj="x", tarih=datetime(2026, 1, 1, 21, 30)))  # naive = UTC
+    session.commit()
+    assert "02.01.2026 00:30" in panel_client.get("/panel/bildirimler").text
