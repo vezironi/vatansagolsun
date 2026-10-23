@@ -619,3 +619,60 @@ def test_toplayici_bilinmeyen_saglayici_satiri(panel_client, app, monkeypatch):
     monkeypatch.setattr(app.state.settings, "analiz_sirasi", ["mistral"])
     t = panel_client.get("/panel/toplayici").text
     assert "mistral" in t and "bilinmeyen sağlayıcı" in t
+
+
+def _saglayici_ayarla(app, monkeypatch):
+    ayar = app.state.settings
+    for ad in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.delenv(ad, raising=False)
+    monkeypatch.setattr(ayar, "analiz_sirasi", ["openai", "gemini", "claude"])
+    monkeypatch.setattr(ayar, "openai_api_key", "sk-openai-gizli-111")
+    monkeypatch.setattr(ayar, "gemini_api_key", "sk-gem-gizli-333")
+    monkeypatch.setattr(ayar, "anthropic_api_key", "")
+
+
+def _park_satiri(session, ad, durum, imlec=None, mesaj=None):
+    from datetime import datetime, timezone
+
+    from app.models import KaynakDurumu
+
+    session.add(KaynakDurumu(kaynak_kodu=f"analiz_{ad}", tamamlandi=False, eklenen=0, birlesen=0, atlanan=0,
+                             hatali=0, son_calisma=datetime.now(timezone.utc), son_durum=durum, imlec=imlec,
+                             son_mesaj=mesaj))
+    session.commit()
+
+
+def test_toplayici_yeniden_dene_ve_son_hata(panel_client, csrf, app, session, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    from app.models import KaynakDurumu
+
+    _saglayici_ayarla(app, monkeypatch)
+    bitis = datetime.now(timezone.utc) + timedelta(hours=5)
+    _park_satiri(session, "openai", "tukendi", "until:" + bitis.isoformat(), "SaglayiciTukendi: x")
+    _park_satiri(session, "gemini", "gecici_hata", None, "RateLimitError 429")
+    t = panel_client.get("/panel/toplayici").text
+    assert "tükendi" in t and "/panel/toplayici/saglayici/openai/sifirla" in t and "Yeniden dene" in t
+    assert "/panel/toplayici/saglayici/gemini/sifirla" not in t  # yalnız parktakinde düğme
+    assert "son hata: RateLimitError 429" in t and "gizli" not in t
+    r = panel_client.post("/panel/toplayici/saglayici/openai/sifirla", data={"csrf": csrf(panel_client)},
+                          follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/panel/toplayici"
+    session.expire_all()
+    assert session.get(KaynakDurumu, "analiz_openai").imlec is None
+    assert "/panel/toplayici/saglayici/openai/sifirla" not in panel_client.get("/panel/toplayici").text
+
+
+def test_toplayici_sifirla_csrf_giris_ve_ad_korumasi(panel_client, csrf, client, app, session, monkeypatch):
+    from app.models import KaynakDurumu
+
+    _saglayici_ayarla(app, monkeypatch)
+    _park_satiri(session, "openai", "tukendi", "until:2999-01-01T00:00:00+00:00")
+    assert panel_client.post("/panel/toplayici/saglayici/openai/sifirla", data={"csrf": "sahte"}).status_code == 403
+    assert panel_client.post("/panel/toplayici/saglayici/openai/sifirla").status_code in (403, 422)
+    assert panel_client.post("/panel/toplayici/saglayici/mistral/sifirla",
+                             data={"csrf": csrf(panel_client)}).status_code == 404
+    session.expire_all()
+    assert session.get(KaynakDurumu, "analiz_openai").imlec.startswith("until:")
+    r = client.post("/panel/toplayici/saglayici/openai/sifirla", data={"csrf": "x"}, follow_redirects=False)
+    assert r.status_code == 303 and "giris" in r.headers["location"]

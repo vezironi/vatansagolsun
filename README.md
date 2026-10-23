@@ -209,7 +209,7 @@ Dikkat: ChatGPT uygulamasındaki abonelik veya bakiye API'de **geçmez**. API i�
 1. https://aistudio.google.com adresine Google hesabınızla girin, **Get API key** düğmesiyle anahtar oluşturun.
 2. `.env` dosyasına yapıştırın: `GEMINI_API_KEY=...`
 
-Ücretsiz katmanın günlük sınırı vardır; kalan hakkınızı AI Studio'da görürsünüz. Sınır dolunca Gemini o gün için "tükendi" sayılır. Ücretsiz katmanda gönderilen metinler Google tarafından ürün geliştirmede kullanılabilir; ancak gönderilenler zaten herkese açık haber metinleridir.
+Ücretsiz katmanın günlük sınırı vardır; kalan hakkınızı AI Studio'da görürsünüz. Sınır dolunca Gemini "tükendi" sayılır ve günlük hak sıfırlanana dek (Pasifik saatiyle gece yarısı, Türkiye saatiyle kabaca 10:00) denenmez. Ücretsiz katmanda gönderilen metinler Google tarafından ürün geliştirmede kullanılabilir; ancak gönderilenler zaten herkese açık haber metinleridir.
 
 **3. Claude**
 
@@ -217,11 +217,11 @@ Dikkat: ChatGPT uygulamasındaki abonelik veya bakiye API'de **geçmez**. API i�
 2. **API Keys** bölümünden yeni anahtar oluşturup kopyalayın (yalnızca bir kez gösterilir).
 3. `.env` dosyasına yapıştırın: `ANTHROPIC_API_KEY=sk-ant-...`
 
-Anahtarları ekledikten sonra `docker compose up -d` ile yeniden başlatın. Anahtarları kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "var" ya da "yok" yazar.
+Anahtarları ekledikten sonra `docker compose up -d` ile yeniden başlatın. `GOOGLE_API_KEY` ve `ANTHROPIC_AUTH_TOKEN` ayarlar dosyasından değil gerçek ortam değişkenlerinden okunur (Docker, `.env` içeriğini kapsayıcıya aktarır). Anahtarları kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "var" ya da "yok" yazar.
 
 **Sırayı değiştirmek:** `.env` dosyasındaki `ANALIZ_SIRASI` satırını düzenleyin; örneğin Claude'u öne almak için `ANALIZ_SIRASI=["claude","openai","gemini"]`. Her sağlayıcının modeli `OPENAI_MODELI`, `GEMINI_MODELI` ve `ANALIZ_MODELI` (Claude) ile değiştirilebilir; varsayılanlar ucuz modellerdir, değiştirmeniz gerekmez.
 
-**Otomatik geçiş nasıl çalışır:** Bir haber için sırayla sağlayıcılar denenir. Geçici bir sorun olursa (internet kesintisi, yoğunluk) aynı haber sıradaki sağlayıcıya verilir. Bir sağlayıcının kredisi ya da günlük hakkı bittiyse veya anahtarı geçersizse panelde **"tükendi"** yazar; sistem onu **24 saat** hiç denemez, haberleri sıradakilere verir. 24 saat dolunca kendiliğinden tekrar dener; sizin bir şey yapmanız gerekmez (kredi yüklediyseniz bile bekleyip kendiliğinden devreye girmesini görürsünüz). Tüm sağlayıcılar tükenmişse haberler bekletilir, kredi yükleyince ya da süre dolunca işlenir.
+**Otomatik geçiş nasıl çalışır:** Bir haber için sırayla sağlayıcılar denenir. Geçici bir sorun olursa (internet kesintisi, yoğunluk) aynı haber sıradaki sağlayıcıya verilir. Bir sağlayıcının kredisi ya da günlük hakkı bittiyse veya anahtarı geçersizse panelde **"tükendi"** yazar; sistem onu panelde yazan zamana kadar hiç denemez ve haberleri sıradakilere verir. Tükenme süresi 24 saattir; Gemini'nin günlük hakkı bittiyse bir sonraki günlük sıfırlanmaya kadar sürer. Süre dolunca sistem kendiliğinden tekrar dener. Kredi yüklediyseniz beklemek zorunda değilsiniz: panelde ilgili sağlayıcının yanındaki **"Yeniden dene"** düğmesi tükenmeyi hemen kaldırır. Model adı yanlışsa ya da model desteklenmiyorsa sağlayıcı da "tükendi" görünür (ileti: "model bulunamadı veya desteklenmiyor"); `.env` içindeki model adını düzeltip **"Yeniden dene"** deyin. Geçici hatalar sağlayıcıyı tükenmiş saymaz; son geçici hata ve zamanı tabloda "son hata" olarak görünür. Tüm sağlayıcılar tükenmişse haberler bekletilir, kredi yükleyince ya da süre dolunca işlenir.
 
 **Tahmini maliyet:** günde birkaç düzine haber okunur ve ucuz modeller kullanılır; olağan bir ayda maliyet birkaç doların altında kalır. Gemini ücretsiz katmanı yetiyorsa hiç ödemeyebilirsiniz. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır; haber başına bir sayılır.
 

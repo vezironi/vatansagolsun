@@ -26,8 +26,13 @@
       <td>{% if x.anahtar_var %}var{% else %}yok{% endif %}</td>
       <td>{{ x.model }}</td>
       <td>{% if x.durum == "tukendi" %}tükendi — {{ x.tukenme_bitis|istanbul_saati }}'e kadar
+          <form method="post" action="/panel/toplayici/saglayici/{{ x.ad }}/sifirla" style="display:inline">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button type="submit">Yeniden dene</button>
+          </form>
           {% elif x.durum == "anahtar_yok" %}kullanılmıyor (anahtar yok)
-          {% else %}kullanılabilir{% endif %}</td>
+          {% else %}kullanılabilir{% endif %}
+          {% if x.son_hata %}<br><small>son hata: {{ x.son_hata }}{% if x.son_hata_zamani %} ({{ x.son_hata_zamani|istanbul_saati }}){% endif %}</small>{% endif %}</td>
       <td>{% if x.son_basarili %}{{ x.son_basarili|istanbul_saati }}{% else %}-{% endif %}</td>
       {% endif %}
     </tr>

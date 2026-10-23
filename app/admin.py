@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import repo
-from app.analiz import analiz_yapilandirildi_mi, saglayici_tablosu
+from app.analiz import VARSAYILAN_SIRA, analiz_yapilandirildi_mi, park_temizle, saglayici_tablosu
 from app.dates import TZ, bugun
 from app.db import get_session
 from app.kaynaklar import haber
@@ -430,6 +430,14 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
             return RedirectResponse("/panel/toplayici?calisiyor=1", status_code=303)
         is_.modify(next_run_time=datetime.now(zamanlayici.timezone))
         return RedirectResponse("/panel/toplayici?basladi=1", status_code=303)
+
+    @router.post("/toplayici/saglayici/{ad}/sifirla")
+    def saglayici_sifirla(request: Request, _: Yonetici, s: Oturum, ad: str, csrf: Annotated[str, Form()] = ""):
+        csrf_dogrula(request, csrf)
+        if ad not in VARSAYILAN_SIRA:
+            raise HTTPException(status_code=404)
+        park_temizle(s, ad)
+        return RedirectResponse("/panel/toplayici", status_code=303)
 
     @router.get("/bildirimler")
     def bildirimler(request: Request, kullanici: Yonetici, s: Oturum):
