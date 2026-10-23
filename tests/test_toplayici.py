@@ -91,11 +91,35 @@ def test_ayni_sehit_iki_haberde_tek_kayit(session, ortam):
     assert s.ad == "Ali" and s.soyad == "KAYA"
 
 
-def test_yayindaki_kayda_sadece_kaynak_eklenir(session, ortam, sehit_ekle):
-    s = sehit_ekle(ad="Ali", soyad="KAYA", sehadet_tarihi=date(2026, 10, 22))
-    d = tara(session, ortam, [oge(1)], SahteAnalizci())
-    assert session.query(Sehit).count() == 1 and s.durum == Durum.yayinda
-    assert len(s.kaynaklar) == 1 and d.birlesen == 1
+_ALANLAR = ("ad", "soyad", "gorev", "memleket", "kurum", "kategori", "tarih_hassasiyeti",
+            "sehadet_tarihi", "yil", "ay", "gun", "resmi_teyit", "kaynak_kodu", "durum")
+_DOLU_KISI = Kisi(ad="ali", soyad="kaya", kategori="asker", sehadet_tarihi="2026-10-22",
+                  gorev="Uydurma Rütbe", memleket="Uydurma İl", kurum="Uydurma Kurum")
+
+
+def _bos_alanli_kayit(sehit_ekle, durum):
+    """Haberin doldurabileceği her alanı boş/zayıf kayıt (yıl hassasiyetli, kategori diğer)."""
+    return sehit_ekle(ad="Ali", soyad="KAYA", kategori="diger", tarih_hassasiyeti="yil",
+                      sehadet_tarihi=None, yil=2026, resmi_teyit=False, durum=durum)
+
+
+@pytest.mark.parametrize("durum", ["yayinda", "reddedildi"])
+def test_yayindaki_kayda_sadece_kaynak_eklenir(session, ortam, sehit_ekle, durum):
+    # Karar Q9: haber, yayındaki/reddedilmiş kaydı asla değiştirmez; yalnızca kaynak eklenir.
+    s = _bos_alanli_kayit(sehit_ekle, durum)
+    once = {a: getattr(s, a) for a in _ALANLAR}
+    d = tara(session, ortam, [oge(1)], SahteAnalizci(analiz(kisiler=[_DOLU_KISI])))
+    session.refresh(s)
+    assert session.query(Sehit).count() == 1 and {a: getattr(s, a) for a in _ALANLAR} == once
+    assert len(s.kaynaklar) == 1 and s.kaynaklar[0].kaynak_kodu == "haber" and d.birlesen == 1
+
+
+def test_onay_bekleyen_kayit_haberle_doldurulur(session, ortam, sehit_ekle):
+    s = _bos_alanli_kayit(sehit_ekle, "onay_bekliyor")
+    tara(session, ortam, [oge(1)], SahteAnalizci(analiz(kisiler=[_DOLU_KISI])))
+    session.refresh(s)
+    assert (s.gorev, s.memleket, s.kurum, s.kategori) == ("Uydurma Rütbe", "Uydurma İl", "Uydurma Kurum", "asker")
+    assert s.sehadet_tarihi == date(2026, 10, 22) and s.resmi_teyit is True and s.durum == Durum.onay_bekliyor
 
 
 def test_reddedilen_dirilmez(session, ortam, sehit_ekle):

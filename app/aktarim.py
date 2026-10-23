@@ -256,7 +256,10 @@ def kayit_aktar(s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda)
                 s.add(_kaynak_kaydi(sehit, ham))
                 s.flush()
                 return Sonuc("yeni", sehit.id)
-            _birlestir(mevcut, veri)
+            # Karar Q9: haber (model çıkarımı, incelenmemiş) yayındaki ya da reddedilmiş kaydı
+            # asla değiştirmez; yalnızca kaynak eklenir. Onay bekleyende birleştirme sürer.
+            if not (ham.kaynak_kodu == "haber" and Durum(mevcut.durum) != Durum.onay_bekliyor):
+                _birlestir(mevcut, veri)
             s.add(_kaynak_kaydi(mevcut, ham))
             s.flush()
             return Sonuc("birlesti", mevcut.id)
