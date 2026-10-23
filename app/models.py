@@ -2,7 +2,7 @@
 from datetime import date, datetime, timezone
 from enum import StrEnum
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -64,6 +64,7 @@ class Sehit(Base):
     kaynak_kodu: Mapped[str] = mapped_column(String(50), index=True)
     slug: Mapped[str] = mapped_column(String(300), default="")
     arama_metni: Mapped[str] = mapped_column(Text, default="", index=True)
+    isim_anahtari: Mapped[str] = mapped_column(String(400), default="", index=True)
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
     guncelleme: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_simdi, onupdate=_simdi)
 
@@ -87,6 +88,8 @@ class Sehit(Base):
         parcalar = [self.ad, self.soyad, self.lakap, self.memleket, self.gorev, self.kurum]
         self.arama_metni = katla(" ".join(p for p in parcalar if p))
 
+        self.isim_anahtari = katla(" ".join([self.ad, self.soyad or "", self.lakap or ""]).strip())[:400]
+
         hassasiyet = Hassasiyet(self.tarih_hassasiyeti)
         if hassasiyet == Hassasiyet.tam and self.sehadet_tarihi:
             self.yil = self.sehadet_tarihi.year
@@ -100,6 +103,7 @@ class Sehit(Base):
 
 class Kaynak(Base):
     __tablename__ = "kaynaklar"
+    __table_args__ = (UniqueConstraint("kaynak_kodu", "dis_kimlik", name="uq_kaynak_dis_kimlik"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     sehit_id: Mapped[int] = mapped_column(ForeignKey("sehitler.id"))
@@ -107,9 +111,26 @@ class Kaynak(Base):
     baslik: Mapped[str | None] = mapped_column(Text)
     metin: Mapped[str | None] = mapped_column(Text)
     kaynak_adi: Mapped[str] = mapped_column(String(100))
+    kaynak_kodu: Mapped[str | None] = mapped_column(String(50))
+    dis_kimlik: Mapped[str | None] = mapped_column(String(300))
     eklenme: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
 
     sehit: Mapped[Sehit] = relationship(back_populates="kaynaklar")
+
+
+class KaynakDurumu(Base):
+    __tablename__ = "kaynak_durumlari"
+
+    kaynak_kodu: Mapped[str] = mapped_column(String(50), primary_key=True)
+    imlec: Mapped[str | None] = mapped_column(String(300))
+    tamamlandi: Mapped[bool] = mapped_column(Boolean, default=False)
+    son_calisma: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    son_durum: Mapped[str | None] = mapped_column(String(20))
+    son_mesaj: Mapped[str | None] = mapped_column(Text)
+    eklenen: Mapped[int] = mapped_column(Integer, default=0)
+    birlesen: Mapped[int] = mapped_column(Integer, default=0)
+    atlanan: Mapped[int] = mapped_column(Integer, default=0)
+    hatali: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Bildirim(Base):

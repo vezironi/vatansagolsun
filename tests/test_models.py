@@ -37,3 +37,21 @@ def test_varsayilanlar_ve_zaman(sehit_ekle):
     assert s.durum == "onay_bekliyor"
     assert s.resmi_teyit is False and s.isimsiz is False
     assert s.olusturma is not None
+
+
+def test_isim_anahtari(sehit_ekle):
+    s = sehit_ekle(ad="ÖMER", soyad="şahin")
+    assert s.isim_anahtari == "omer sahin"
+    t = sehit_ekle(ad="İsmail", soyad=None, lakap="Aşçıoğullarından")
+    assert t.isim_anahtari == "ismail asciogullarindan"
+
+
+def test_kaynak_dis_kimlik_tekil(session, sehit_ekle):
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+    from app.models import Kaynak
+    s = sehit_ekle()
+    s.kaynaklar.append(Kaynak(kaynak_adi="EGM", kaynak_kodu="egm", dis_kimlik="/a"))
+    s.kaynaklar.append(Kaynak(kaynak_adi="EGM", kaynak_kodu="egm", dis_kimlik="/a"))
+    with pytest.raises(IntegrityError):
+        session.commit()
