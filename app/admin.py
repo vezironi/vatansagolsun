@@ -12,6 +12,8 @@ from slowapi import Limiter
 GIRIS_ADRESI = "/panel/giris"
 BCRYPT_EN_COK_BAYT = 72
 GIRIS_SINIRI = "10/minute"
+VARSAYILAN_SECRET = "degistir"
+SECRET_EN_AZ_UZUNLUK = 32
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
 
@@ -41,7 +43,15 @@ def giris_gerekli_isleyici(request: Request, istisna: GirisGerekli) -> RedirectR
     return RedirectResponse(GIRIS_ADRESI, status_code=303)
 
 
+def secret_zayif_mi(ayarlar) -> bool:
+    """Varsayılan ya da kısa SECRET_KEY ile imzalanan oturum çerezi taklit edilebilir."""
+    anahtar = ayarlar.secret_key
+    return anahtar == VARSAYILAN_SECRET or len(anahtar) < SECRET_EN_AZ_UZUNLUK
+
+
 def yonetici_gerekli(request: Request) -> str:
+    if secret_zayif_mi(request.app.state.settings):
+        raise GirisGerekli()  # kapalı durumda hiçbir oturum geçerli sayılmaz
     kullanici = request.session.get("kullanici")
     if not kullanici:
         raise GirisGerekli()
@@ -88,6 +98,12 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         sifre: Annotated[str, Form()] = "",
     ):
         ayarlar = request.app.state.settings  # çağrı anında okunur
+        if secret_zayif_mi(ayarlar):
+            return _giris_sayfasi(
+                request,
+                f"Panel kapalı: SECRET_KEY ayarlanmalı (en az {SECRET_EN_AZ_UZUNLUK} karakter, varsayılan olmamalı).",
+                401,
+            )
         sifre_tamam = sifre_dogru(sifre, ayarlar.admin_sifre_hash)
         kullanici_tamam = secrets.compare_digest(
             kullanici.encode(), ayarlar.admin_kullanici.encode()

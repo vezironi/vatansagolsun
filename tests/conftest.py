@@ -46,7 +46,11 @@ def sehit_ekle(session):
 
 
 @pytest.fixture
-def app(session):
+def app(session, monkeypatch):
+    from app.config import get_settings
+
+    # Güçlü anahtar: zayıf anahtarda panel bilerek kapalıdır.
+    monkeypatch.setattr(get_settings(), "secret_key", "t" * 40)
     uygulama = create_app()
     uygulama.dependency_overrides[get_session] = lambda: session
     return uygulama
@@ -61,6 +65,7 @@ def client(app):
 def ayarli_sifre(app, monkeypatch):
     from app.admin import sifre_hashle
 
+    monkeypatch.setattr(app.state.settings, "admin_kullanici", "admin")
     monkeypatch.setattr(app.state.settings, "admin_sifre_hash", sifre_hashle("test-sifre"))
 
 

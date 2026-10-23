@@ -1,4 +1,5 @@
 """Uygulama fabrikası."""
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -9,12 +10,13 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import sessionmaker
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.admin import GirisGerekli, giris_gerekli_isleyici, panel_router_olustur
+from app.admin import GirisGerekli, secret_zayif_mi, giris_gerekli_isleyici, panel_router_olustur
 from app.api import api_router_olustur
 from app.config import Settings, get_settings
 from app.db import motor_olustur
 from app.site import router as site_router
 
+logger = logging.getLogger(__name__)
 PAKET_DIZINI = Path(__file__).resolve().parent
 
 
@@ -25,6 +27,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/api/belgeler",
         openapi_url="/api/openapi.json",
     )
+    if secret_zayif_mi(settings):
+        logger.warning(
+            "SECRET_KEY varsayılan ya da 32 karakterden kısa: yönetici paneli kapalı kalacak."
+        )
     motor = motor_olustur(settings.database_url)
     app.state.motor = motor
     app.state.session_factory = sessionmaker(motor)
