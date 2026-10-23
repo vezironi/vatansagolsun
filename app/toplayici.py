@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.aktarim import kaynak_durumu, temizle, kayit_aktar
-from app.analiz import AnalizHatasi, Analizci, AnalizYapilandirilmamis, HaberAnalizi, analizci_olustur
+from app.analiz import AnalizHatasi, Analizci, AnalizYapilandirilmamis, HaberAnalizi, TUKENDI_MESAJI, analizci_olustur
 from app.config import get_settings
 from app.dates import TZ
 from app.kaynaklar import HamKayit, KaynakHatasi, ayristir, egm, haber, sg
@@ -199,6 +199,10 @@ def haber_kaynagi_tara(
         try:
             oge_hatali = 0
             if haber.sehit_gecer_mi(oge.baslik, oge.ozet):
+                kullanilabilir = getattr(analizci, "kullanilabilir_mi", None)
+                if kullanilabilir is not None and not kullanilabilir():
+                    son_durum, mesaj = "hata", TUKENDI_MESAJI  # sayaç ve takılı koruması harcanmaz
+                    break
                 makale = haber.makale_ayristir(g.metin(kod, oge.url), kaynak)
                 if not analiz_sayaci_artir(s, bugun, ayar.gunluk_analiz_siniri):
                     mesaj = "günlük analiz sınırı"  # kısıtlama, hata değil
@@ -217,10 +221,10 @@ def haber_kaynagi_tara(
             durum.imlec = imlec.yaz()
             s.commit()  # çökme olursa işlenen öğeler ve imleç korunur
             hatali_taslak += oge_hatali
-        except AnalizYapilandirilmamis:
+        except AnalizYapilandirilmamis as hata:
             s.rollback()
             durum = kaynak_durumu(s, kod)
-            son_durum, mesaj = "hata", "API anahtarı geçersiz/yok"
+            son_durum, mesaj = "hata", temizle(str(hata)) or TUKENDI_MESAJI
             break
         except Exception as hata:  # noqa: BLE001 - takılan öğe her turda baştan denenmesin
             # Öğenin yarım işi geri alınır; takılı sayacı ayrı bir işlemde kalıcı olur ki

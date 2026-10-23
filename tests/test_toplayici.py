@@ -627,8 +627,28 @@ def test_zincir_hepsi_tukendi_toplayici_anahtar_gecersiz_der(session, ortam, fab
 
     z = _zincir_ile(fabrika, _SahteSaglayici("openai", SaglayiciTukendi("a")))
     d = tara(session, ortam, [oge(1)], z)
-    assert d.son_durum == "hata" and d.son_mesaj == "API anahtarı geçersiz/yok"
+    assert d.son_durum == "hata" and d.son_mesaj == "Tüm analiz sağlayıcıları tükendi"
     assert imlec(session) is None  # takılı sayacı artmadı
+
+
+def test_hepsi_parkta_sayac_harcanmaz_cagri_yok(session, ortam, fabrika):
+    from app.analiz import SaglayiciTukendi
+
+    s1 = _SahteSaglayici("openai", SaglayiciTukendi("a"))
+    z = _zincir_ile(fabrika, s1)
+    tara(session, ortam, [oge(1)], z)  # ilk tur: openai tükenir, sayaç bir kez harcandı
+    sayac = session.get(KaynakDurumu, toplayici.SAYAC_KODU).imlec
+    d = tara(session, ortam, [oge(1)], z)
+    assert s1.cagri == 1  # parkta: çağrılmadı
+    assert session.get(KaynakDurumu, toplayici.SAYAC_KODU).imlec == sayac
+    assert d.son_durum == "hata" and d.son_mesaj == "Tüm analiz sağlayıcıları tükendi"
+    assert imlec(session) is None  # takılı koruması saymadı
+
+
+def test_kullanilabilir_mi_olmayan_analizci_kullanilabilir_sayilir(session, ortam):
+    a = SahteAnalizci(analiz())
+    tara(session, ortam, [oge(1)], a)
+    assert a.cagri == 1
 
 
 def test_zincir_gecici_hata_takili_korumasina_girer(session, ortam, fabrika):
