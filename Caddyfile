@@ -1,3 +1,7 @@
 {$ALAN_ADI} {
 	reverse_proxy app:8000
 }
+
+www.{$ALAN_ADI} {
+	redir https://{$ALAN_ADI}{uri} permanent
+}
