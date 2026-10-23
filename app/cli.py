@@ -136,8 +136,16 @@ def _sayi_metni(sayilar: dict[str, int]) -> str:
     return " ".join(f"{alan}={sayilar[alan]}" for alan in SAYACLAR)
 
 
+def _imlec_metni(d: KaynakDurumu) -> str | None:
+    """Haber imleci (3 günlük kimlik kümesi) kısa özetle yazılır."""
+    if d.kaynak_kodu in haber.HABER_KAYNAKLARI:
+        imlec = toplayici.HaberImleci.oku(d.imlec)
+        return imlec.ozet() if imlec else None
+    return d.imlec
+
+
 def _ozet(kod: str, d: KaynakDurumu) -> str:
-    return f"{kod}: {_sayi_metni(_sayilar(d))} durum={d.son_durum} imlec={d.imlec}"
+    return f"{kod}: {_sayi_metni(_sayilar(d))} durum={d.son_durum} imlec={_imlec_metni(d)}"
 
 
 def _calisma_ozeti(kod: str, d: KaynakDurumu, onceki: dict[str, int]) -> str:

@@ -1,4 +1,6 @@
+import json
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -61,8 +63,17 @@ def tara(s, ortam, ogeler, analizci, g=None):
     return toplayici.haber_kaynagi_tara(s, "hurriyet", g or SahteGetirici(), analizci, simdi=SIMDI)
 
 
+def imlec_nesnesi(s):
+    return toplayici.HaberImleci.oku(s.get(KaynakDurumu, "hurriyet").imlec)
+
+
 def imlec(s):
-    return toplayici.HaberImleci.oku(s.get(KaynakDurumu, "hurriyet").imlec).son_yayin
+    return (imlec_nesnesi(s) or toplayici.HaberImleci()).son_yayin
+
+
+def imlec_kur(s, metin):
+    s.add(KaynakDurumu(kaynak_kodu="hurriyet", imlec=metin, eklenen=0, birlesen=0, atlanan=0, hatali=0))
+    s.commit()
 
 
 def test_ilk_calisma_yalnizca_bugun(session, ortam):
@@ -238,6 +249,147 @@ def test_ilk_calisma_sinir_istanbul_gece_yarisi(session, ortam):
     a = SahteAnalizci()
     tara(session, ortam, [dun, bugun], a)
     assert a.cagri == 1 and imlec(session) == bugun.yayin
+
+
+# --- imleç: 3 günlük kimlik kümesi (I3), TEXT sütun (C1), beklenmeyen hata koruması (I2) ---
+
+def test_sonradan_eklenen_eski_tarihli_oge_islenir(session, ortam):
+    yeni = oge(1, saat_once=1)
+    tara(session, ortam, [yeni], SahteAnalizci())
+    gec = oge(2, saat_once=5, baslik="Şehit 2")  # imleç zamanından eski, akışa sonradan girdi
+    a = SahteAnalizci(analiz(kisiler=[Kisi(ad="veli", soyad="demir", kategori="asker")]))
+    tara(session, ortam, [yeni, gec], a)
+    assert a.cagri == 1 and session.query(Sehit).count() == 2
+    assert imlec(session) == yeni.yayin  # son_yayin geri gitmez
+
+
+def test_onceki_gunden_gec_gelen_oge_uc_gun_icinde_islenir(session, ortam):
+    son = SIMDI - timedelta(hours=1)
+    imlec_kur(session, toplayici.HaberImleci(son_yayin=son, islenen={"9": son.isoformat()}).yaz())
+    gec, cok_eski = oge(2, gun_once=2), oge(3, gun_once=3, saat_once=1)
+    a = SahteAnalizci()
+    tara(session, ortam, [oge(9, saat_once=1), gec, cok_eski], a)
+    assert a.cagri == 1 and set(imlec_nesnesi(session).islenen) == {"9", "2"}
+
+
+def test_budama_uc_gunden_eskileri_atar(session, ortam):
+    eski, yakin = SIMDI - timedelta(days=4), SIMDI - timedelta(days=1)
+    imlec_kur(session, toplayici.HaberImleci(
+        son_yayin=yakin, islenen={"eski": eski.isoformat(), "yakin": yakin.isoformat()},
+        taban=SIMDI - timedelta(days=5)).yaz())
+    a = SahteAnalizci()
+    tara(session, ortam, [HaberOgesi("hurriyet", "yakin", "https://x/y", "Şehit", "", yakin)], a)
+    im = imlec_nesnesi(session)
+    assert a.cagri == 0 and im.islenen == {"yakin": yakin.isoformat()} and im.taban is None
+
+
+def test_onceki_imlec_bicimi_okunur_tekrar_analiz_yok(session, ortam):
+    an = SIMDI - timedelta(hours=3)
+    imlec_kur(session, json.dumps({"son_yayin": an.isoformat(), "son_kimlikler": ["1"], "takili": None}))
+    islenmis = HaberOgesi("hurriyet", "1", "https://x/1", "Şehit", "", an)
+    ayni_an_yeni = HaberOgesi("hurriyet", "2", "https://x/2", "Şehit", "", an)
+    daha_eski = HaberOgesi("hurriyet", "0", "https://x/0", "Şehit", "", an - timedelta(hours=1))
+    a = SahteAnalizci()
+    tara(session, ortam, [islenmis, ayni_an_yeni, daha_eski], a)
+    assert a.cagri == 1 and "2" in imlec_nesnesi(session).islenen
+
+
+def test_en_eski_duz_iso_imleci_o_ani_islenmis_sayar():
+    an = SIMDI - timedelta(hours=3)
+    im = toplayici.HaberImleci.oku(an.isoformat())
+    assert not im.islenecek_mi(HaberOgesi("hurriyet", "1", "u", "b", "", an), SIMDI)
+    assert im.islenecek_mi(HaberOgesi("hurriyet", "2", "u", "b", "", an + timedelta(seconds=1)), SIMDI)
+    assert toplayici.HaberImleci.oku(None) is None and toplayici.HaberImleci.oku("bozuk") is None
+
+
+def test_ilk_calismanin_tabani_bos_turda_da_kalir(session, ortam):
+    a = SahteAnalizci()
+    tara(session, ortam, [], a)  # bugün hiç haber yok
+    tara(session, ortam, [oge(1, gun_once=1)], a)  # dünkü haber sonradan görünür: ilk çalışma geçmişi taşımaz
+    assert a.cagri == 0 and imlec_nesnesi(session).taban is not None
+
+
+def test_imlec_25_ayni_an_ve_takili_url_gidip_gelir(session):
+    an = SIMDI - timedelta(hours=1)
+    im = toplayici.HaberImleci()
+    for i in range(25):
+        im.isle(HaberOgesi("hurriyet", str(43351000 + i), "u", "b", "", an))
+    im.takili = {"kimlik": "https://www.sabah.com.tr/gundem/2026/10/23/" + "uzun-baslik-" * 20, "deneme": 2}
+    metin = im.yaz()
+    assert len(metin) > 300  # eski VARCHAR(300) sütuna sığmazdı
+    assert toplayici.HaberImleci.oku(metin) == im
+    imlec_kur(session, metin)
+    session.expire_all()
+    assert toplayici.HaberImleci.oku(session.get(KaynakDurumu, "hurriyet").imlec) == im
+
+
+def test_hurriyet_gercek_ornek_21_ayni_an(session, ortam):
+    xml = (Path(__file__).parent.parent / "docs/superpowers/plans/kaynaklar/haber/veri/h_gundem.xml").read_text(encoding="utf-8")
+    ogeler = haber.rss_ayristir(xml, haber.HABER_KAYNAKLARI["hurriyet"])
+    bugun = [o for o in ogeler if o.yayin.astimezone(TZ).date() == SIMDI.date()]
+    assert sum(o.yayin == datetime(2026, 10, 23, 7, 0, tzinfo=TZ) for o in bugun) == 21
+    a = SahteAnalizci()
+    tara(session, ortam, ogeler, a)
+    metin = session.get(KaynakDurumu, "hurriyet").imlec
+    assert len(metin) > 300 and set(toplayici.HaberImleci.oku(metin).islenen) == {o.kimlik for o in bugun}
+    tara(session, ortam, ogeler, a)
+    assert a.cagri == 0 and session.get(KaynakDurumu, "hurriyet").imlec == metin
+
+
+def test_beklenmeyen_hata_takili_sayar_ucuncude_atlar(session, ortam, monkeypatch):
+    def patlar(html, k):
+        raise RuntimeError("ayrıştırıcı hatası")
+    monkeypatch.setattr(haber, "makale_ayristir", patlar)
+    kotu, iyi = oge(1, 3), oge(2, 2, baslik="Hava durumu")
+    for n in (1, 2):
+        d = tara(session, ortam, [kotu, iyi], SahteAnalizci())
+        assert d.son_durum == "hata" and "RuntimeError: ayrıştırıcı hatası" in d.son_mesaj
+        session.expire_all()
+        assert imlec_nesnesi(session).takili == {"kimlik": "1", "deneme": n}
+        assert "2" not in imlec_nesnesi(session).islenen  # ilk hatada durulur
+    d = tara(session, ortam, [kotu, iyi], SahteAnalizci())
+    assert d.hatali == 1 and d.son_mesaj == "3. denemede atlandı: 1"
+    assert set(imlec_nesnesi(session).islenen) == {"1", "2"} and imlec_nesnesi(session).takili is None
+
+
+@pytest.fixture
+def gercek_savepoint_oturumu():
+    """pysqlite, BEGIN'siz SAVEPOINT'in RELEASE'inde commit eder; PostgreSQL gibi davranması
+    için SQLAlchemy'nin önerdiği tarif: sürücü işlem yönetmez, BEGIN'i SQLAlchemy yollar."""
+    from sqlalchemy import create_engine, event
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from app.db import Base
+
+    motor = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+
+    @event.listens_for(motor, "connect")
+    def _baglan(dbapi_baglanti, _kayit):
+        dbapi_baglanti.isolation_level = None
+
+    @event.listens_for(motor, "begin")
+    def _basla(baglanti):
+        baglanti.exec_driver_sql("BEGIN")
+
+    Base.metadata.create_all(motor)
+    with sessionmaker(motor)() as s:
+        yield s
+    motor.dispose()
+
+
+def test_beklenmeyen_hata_ogenin_yarim_isini_geri_alir(gercek_savepoint_oturumu, ortam, monkeypatch):
+    session = gercek_savepoint_oturumu
+    gercek = toplayici.kayit_aktar
+
+    def yarim(s, ham, **kw):
+        gercek(s, ham, **kw)
+        raise RuntimeError("taslak sonrası")
+    monkeypatch.setattr(toplayici, "kayit_aktar", yarim)
+    d = tara(session, ortam, [oge(1)], SahteAnalizci())
+    assert d.son_durum == "hata" and session.query(Sehit).count() == 0 and d.eklenen == 0
+    assert session.get(KaynakDurumu, toplayici.SAYAC_KODU).imlec.endswith(":1")  # harcanan analiz sayılır
+    assert imlec_nesnesi(session).takili == {"kimlik": "1", "deneme": 1}
 
 
 # --- resmî sayfa taraması ve birleşik çalıştırma (Task 5) ---

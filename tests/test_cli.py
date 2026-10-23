@@ -299,3 +299,17 @@ def test_aktarim_durumu_analiz_sayacini_kaynak_gibi_listelemez(cli_db, capsys):
     cikti = capsys.readouterr().out
     assert "analiz_sayaci" not in cikti and "Bugünkü analiz: 7" in cikti
     assert "egm_toplayici: eklenen=2" in cikti
+
+
+def test_aktarim_durumu_haber_imlecini_ozetler(cli_db, capsys):
+    from datetime import datetime, timezone
+
+    an = datetime(2026, 10, 23, 7, 0, tzinfo=timezone.utc)
+    im = toplayici.HaberImleci(son_yayin=an, islenen={str(i): an.isoformat() for i in range(30)})
+    with cli_db() as s:
+        s.add(KaynakDurumu(kaynak_kodu="hurriyet", imlec=im.yaz(), eklenen=0, birlesen=0, atlanan=0, hatali=0))
+        s.commit()
+    assert cli.main(["aktarim-durumu"]) == 0
+    cikti = capsys.readouterr().out
+    assert "hurriyet: " in cikti and "imlec=son_yayin=2026-10-23T07:00:00+00:00 islenen=30" in cikti
+    assert '"islenen"' not in cikti  # kimlik kümesi dökülmez

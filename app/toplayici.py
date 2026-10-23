@@ -29,41 +29,88 @@ TAKILI_DENEME = 3
 
 @dataclass
 class HaberImleci:
-    """`son_kimlikler`: `son_yayin` anında zaten işlenmiş öğeler. `takili`: art arda hata veren öğe."""
-    son_yayin: datetime | None
-    son_kimlikler: list[str] = field(default_factory=list)
+    """Haber kaynağının imleci (JSON, `KaynakDurumu.imlec` TEXT).
+
+    `islenen`: son `TELAFI_GUN` günde işlenmiş (ya da takılıp atlanmış) öğeler, {kimlik: yayın ISO}.
+    Sonradan eklenen eski tarihli haberler de (Hürriyet'in toplu, geriye tarihli yayınları)
+    böylece kaçmaz: zaman değil kimlik belirleyicidir.
+    `taban`: bundan önce yayımlanan öğeler işlenmiş sayılır — ilk çalışmada bugünün (İstanbul)
+    başı, eski biçimden okunurken eski imleç zamanı. Telafi penceresinden çıkınca düşer.
+    `son_yayin`: işlenen en yeni öğe (yalnızca durum gösterimi). `takili`: art arda hata veren öğe.
+    """
+    son_yayin: datetime | None = None
+    islenen: dict[str, str] = field(default_factory=dict)
+    taban: datetime | None = None
     takili: dict | None = None  # {"kimlik": ..., "deneme": n}
 
     @classmethod
-    def oku(cls, metin: str | None) -> "HaberImleci":
+    def oku(cls, metin: str | None) -> "HaberImleci | None":
+        """İmleç yoksa ya da okunamıyorsa None (ilk çalışma). Eski biçimler de okunur."""
         if not metin:
-            return cls(None)
+            return None
         try:
-            if metin.lstrip().startswith("{"):
-                v = json.loads(metin)
-                yayin = v.get("son_yayin")
-                return cls(datetime.fromisoformat(yayin) if yayin else None,
-                           list(v.get("son_kimlikler") or []), v.get("takili"))
-            return cls(datetime.fromisoformat(metin))  # eski biçim: yalnızca ISO metin
-        except (ValueError, AttributeError):
-            return cls(None)
+            if not metin.lstrip().startswith("{"):
+                # En eski biçim: yalnızca son işlenen ISO zaman; o ana kadar (dahil) işlenmiş.
+                return cls(taban=datetime.fromisoformat(metin) + timedelta(microseconds=1))
+            v = json.loads(metin)
+            son = datetime.fromisoformat(v["son_yayin"]) if v.get("son_yayin") else None
+            if "islenen" not in v:
+                # Önceki biçim {son_yayin, son_kimlikler}: son_yayin'dan eskiler işlenmiş;
+                # o andakilerden yalnızca son_kimlikler işlenmiş.
+                kimlikler = v.get("son_kimlikler") or []
+                return cls(son_yayin=son, taban=son, takili=v.get("takili"),
+                           islenen={k: son.isoformat() for k in kimlikler} if son else {})
+            taban = datetime.fromisoformat(v["taban"]) if v.get("taban") else None
+            return cls(son_yayin=son, islenen=dict(v.get("islenen") or {}), taban=taban,
+                       takili=v.get("takili"))
+        except (ValueError, AttributeError, TypeError, KeyError):
+            return None
 
     def yaz(self) -> str:
         return json.dumps({
             "son_yayin": self.son_yayin.isoformat() if self.son_yayin else None,
-            "son_kimlikler": self.son_kimlikler, "takili": self.takili,
-        })
+            "taban": self.taban.isoformat() if self.taban else None,
+            "islenen": self.islenen, "takili": self.takili,
+        }, separators=(",", ":"))
 
-    def ilerle(self, oge) -> None:
-        if oge.yayin == self.son_yayin:
-            self.son_kimlikler.append(oge.kimlik)
-        else:
-            self.son_yayin, self.son_kimlikler = oge.yayin, [oge.kimlik]
-        self.takili = None
+    def ozet(self) -> str:
+        """Komut satırı için kısa gösterim (kimlik kümesi yazılmaz)."""
+        son = self.son_yayin.isoformat() if self.son_yayin else "-"
+        return f"son_yayin={son} islenen={len(self.islenen)}" + (f" takili={self.takili}" if self.takili else "")
+
+    def buda(self, simdi: datetime) -> None:
+        """Telafi penceresinin (simdi - TELAFI_GUN) dışında kalan kayıtları atar."""
+        esik = simdi - timedelta(days=TELAFI_GUN)
+        kalan = {}
+        for kimlik, yayin in self.islenen.items():
+            try:
+                if datetime.fromisoformat(yayin) > esik:
+                    kalan[kimlik] = yayin
+            except (TypeError, ValueError):
+                continue
+        self.islenen = kalan
+        if self.taban is not None and self.taban <= esik:
+            self.taban = None  # pencere zaten daha eskisini dışarıda bırakır
+
+    def islenecek_mi(self, oge, simdi: datetime) -> bool:
+        if oge.yayin > simdi:  # gelecek tarihli öğe: sonraki çalışmaya kalır
+            return False
+        if oge.yayin <= simdi - timedelta(days=TELAFI_GUN):
+            return False
+        if self.taban is not None and oge.yayin < self.taban:
+            return False
+        return oge.kimlik not in self.islenen
+
+    def isle(self, oge) -> None:
+        self.islenen[oge.kimlik] = oge.yayin.isoformat()
+        if self.son_yayin is None or oge.yayin > self.son_yayin:
+            self.son_yayin = oge.yayin
+        if self.takili and self.takili.get("kimlik") == oge.kimlik:
+            self.takili = None
 
     def hata(self, oge) -> int:
         """Aynı öğenin art arda hata sayısını artırıp döndürür."""
-        onceki = self.takili["deneme"] if self.takili and self.takili["kimlik"] == oge.kimlik else 0
+        onceki = self.takili["deneme"] if self.takili and self.takili.get("kimlik") == oge.kimlik else 0
         self.takili = {"kimlik": oge.kimlik, "deneme": onceki + 1}
         return onceki + 1
 
@@ -127,60 +174,70 @@ def haber_kaynagi_tara(
         return _sonuc_yaz(s, durum, simdi, "hata", "API anahtarı yok")
 
     kaynak = haber.HABER_KAYNAKLARI[kod]
-    imlec = HaberImleci.oku(durum.imlec)
-    son_yayin = imlec.son_yayin
     bugun_basi = simdi.astimezone(TZ).replace(hour=0, minute=0, second=0, microsecond=0)
-    alt_sinir = bugun_basi if son_yayin is None else max(son_yayin, simdi - timedelta(days=TELAFI_GUN))
+    # İlk çalışma (imleç yok): yalnızca bugünün haberleri; taban imleçte kalır.
+    imlec = HaberImleci.oku(durum.imlec) or HaberImleci(taban=bugun_basi)
+    imlec.buda(simdi)
     bugun = simdi.astimezone(TZ).date()
 
-    def islenecek(o) -> bool:
-        if o.yayin > simdi:  # gelecek tarihli öğe imleci ileri sürmesin; sonraki çalışmaya kalır
-            return False
-        return o.yayin > alt_sinir or (o.yayin == alt_sinir == son_yayin and o.kimlik not in imlec.son_kimlikler)
-
     try:
-        ogeler = sorted((o for o in haber.ogeleri_getir(g, kaynak) if islenecek(o)), key=lambda o: o.yayin)
+        ogeler = sorted((o for o in haber.ogeleri_getir(g, kaynak) if imlec.islenecek_mi(o, simdi)),
+                        key=lambda o: o.yayin)
     except KaynakHatasi as hata:
         return _sonuc_yaz(s, durum, simdi, "hata", temizle(str(hata)))
 
     son_durum, mesaj, hatali_taslak = "basarili", None, 0
     for oge in ogeler:
-        if haber.sehit_gecer_mi(oge.baslik, oge.ozet):
-            try:
+        try:
+            oge_hatali = 0
+            if haber.sehit_gecer_mi(oge.baslik, oge.ozet):
                 makale = haber.makale_ayristir(g.metin(kod, oge.url), kaynak)
                 if not analiz_sayaci_artir(s, bugun, ayar.gunluk_analiz_siniri):
                     mesaj = "günlük analiz sınırı"  # kısıtlama, hata değil
                     break
                 s.commit()  # sayaç, çağrıdan önce kalıcı: başarısız çağrı da para harcar
                 analiz = analizci.analiz_et(baslik=makale.baslik or oge.baslik, govde=makale.govde, yayin=oge.yayin)
-            except AnalizYapilandirilmamis:
-                son_durum, mesaj = "hata", "API anahtarı geçersiz/yok"
-                break
-            except (KaynakHatasi, AnalizHatasi) as hata:
+                if analiz.sehit_haberi and analiz.yeni_olay:
+                    for ham in _taslaklar(kod, kaynak, oge, makale, analiz):
+                        sonuc = kayit_aktar(s, ham, yeni_durum=Durum.onay_bekliyor)
+                        alan = _SAYAC_ALANI[sonuc.durum]
+                        setattr(durum, alan, (getattr(durum, alan) or 0) + 1)
+                        if sonuc.durum == "hatali":
+                            oge_hatali += 1
+                            logger.warning("%s/%s taslağı aktarılamadı: %s", kod, ham.dis_kimlik, temizle(sonuc.mesaj))
+            imlec.isle(oge)
+            durum.imlec = imlec.yaz()
+            s.commit()  # çökme olursa işlenen öğeler ve imleç korunur
+            hatali_taslak += oge_hatali
+        except AnalizYapilandirilmamis:
+            s.rollback()
+            durum = kaynak_durumu(s, kod)
+            son_durum, mesaj = "hata", "API anahtarı geçersiz/yok"
+            break
+        except Exception as hata:  # noqa: BLE001 - takılan öğe her turda baştan denenmesin
+            # Öğenin yarım işi geri alınır; takılı sayacı ayrı bir işlemde kalıcı olur ki
+            # koruma çalışmalar arasında sayabilsin (analiz sayacı zaten commit edildi).
+            s.rollback()
+            if isinstance(hata, (KaynakHatasi, AnalizHatasi)):
                 logger.warning("%s/%s işlenemedi: %s", kod, oge.kimlik, hata)
-                deneme = imlec.hata(oge)
-                if deneme < TAKILI_DENEME:
-                    son_durum, mesaj = "hata", temizle(f"{oge.kimlik}: {hata}")
-                    durum.imlec = imlec.yaz()
-                    break
-                logger.warning("%s/%s %d. denemede atlandı", kod, oge.kimlik, deneme)
-                durum.hatali = (durum.hatali or 0) + 1
-                mesaj = f"{deneme}. denemede atlandı: {oge.kimlik}"
-                imlec.ilerle(oge)
+                neden = str(hata)
+            else:
+                logger.exception("%s/%s işlenirken beklenmeyen hata", kod, oge.kimlik)
+                neden = f"{type(hata).__name__}: {hata}"
+            durum = kaynak_durumu(s, kod)
+            deneme = imlec.hata(oge)
+            if deneme < TAKILI_DENEME:
+                son_durum, mesaj = "hata", temizle(f"{oge.kimlik}: {neden}")
                 durum.imlec = imlec.yaz()
                 s.commit()
-                continue
-            if analiz.sehit_haberi and analiz.yeni_olay:
-                for ham in _taslaklar(kod, kaynak, oge, makale, analiz):
-                    sonuc = kayit_aktar(s, ham, yeni_durum=Durum.onay_bekliyor)
-                    alan = _SAYAC_ALANI[sonuc.durum]
-                    setattr(durum, alan, (getattr(durum, alan) or 0) + 1)
-                    if sonuc.durum == "hatali":
-                        hatali_taslak += 1
-                        logger.warning("%s/%s taslağı aktarılamadı: %s", kod, ham.dis_kimlik, temizle(sonuc.mesaj))
-        imlec.ilerle(oge)
-        durum.imlec = imlec.yaz()
-        s.commit()  # çökme olursa işlenen öğeler ve imleç korunur
+                break
+            logger.warning("%s/%s %d. denemede atlandı", kod, oge.kimlik, deneme)
+            durum.hatali = (durum.hatali or 0) + 1
+            mesaj = f"{deneme}. denemede atlandı: {oge.kimlik}"
+            imlec.isle(oge)
+            durum.imlec = imlec.yaz()
+            s.commit()
+    durum.imlec = imlec.yaz()  # öğe olmasa da: ilk çalışmanın tabanı ve budama kalıcı olsun
     if hatali_taslak and mesaj is None:
         mesaj = f"{hatali_taslak} taslak aktarılamadı"
     return _sonuc_yaz(s, durum, simdi, son_durum, mesaj)
