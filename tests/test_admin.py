@@ -413,3 +413,23 @@ def test_bildirim_saati_istanbul(panel_client, session):
     session.add(Bildirim(mesaj="x", tarih=datetime(2026, 1, 1, 21, 30)))  # naive = UTC
     session.commit()
     assert "02.01.2026 00:30" in panel_client.get("/panel/bildirimler").text
+
+
+def test_panel_duzenlemesi_elle_duzenlendi_isaretler(panel_client, csrf, sehit_ekle, session):
+    from app.models import Sehit
+
+    s = sehit_ekle(durum="onay_bekliyor")
+    assert s.elle_duzenlendi is False
+    panel_client.post(f"/panel/sehit/{s.id}", data=_form(csrf(panel_client)), follow_redirects=False)
+    session.refresh(s)
+    assert s.elle_duzenlendi is True
+    panel_client.post("/panel/sehit/yeni", data=_form(csrf(panel_client), kaynak_kodu=""), follow_redirects=False)
+    yeni = session.query(Sehit).order_by(Sehit.id.desc()).first()
+    assert yeni.elle_duzenlendi is True
+
+
+def test_kaydet_ve_onayla_da_isaretler(panel_client, csrf, sehit_ekle, session):
+    s = sehit_ekle(durum="onay_bekliyor")
+    panel_client.post(f"/panel/sehit/{s.id}", data=_form(csrf(panel_client), islem="onayla"), follow_redirects=False)
+    session.refresh(s)
+    assert s.elle_duzenlendi is True

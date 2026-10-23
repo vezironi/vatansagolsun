@@ -320,7 +320,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
             veri = veri_olustur(ham, "panel")
         except ValueError as hata:
             return _duzenle_sayfasi(request, kullanici, None, ham, str(hata), 400)
-        sehit = repo.yeni_sehit(s, veri, durum=Durum.onay_bekliyor)
+        sehit = repo.yeni_sehit(s, veri, durum=Durum.onay_bekliyor, elle=True)
         return RedirectResponse(f"/panel/sehit/{sehit.id}", status_code=303)
 
     @router.get("/sehit/{sehit_id:int}")
@@ -340,7 +340,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
             veri = veri_olustur(ham, sehit.kaynak_kodu)
         except ValueError as hata:
             return _duzenle_sayfasi(request, kullanici, sehit, ham, str(hata), 400)
-        repo.sehit_guncelle(s, sehit, veri)
+        repo.sehit_guncelle(s, sehit, veri, elle=True)
         if islem == "onayla":
             repo.durum_degistir(s, sehit, Durum.yayinda)
             return RedirectResponse("/panel", status_code=303)

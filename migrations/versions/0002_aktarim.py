@@ -37,6 +37,9 @@ def upgrade() -> None:
         batch_op.alter_column('isim_anahtari', existing_type=sa.String(length=400), server_default=None)
         batch_op.create_index(batch_op.f('ix_sehitler_isim_anahtari'), ['isim_anahtari'], unique=False)
 
+    with op.batch_alter_table('sehitler') as batch_op:
+        batch_op.add_column(sa.Column('elle_duzenlendi', sa.Boolean(), nullable=False, server_default=sa.false()))
+
     with op.batch_alter_table('kaynaklar') as batch_op:
         batch_op.add_column(sa.Column('kaynak_kodu', sa.String(length=50), nullable=True))
         batch_op.add_column(sa.Column('dis_kimlik', sa.String(length=300), nullable=True))
@@ -64,5 +67,6 @@ def downgrade() -> None:
         batch_op.drop_column('dis_kimlik')
         batch_op.drop_column('kaynak_kodu')
     with op.batch_alter_table('sehitler') as batch_op:
+        batch_op.drop_column('elle_duzenlendi')
         batch_op.drop_index(batch_op.f('ix_sehitler_isim_anahtari'))
         batch_op.drop_column('isim_anahtari')

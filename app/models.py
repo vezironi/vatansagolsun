@@ -2,7 +2,10 @@
 from datetime import date, datetime, timezone
 from enum import StrEnum
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean, Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
+)
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -62,6 +65,7 @@ class Sehit(Base):
     resmi_teyit: Mapped[bool] = mapped_column(Boolean, default=False)
     isimsiz: Mapped[bool] = mapped_column(Boolean, default=False)
     kaynak_kodu: Mapped[str] = mapped_column(String(50), index=True)
+    elle_duzenlendi: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     slug: Mapped[str] = mapped_column(String(300), default="")
     arama_metni: Mapped[str] = mapped_column(Text, default="", index=True)
     isim_anahtari: Mapped[str] = mapped_column(String(400), default="", index=True)

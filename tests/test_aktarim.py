@@ -177,3 +177,98 @@ def test_kaynak_calistir_diger_istisna_kaydedilir_ve_yeniden_firlatilir(session)
 def test_kaynak_durumu_olusturur(session):
     d = aktarim.kaynak_durumu(session, "egm")
     assert d.kaynak_kodu == "egm" and d.eklenen == 0 and aktarim.kaynak_durumu(session, "egm") is d
+
+
+# --- inceleme turu 1 ---
+
+def test_kayit_hatasi_loglanir_ve_son_mesaja_yazilir(session, caplog):
+    import logging
+    with caplog.at_level(logging.WARNING, logger="app.aktarim"):
+        d = aktarim.kaynak_calistir(
+            session, "kahramanlar", iter([("1", [ham(dk="kotu", ad="Ali", tarih=None), ham(dk="iyi")])])
+        )
+    assert d.hatali == 1 and d.eklenen == 1 and d.son_durum == "basarili"
+    assert d.son_mesaj and len(d.son_mesaj) <= 500 and "[SQL:" not in d.son_mesaj
+    assert "kahramanlar/kotu aktarılamadı" in caplog.text
+
+
+def test_mesaj_sql_dokumu_atilir_ve_kirpilir():
+    assert aktarim._temizle("Hata x [SQL: INSERT ...] [parameters: (1,)]") == "Hata x"
+    assert len(aktarim._temizle("a" * 900)) == 500
+
+
+def test_elle_duzenlenmis_kayit_ezilmez(session, sehit_ekle):
+    s = sehit_ekle(ad="Tayfun", soyad="Baş", sehadet_tarihi=date(2026, 6, 14), kaynak_kodu="panel",
+                   elle_duzenlendi=True, gorev=None)
+    r = aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="e", ad="TAYFUN", soyad="BAŞ",
+                                         tarih=date(2026, 6, 15), gorev="Polis Memuru"))
+    session.refresh(s)
+    assert r.durum == "yeni"  # farklı tam tarih eşleşmez; aynı tarihle deneyelim
+    r = aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="e2", ad="Tayfun", soyad="Baş", lakap=None,
+                                         gorev="Polis Memuru", memleket="Sivas"))
+    session.refresh(s)
+    assert r.durum == "birlesti" and r.sehit_id == s.id
+    assert (s.ad, s.sehadet_tarihi, s.kaynak_kodu) == ("Tayfun", date(2026, 6, 14), "panel")
+    assert (s.gorev, s.memleket) == ("Polis Memuru", "Sivas")  # boşlar dolar
+
+
+def test_elle_duzenlenmis_adi_ve_dolu_gorevi_ezmez(session, sehit_ekle):
+    s = sehit_ekle(ad="Tayfun", soyad="Baş", sehadet_tarihi=date(2026, 6, 14), kaynak_kodu="kahramanlar",
+                   elle_duzenlendi=True, gorev="Komiser")
+    aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="e", ad="TAYFUN", soyad="BAŞ", gorev="Polis Memuru"))
+    session.refresh(s)
+    assert (s.ad, s.gorev, s.kaynak_kodu) == ("Tayfun", "Komiser", "kahramanlar")
+
+
+def test_belirsiz_eslesme_yeni_kayit_ve_uyari(session, sehit_ekle, caplog):
+    import logging
+    sehit_ekle(ad="Tayfun", soyad="Baş", sehadet_tarihi=date(2026, 6, 14))
+    sehit_ekle(ad="Tayfun", soyad="Baş", sehadet_tarihi=date(2026, 6, 14))
+    with caplog.at_level(logging.WARNING, logger="app.aktarim"):
+        r = aktarim.kayit_aktar(session, ham())
+    assert r.durum == "yeni" and session.query(Sehit).count() == 3
+    assert "belirsiz eşleşme" in caplog.text
+
+
+def test_tamamlandi_sifirlama_ilk_sayfadan_once_hata_olsa_da_kalici(session):
+    d = aktarim.kaynak_durumu(session, "kahramanlar")
+    d.tamamlandi = True
+    session.commit()
+
+    def sayfalar():
+        raise KaynakHatasi("hemen")
+        yield  # pragma: no cover
+
+    d = aktarim.kaynak_calistir(session, "kahramanlar", sayfalar())
+    session.expire_all()
+    assert d.tamamlandi is False and d.son_durum == "hata"
+
+
+def test_duz_str_kategori_firlatmaz(session, sehit_ekle):
+    sehit_ekle(ad="Tayfun", soyad="Baş", sehadet_tarihi=date(2026, 6, 14), kategori="diger")
+    r = aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="e", kategori="polis"))
+    assert r.durum == "birlesti" and session.get(Sehit, r.sehit_id).kategori == "polis"
+
+
+def test_savepoint_kaynak_insert_hatasinda_sehit_satiri_geri_alinir(session, monkeypatch):
+    from app.models import Kaynak
+    aktarim.kayit_aktar(session, ham(dk="once", ad="Ali", soyad="Bir"))
+    # Kaynak eklenirken tekil kısıtı ihlal ettir: ayni (kaynak_kodu, dis_kimlik) ile ikinci satır
+    asil = aktarim._kaynak_kaydi
+
+    def bozuk(sehit, h):
+        if h.dis_kimlik == "cakisan":
+            k = asil(sehit, h)
+            k.dis_kimlik = "once"
+            return k
+        return asil(sehit, h)
+
+    monkeypatch.setattr(aktarim, "_kaynak_kaydi", bozuk)
+    r = aktarim.kayit_aktar(session, ham(dk="cakisan", ad="Veli", soyad="Iki"))
+    assert r.durum == "hatali" and "[SQL:" not in r.mesaj
+    assert aktarim.kayit_aktar(session, ham(dk="sonra", ad="Can", soyad="Uc")).durum == "yeni"
+    session.commit()
+    session.expire_all()
+    adlar = sorted(x.ad for x in session.query(Sehit))
+    assert adlar == ["Ali", "Can"]  # Veli'nin Sehit INSERT'i geri alındı
+    assert session.query(Kaynak).count() == 2

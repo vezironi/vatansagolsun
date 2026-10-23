@@ -106,10 +106,11 @@ def _alanlari_uygula(sehit: Sehit, veri: SehitVeri) -> None:
 
 
 def yeni_sehit(
-    s: Session, veri: SehitVeri, *, durum: Durum = Durum.onay_bekliyor, commit: bool = True
+    s: Session, veri: SehitVeri, *, durum: Durum = Durum.onay_bekliyor, commit: bool = True,
+    elle: bool = False,
 ) -> Sehit:
     """commit=False: yalnızca flush eder (çağıran savepoint/işlem sınırını yönetir)."""
-    sehit = Sehit(durum=durum)
+    sehit = Sehit(durum=durum, elle_duzenlendi=elle)
     _alanlari_uygula(sehit, veri)
     sehit.alanlari_yenile()
     s.add(sehit)
@@ -120,8 +121,11 @@ def yeni_sehit(
     return sehit
 
 
-def sehit_guncelle(s: Session, sehit: Sehit, veri: SehitVeri) -> Sehit:
+def sehit_guncelle(s: Session, sehit: Sehit, veri: SehitVeri, *, elle: bool = False) -> Sehit:
+    """elle=True: panel düzenlemesi; kayıt sonraki aktarımlarda ezilmez."""
     _alanlari_uygula(sehit, veri)
+    if elle:
+        sehit.elle_duzenlendi = True
     sehit.alanlari_yenile()
     s.commit()
     return sehit
