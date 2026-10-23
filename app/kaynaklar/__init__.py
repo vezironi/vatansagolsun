@@ -25,6 +25,8 @@ class HamKayit:
     kaynak_adi: str = ""
     kaynak_url: str | None = None
     metin: str | None = None
+    resmi_teyit: bool = True
+    isimsiz: bool = False
 
 
 class KaynakHatasi(Exception):

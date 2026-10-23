@@ -349,3 +349,16 @@ def test_harfsiz_ad_hatali(session):
         r = aktarim.kayit_aktar(session, ham(ad=ad, dk="x" + ad))
         assert r.durum == "hatali" and r.sehit_id is None
     assert session.query(Sehit).count() == 0
+
+
+def test_resmi_teyitsiz_ve_isimsiz_bayraklari(session):
+    r = aktarim.kayit_aktar(session, ham(kaynak_kodu="haber", dk="hurriyet:1#0", resmi_teyit=False))
+    s = session.get(Sehit, r.sehit_id)
+    assert s.resmi_teyit is False and s.isimsiz is False
+
+
+def test_isimsiz_kayit_eslestirilmez(session):
+    a = aktarim.kayit_aktar(session, ham(ad="İsimsiz", soyad=None, kaynak_kodu="haber", dk="h:1#isimsiz", isimsiz=True, tarih=None, hassasiyet=H.bilinmiyor, yil=None))
+    b = aktarim.kayit_aktar(session, ham(ad="İsimsiz", soyad=None, kaynak_kodu="haber", dk="h:2#isimsiz", isimsiz=True, tarih=None, hassasiyet=H.bilinmiyor, yil=None))
+    assert (a.durum, b.durum) == ("yeni", "yeni") and a.sehit_id != b.sehit_id
+    assert aktarim.kayit_aktar(session, ham(ad="İsimsiz", soyad=None, kaynak_kodu="haber", dk="h:1#isimsiz", isimsiz=True)).durum == "atlandi"

@@ -64,8 +64,8 @@ def ham_to_veri(ham: HamKayit) -> SehitVeri:
         baba_adi=_kirp(ham.baba_adi, 200),
         dogum_yili=ham.dogum_yili,
         donem=_kirp(ham.donem, 100),
-        resmi_teyit=True,
-        isimsiz=False,
+        resmi_teyit=ham.resmi_teyit,
+        isimsiz=ham.isimsiz,
         kaynak_kodu=ham.kaynak_kodu[:50],
     )
 
@@ -235,7 +235,7 @@ def kayit_aktar(s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda)
             if var is not None:
                 return Sonuc("atlandi", None)
             veri = ham_to_veri(ham)
-            mevcut = eslesen_bul(s, ham)
+            mevcut = None if ham.isimsiz else eslesen_bul(s, ham)
             if mevcut is None:
                 sehit = repo.yeni_sehit(s, veri, durum=yeni_durum, commit=False)
                 s.add(_kaynak_kaydi(sehit, ham))
