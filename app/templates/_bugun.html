@@ -2,7 +2,7 @@
 <div class="wrap">
   <div class="today">
     <div class="head">
-      <h2>Bugün, {{ bugun_metni }}</h2>
+      <h2>{{ baslik | default("Bugün, " ~ bugun_metni) }}</h2>
       <div class="sub">2000 yılından bu yana bu tarihte şehit düşenler</div>
     </div>
     <div class="today-grid">

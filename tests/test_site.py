@@ -60,3 +60,63 @@ def test_asiri_buyuk_sayfa_ve_ascii_disi_rakam_500_vermez(client, monkeypatch):
     assert client.get("/", params={"sayfa": "²"}).status_code == 200
     assert client.get("/", params={"yil": "²"}).status_code == 200
     assert client.get("/", params={"yil": "9" * 30}).status_code == 200
+
+
+def test_sehit_sayfasi_ve_yonlendirme(client, sehit_ekle):
+    s = sehit_ekle(ad="Hasan", soyad="Tekin")
+    r = client.get(s.url)
+    assert r.status_code == 200 and "<title>Hasan TEKİN — vatansagolsun</title>" in r.text
+    r = client.get(f"/sehit/yanlis-{s.id}", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == s.url
+
+
+def test_sehit_sayfasi_onay_bekleyen_404(client, sehit_ekle):
+    s = sehit_ekle(durum="onay_bekliyor")
+    assert client.get(f"/sehit/x-{s.id}").status_code == 404
+    assert client.get("/sehit/abc").status_code == 404
+
+
+def test_sehit_sayfasi_kotu_id_404(client):
+    assert client.get("/sehit/x-" + "9" * 40).status_code == 404
+    assert client.get("/sehit/x-١٢٣").status_code == 404
+
+
+def test_sehit_kaynak_linkleri_sadece_http(client, sehit_ekle, session):
+    from app.models import Kaynak
+    s = sehit_ekle()
+    session.add(Kaynak(sehit_id=s.id, url="javascript:alert(1)", baslik="Kötü", kaynak_adi="x"))
+    session.add(Kaynak(sehit_id=s.id, url="https://ornek.gov.tr/a", baslik="İyi", kaynak_adi="y"))
+    session.commit()
+    h = client.get(s.url).text
+    assert 'href="https://ornek.gov.tr/a"' in h and "javascript:" not in h
+
+
+def test_yil_donumleri_sayfasi(client, sehit_ekle):
+    sehit_ekle(ad="Cem", soyad="Uçar", sehadet_tarihi=date(2016, 7, 15))
+    assert "Cem UÇAR" in client.get("/yil-donumleri", params={"ay": 7, "gun": 15}).text
+    assert client.get("/yil-donumleri", params={"ay": 13, "gun": 99}).status_code == 200
+    assert client.get("/yil-donumleri", params={"ay": "9" * 50, "gun": "١"}).status_code == 200
+
+
+def test_hakkinda(client):
+    h = client.get("/hakkinda").text
+    assert "sehitlerimiz.org.tr — Türkiye Şehit Arşivi" in h and "resmî toplam değildir" in h
+
+
+def test_bildir(client, session):
+    from app.models import Bildirim
+    r = client.post("/bildir", data={"mesaj": "Tarih yanlış", "iletisim": ""})
+    assert "Teşekkürler" in r.text
+    assert session.query(Bildirim).one().mesaj == "Tarih yanlış"
+    assert "Teşekkürler" not in client.post("/bildir", data={"mesaj": "  "}).text
+
+
+def test_bildir_uzun_ve_sehit_id(client, session, sehit_ekle):
+    from app.models import Bildirim
+    assert "Teşekkürler" not in client.post("/bildir", data={"mesaj": "a" * 2001}).text
+    assert session.query(Bildirim).count() == 0
+    s = sehit_ekle()
+    assert client.get("/bildir", params={"sehit": "9" * 40}).status_code == 200
+    client.post("/bildir", data={"mesaj": "x", "sehit": str(s.id)})
+    client.post("/bildir", data={"mesaj": "y", "sehit": "abc"})
+    assert [b.sehit_id for b in session.query(Bildirim).order_by(Bildirim.id)] == [s.id, None]

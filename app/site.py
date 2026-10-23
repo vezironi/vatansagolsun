@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -118,4 +119,115 @@ def ana_sayfa(
             "sayfalar": sayfalar,
         },
     )
+
+
+def _tam_sayi(ham: str | None, en_cok_hane: int) -> int | None:
+    if ham is None or not (ham.isascii() and ham.isdigit()) or len(ham) > en_cok_hane:
+        return None
+    return int(ham)
+
+
+@router.get("/sehit/{slug_id}")
+def sehit_sayfasi(request: Request, slug_id: str, s: Oturum):
+    _, ayrac, ham_id = slug_id.rpartition("-")
+    sehit_id = _tam_sayi(ham_id, 9) if ayrac else None
+    sehit = repo.getir(s, sehit_id) if sehit_id is not None else None
+    if sehit is None:
+        raise HTTPException(status_code=404)
+    if request.url.path != sehit.url:
+        return RedirectResponse(sehit.url, status_code=301)
+    kaynaklar = [
+        k for k in sehit.kaynaklar if k.url and k.url.lower().startswith(("http://", "https://"))
+    ]
+    return templates.TemplateResponse(
+        request,
+        "sehit.html",
+        {"sehit": sehit, "kaynaklar": kaynaklar, "tarih": tarih_metni(sehit)},
+    )
+
+
+def _ay_gun_coz(ay: str | None, gun: str | None, bugun_tarihi) -> tuple[int, int]:
+    a, g = _tam_sayi(ay, 2), _tam_sayi(gun, 2)
+    if a is not None and g is not None and 1 <= a <= 12 and 1 <= g <= calendar.monthrange(2000, a)[1]:
+        return a, g
+    return bugun_tarihi.month, bugun_tarihi.day
+
+
+@router.get("/yil-donumleri")
+def yil_donumleri(request: Request, s: Oturum, ay: str | None = None, gun: str | None = None):
+    bugun_tarihi = bugun()
+    a, g = _ay_gun_coz(ay, gun, bugun_tarihi)
+    kayitlar = [
+        {"kayit": k, "yil_donumu": bugun_tarihi.year - k.yil}
+        for k in repo.yil_donumu(s, a, g, artik_yil=calendar.isleap(bugun_tarihi.year))
+    ]
+    metin = f"{g} {AYLAR[a - 1]}"
+    bugun_mu = (a, g) == (bugun_tarihi.month, bugun_tarihi.day)
+    return templates.TemplateResponse(
+        request,
+        "yil_donumleri.html",
+        {
+            "ay": a,
+            "gun": g,
+            "aylar": list(enumerate(AYLAR, start=1)),
+            "gunler": range(1, 32),
+            "bugun_kayitlari": kayitlar,
+            "bugun_metni": metin,
+            "baslik": f"Bugün, {metin}" if bugun_mu else metin,
+            "ay_adi": AYLAR[a - 1],
+        },
+    )
+
+
+@router.get("/hakkinda")
+def hakkinda(request: Request):
+    return templates.TemplateResponse(request, "hakkinda.html", {})
+
+
+MESAJ_EN_COK = 2000
+ILETISIM_EN_COK = 200
+
+
+def _bildir_sehit(s: Session, ham: str | None) -> Sehit | None:
+    sehit_id = _tam_sayi((ham or "").strip(), 9)
+    return repo.getir(s, sehit_id) if sehit_id is not None else None
+
+
+@router.get("/bildir")
+def bildir_formu(request: Request, s: Oturum, sehit: str | None = None):
+    return templates.TemplateResponse(
+        request,
+        "bildir.html",
+        {"sehit": _bildir_sehit(s, sehit), "mesaj": "", "iletisim": "", "hata": None},
+    )
+
+
+@router.post("/bildir")
+def bildir_gonder(
+    request: Request,
+    s: Oturum,
+    mesaj: Annotated[str, Form()] = "",
+    iletisim: Annotated[str, Form()] = "",
+    sehit: Annotated[str, Form()] = "",
+):
+    mesaj, iletisim = mesaj.strip(), iletisim.strip()
+    kayit = _bildir_sehit(s, sehit)
+    hata = None
+    if not mesaj:
+        hata = "Lütfen bir mesaj yazın."
+    elif len(mesaj) > MESAJ_EN_COK:
+        hata = f"Mesaj en fazla {MESAJ_EN_COK} karakter olabilir."
+    elif len(iletisim) > ILETISIM_EN_COK:
+        hata = f"İletişim bilgisi en fazla {ILETISIM_EN_COK} karakter olabilir."
+    if hata:
+        return templates.TemplateResponse(
+            request,
+            "bildir.html",
+            {"sehit": kayit, "mesaj": mesaj, "iletisim": iletisim, "hata": hata},
+            status_code=400,
+        )
+    repo.bildirim_ekle(
+        s, mesaj=mesaj, iletisim=iletisim or None, sehit_id=kayit.id if kayit else None
+    )
+    return templates.TemplateResponse(request, "bildir_tesekkur.html", {})
 

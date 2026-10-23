@@ -119,3 +119,29 @@
     footer .cols { grid-template-columns: 1fr; }
     th.h-m, td.h-m { display: none; }
   }
+
+  /* iç sayfalar */
+  .page { padding-top: 36px; padding-bottom: 36px; max-width: 760px; }
+  .page a.ul { color: var(--text); text-decoration: underline; }
+  .ptitle, .pname { font-family: "Cormorant Garamond", serif; font-weight: 600; margin: 0 0 14px; }
+  .ptitle { font-size: 34px; }
+  .pname { font-size: 46px; }
+  .page .role { color: var(--muted); margin-bottom: 22px; }
+  .info { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; margin: 0; font-size: 14px; }
+  .info dt { color: var(--muted); }
+  .info dd { margin: 0; }
+  .page .src { margin-top: 20px; font-size: 13px; color: var(--muted); }
+  .page .src a { text-decoration: underline; }
+  .page .rip { margin-top: 24px; font-family: "Cormorant Garamond", serif; font-style: italic; color: var(--muted); font-size: 19px; }
+  .pnote { color: var(--muted); font-size: 14px; }
+  .prose h2 { font-family: "Cormorant Garamond", serif; font-size: 24px; margin: 26px 0 8px; }
+  .prose p, .prose li { line-height: 1.6; }
+  .datepick { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .datepick select, .datepick button, .bform input, .bform textarea {
+    background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; font: inherit;
+  }
+  .datepick button, .bform button { cursor: pointer; border-color: var(--red); }
+  .bform { display: grid; gap: 16px; }
+  .bform label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+  .bform button { justify-self: start; background: var(--red); color: #fff; border: 0; border-radius: 4px; padding: 9px 22px; font: inherit; }
+  .err { color: var(--red-soft); }

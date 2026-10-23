@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block baslik %}{{ sehit.gorunen_ad }} — vatansagolsun{% endblock %}
+{% block meta %}<meta name="description" content="{{ sehit.gorunen_ad }}{% if sehit.gorev %}, {{ sehit.gorev }}{% endif %}{% if tarih %} — {{ tarih }}{% endif %}{% if sehit.memleket %} — {{ sehit.memleket }}{% endif %}. Mekânı cennet olsun.">{% endblock %}
+{% block icerik %}
+<div class="wrap page">
+  <h1 class="pname">{{ sehit.gorunen_ad }}</h1>
+  {% if sehit.gorev %}<div class="role">{{ sehit.gorev }}</div>{% endif %}
+  <dl class="info">
+    {% if tarih %}<dt>Şehadet tarihi</dt><dd>{{ tarih }}</dd>{% endif %}
+    {% if sehit.memleket %}<dt>Memleket</dt><dd>{{ sehit.memleket }}</dd>{% endif %}
+    {% if sehit.baba_adi %}<dt>Baba adı</dt><dd>{{ sehit.baba_adi }}</dd>{% endif %}
+    {% if sehit.dogum_yili %}<dt>Doğum yılı</dt><dd>{{ sehit.dogum_yili }}</dd>{% endif %}
+    {% if sehit.kurum %}<dt>Kurum</dt><dd>{{ sehit.kurum }}</dd>{% endif %}
+    {% if sehit.donem %}<dt>Dönem</dt><dd>{{ sehit.donem }}</dd>{% endif %}
+    {% if sehit.lakap and sehit.soyad %}<dt>Lakap</dt><dd>{{ sehit.lakap }}</dd>{% endif %}
+  </dl>
+  {% if kaynaklar %}
+  <div class="src">Kaynak:
+    {% for k in kaynaklar %}<a href="{{ k.url }}" rel="noopener nofollow" target="_blank">{{ k.baslik or k.kaynak_adi }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+  </div>
+  {% endif %}
+  <div class="rip">Mekânı cennet olsun.</div>
+  <p class="pnote"><a class="ul" href="/bildir?sehit={{ sehit.id }}">Bu kayıtta hata var mı? Bildir</a> · <a class="ul" href="/">Ana sayfa</a></p>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block baslik %}Yıl Dönümleri — vatansagolsun{% endblock %}
+{% block icerik %}
+<div class="wrap page">
+  <h1 class="ptitle">Yıl Dönümleri</h1>
+  <form class="datepick" method="get" action="/yil-donumleri">
+    <select name="gun" aria-label="Gün">{% for g in gunler %}<option value="{{ g }}"{{ " selected" if g == gun }}>{{ g }}</option>{% endfor %}</select>
+    <select name="ay" aria-label="Ay">{% for n, ad in aylar %}<option value="{{ n }}"{{ " selected" if n == ay }}>{{ ad }}</option>{% endfor %}</select>
+    <button type="submit">Göster</button>
+  </form>
+</div>
+{% include "_bugun.html" %}
+{% if not bugun_kayitlari %}<div class="wrap page"><p class="pnote">{{ gun }} {{ ay_adi }} tarihinde 2000 sonrası kayıtlı yıl dönümü yok.</p></div>{% endif %}
+{% endblock %}

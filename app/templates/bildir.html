@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block baslik %}Hatalı kayıt bildir — vatansagolsun{% endblock %}
+{% block icerik %}
+<div class="wrap page">
+  <h1 class="ptitle">Hatalı kayıt bildir</h1>
+  {% if sehit %}<p class="pnote">Kayıt: <a class="ul" href="{{ sehit.url }}">{{ sehit.gorunen_ad }}</a></p>{% endif %}
+  {% if hata %}<p class="err" role="alert">{{ hata }}</p>{% endif %}
+  <form class="bform" method="post" action="/bildir">
+    {% if sehit %}<input type="hidden" name="sehit" value="{{ sehit.id }}">{% endif %}
+    <label>Mesajınız
+      <textarea name="mesaj" rows="6" maxlength="2000" required>{{ mesaj }}</textarea>
+    </label>
+    <label>İletişim (isteğe bağlı)
+      <input type="text" name="iletisim" maxlength="200" value="{{ iletisim }}" placeholder="E-posta veya telefon">
+    </label>
+    <button type="submit">Gönder</button>
+  </form>
+</div>
+{% endblock %}
