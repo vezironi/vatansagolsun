@@ -14,7 +14,7 @@ from app.admin import GirisGerekli, secret_zayif_mi, giris_gerekli_isleyici, pan
 from app.api import api_router_olustur
 from app.config import Settings, get_settings
 from app.db import motor_olustur
-from app.site import router as site_router
+from app.site import bildir_router_olustur, router as site_router
 
 logger = logging.getLogger(__name__)
 PAKET_DIZINI = Path(__file__).resolve().parent
@@ -56,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(api_router_olustur(app.state.limiter, settings.istek_siniri))
     app.include_router(panel_router_olustur(app.state.limiter))
+    app.include_router(bildir_router_olustur(app.state.limiter))
     app.include_router(site_router)
     return app
 

@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from slowapi import Limiter
 from sqlalchemy.orm import Session
 
 from app import repo
@@ -186,6 +187,7 @@ def hakkinda(request: Request):
 
 MESAJ_EN_COK = 2000
 ILETISIM_EN_COK = 200
+BILDIR_SINIRI = "5/minute"
 
 
 def _bildir_sehit(s: Session, ham: str | None) -> Sehit | None:
@@ -202,32 +204,38 @@ def bildir_formu(request: Request, s: Oturum, sehit: str | None = None):
     )
 
 
-@router.post("/bildir")
-def bildir_gonder(
-    request: Request,
-    s: Oturum,
-    mesaj: Annotated[str, Form()] = "",
-    iletisim: Annotated[str, Form()] = "",
-    sehit: Annotated[str, Form()] = "",
-):
-    mesaj, iletisim = mesaj.strip(), iletisim.strip()
-    kayit = _bildir_sehit(s, sehit)
-    hata = None
-    if not mesaj:
-        hata = "Lütfen bir mesaj yazın."
-    elif len(mesaj) > MESAJ_EN_COK:
-        hata = f"Mesaj en fazla {MESAJ_EN_COK} karakter olabilir."
-    elif len(iletisim) > ILETISIM_EN_COK:
-        hata = f"İletişim bilgisi en fazla {ILETISIM_EN_COK} karakter olabilir."
-    if hata:
-        return templates.TemplateResponse(
-            request,
-            "bildir.html",
-            {"sehit": kayit, "mesaj": mesaj, "iletisim": iletisim, "hata": hata},
-            status_code=400,
-        )
-    repo.bildirim_ekle(
-        s, mesaj=mesaj, iletisim=iletisim or None, sehit_id=kayit.id if kayit else None
-    )
-    return templates.TemplateResponse(request, "bildir_tesekkur.html", {})
+def bildir_router_olustur(limiter: Limiter) -> APIRouter:
+    # Sınırlayıcı uygulamaya özel olduğundan yönlendirici uygulama başına kurulur (R6).
+    router = APIRouter()
 
+    @router.post("/bildir")
+    @limiter.limit(BILDIR_SINIRI)
+    def bildir_gonder(
+        request: Request,
+        s: Oturum,
+        mesaj: Annotated[str, Form()] = "",
+        iletisim: Annotated[str, Form()] = "",
+        sehit: Annotated[str, Form()] = "",
+    ):
+        mesaj, iletisim = mesaj.strip(), iletisim.strip()
+        kayit = _bildir_sehit(s, sehit)
+        hata = None
+        if not mesaj:
+            hata = "Lütfen bir mesaj yazın."
+        elif len(mesaj) > MESAJ_EN_COK:
+            hata = f"Mesaj en fazla {MESAJ_EN_COK} karakter olabilir."
+        elif len(iletisim) > ILETISIM_EN_COK:
+            hata = f"İletişim bilgisi en fazla {ILETISIM_EN_COK} karakter olabilir."
+        if hata:
+            return templates.TemplateResponse(
+                request,
+                "bildir.html",
+                {"sehit": kayit, "mesaj": mesaj, "iletisim": iletisim, "hata": hata},
+                status_code=400,
+            )
+        repo.bildirim_ekle(
+            s, mesaj=mesaj, iletisim=iletisim or None, sehit_id=kayit.id if kayit else None
+        )
+        return templates.TemplateResponse(request, "bildir_tesekkur.html", {})
+
+    return router
