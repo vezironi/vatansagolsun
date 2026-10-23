@@ -124,11 +124,27 @@ def sifre_olustur() -> int:
 
 
 HEPSI_SIRASI = ["egm", "sg", "sehitlerimiz", "kahramanlar"]
+SAYACLAR = ("eklenen", "birlesen", "atlanan", "hatali")
+
+
+def _sayilar(d: KaynakDurumu | None) -> dict[str, int]:
+    return {alan: (getattr(d, alan) or 0) if d is not None else 0 for alan in SAYACLAR}
+
+
+def _sayi_metni(sayilar: dict[str, int]) -> str:
+    return " ".join(f"{alan}={sayilar[alan]}" for alan in SAYACLAR)
 
 
 def _ozet(kod: str, d: KaynakDurumu) -> str:
-    return (f"{kod}: eklenen={d.eklenen or 0} birlesen={d.birlesen or 0} atlanan={d.atlanan or 0} "
-            f"hatali={d.hatali or 0} durum={d.son_durum} imlec={d.imlec}")
+    return f"{kod}: {_sayi_metni(_sayilar(d))} durum={d.son_durum} imlec={d.imlec}"
+
+
+def _calisma_ozeti(kod: str, d: KaynakDurumu, onceki: dict[str, int]) -> str:
+    """Bu çalışmanın sayıları (öncekinden fark) ve birikmiş toplam ayrı ayrı."""
+    toplam = _sayilar(d)
+    bu = {alan: toplam[alan] - onceki[alan] for alan in SAYACLAR}
+    return (f"{kod}: {_sayi_metni(bu)} (toplam: {_sayi_metni(toplam)}) "
+            f"durum={d.son_durum} imlec={d.imlec}")
 
 
 def aktar(argv: list[str]) -> int:
@@ -148,6 +164,7 @@ def aktar(argv: list[str]) -> int:
     getirici = Getirici()
     with sessionmaker(motor_olustur(ayarlar.database_url))() as session:
         for kod in izinli:
+            onceki = _sayilar(session.get(KaynakDurumu, kod))
             try:
                 durum = aktarim.kaynagi_aktar(session, kod, getirici, bastan=secenekler.bastan)
             except KeyboardInterrupt:
@@ -159,7 +176,7 @@ def aktar(argv: list[str]) -> int:
                 print(f"{kod}: beklenmeyen hata: {type(hata).__name__}: {hata}", file=sys.stderr)
                 hata_var = True
                 continue
-            print(_ozet(kod, durum))
+            print(_calisma_ozeti(kod, durum, onceki))
             if durum.son_durum == "hata":
                 print(f"{kod}: hata: {durum.son_mesaj}", file=sys.stderr)
                 hata_var = True

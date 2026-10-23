@@ -204,3 +204,34 @@ def test_aktarim_durumu_yazdirir(cli_db, monkeypatch, capsys):
     capsys.readouterr()
     assert cli.main(["aktarim-durumu"]) == 0
     assert "sg: eklenen=1" in capsys.readouterr().out
+
+
+# --- son inceleme: I6, M5 ---
+
+def test_ozet_bu_calismayi_ve_toplami_ayri_yazar(cli_db, monkeypatch, capsys):
+    monkeypatch.setitem(aktarim.OKUYUCULAR, "egm", sahte_okuyucu("egm"))
+    monkeypatch.setattr(cli, "Getirici", lambda: object())
+    assert cli.main(["aktar", "egm"]) == 0
+    assert "egm: eklenen=3 birlesen=0 atlanan=0 hatali=0 (toplam: eklenen=3 " in capsys.readouterr().out
+    assert cli.main(["aktar", "egm", "--bastan"]) == 0  # doğru tekrar çalışma hiçbir şey eklemez
+    cikti = capsys.readouterr().out
+    assert "egm: eklenen=0 birlesen=0 atlanan=3 hatali=0 (toplam: eklenen=3 birlesen=0 atlanan=3 " in cikti
+    assert cli.main(["aktar", "egm"]) == 0  # tamamlanmış kaynak: okuyucu çalışmaz
+    assert "egm: eklenen=0 birlesen=0 atlanan=0 hatali=0 (toplam: eklenen=3 " in capsys.readouterr().out
+
+
+def test_hepsi_erken_hata_sonrakileri_durdurmaz(cli_db, monkeypatch, capsys):
+    def patlayan(g, imlec):
+        raise RuntimeError("beklenmedik")
+        yield  # pragma: no cover
+    monkeypatch.setitem(aktarim.OKUYUCULAR, "egm", sahte_okuyucu("egm", hata={"sayfa": 1}))
+    monkeypatch.setitem(aktarim.OKUYUCULAR, "sg", patlayan)
+    for kod in ("sehitlerimiz", "kahramanlar"):
+        monkeypatch.setitem(aktarim.OKUYUCULAR, kod, sahte_okuyucu(kod, sayfa_sayisi=1))
+    monkeypatch.setattr(cli, "Getirici", lambda: object())
+    assert cli.main(["aktar", "hepsi"]) == 1
+    cikti = capsys.readouterr()
+    assert "egm: hata: ağ hatası" in cikti.err and "sg: beklenmeyen hata: RuntimeError" in cikti.err
+    assert "sehitlerimiz: eklenen=1 " in cikti.out
+    assert "kahramanlar: eklenen=0 birlesen=1 " in cikti.out  # aynı sahte kişi: sehitlerimiz kaydına katıldı
+    assert _sayi(cli_db) == 1
