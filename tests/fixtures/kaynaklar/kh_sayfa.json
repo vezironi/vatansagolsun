@@ -1,0 +1,81 @@
+{
+ "data": [
+  {
+   "ad": "MUSTAFA",
+   "rutbe": "Er / Erbaş",
+   "sehadet_tarihi": "",
+   "harp": "BİRİNCİ DÜNYA SAVAŞI (1914-1918) ÇANAKKALE CEPHESİ",
+   "baba_adi": "HASAN",
+   "lakap": "",
+   "dogum_yili": "1885",
+   "memleketi": "KASTAMONU ARAÇ",
+   "il_filtresi": "KASTAMONU",
+   "sayfa": 0
+  },
+  {
+   "ad": "İSMAİL",
+   "rutbe": "General",
+   "sehadet_tarihi": "",
+   "harp": "OSMANLI-RUS SAVAŞI (1877-1878/93 HARBİ)",
+   "baba_adi": "İBRAHİM",
+   "lakap": "ALİPAŞA",
+   "dogum_yili": "",
+   "memleketi": "ERZİNCAN KEMALİYE",
+   "il_filtresi": "ERZİNCAN",
+   "sayfa": 0
+  },
+  {
+   "ad": "P. UZM. ÇVŞ. AHMET KÖROĞLU",
+   "rutbe": "Uzman Çavuş",
+   "sehadet_tarihi": "",
+   "harp": "PENÇE-KİLİT HAREKATI (2024)",
+   "baba_adi": "ÖMER",
+   "lakap": "",
+   "dogum_yili": "1994",
+   "memleketi": "GİRESUN ÇANAKÇI",
+   "il_filtresi": "GİRESUN",
+   "sayfa": 1
+  },
+  {
+   "ad": "YILDIZ GÜRSOY",
+   "rutbe": "Sivil Şehit / Memur",
+   "sehadet_tarihi": "",
+   "harp": "15 TEMMUZ DEMOKRASİ VE MİLLİ BİRLİK GÜNÜ (2016)",
+   "baba_adi": "ALİ",
+   "lakap": "SİVİL ŞEHİT",
+   "dogum_yili": "1974",
+   "memleketi": "KIRŞEHİR",
+   "il_filtresi": "KIRŞEHİR",
+   "sayfa": 1
+  },
+  {
+   "ad": "P. ASB. KD. BÇVŞ. ÖMER HALİSDEMİR",
+   "rutbe": "Astsubay",
+   "sehadet_tarihi": "",
+   "harp": "15 TEMMUZ DEMOKRASİ VE MİLLİ BİRLİK GÜNÜ (2016)",
+   "baba_adi": "HASAN HÜSEYİN",
+   "lakap": "15 TEMMUZ KAHRAMANI",
+   "dogum_yili": "1974",
+   "memleketi": "NİĞDE BOR ÇUKURKUYU",
+   "il_filtresi": "NİĞDE",
+   "sayfa": 1
+  },
+  {
+   "ad": "PİYADE ÇAVUŞ ALPER KOCA",
+   "rutbe": "Çavuş",
+   "sehadet_tarihi": "",
+   "harp": "VATANİ GÖREV (DİYARBAKIR/LİCE - 2000)",
+   "baba_adi": "-",
+   "lakap": "ŞEHİDİMİZ",
+   "dogum_yili": "1979",
+   "memleketi": "YOZGAT (YENİFAKILI)",
+   "il_filtresi": "YOZGAT",
+   "sayfa": 1
+  }
+ ],
+ "total": 6,
+ "page": 1,
+ "limit": 50,
+ "has_more": true,
+ "meta": null
+}
