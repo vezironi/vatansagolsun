@@ -30,6 +30,10 @@ class HamKayit:
 class KaynakHatasi(Exception):
     """Kaynaktan veri alınırken oluşan hata."""
 
+    def __init__(self, mesaj: str = "", *, durum_kodu: int | None = None) -> None:
+        super().__init__(mesaj)
+        self.durum_kodu = durum_kodu  # HTTP durum kodu (4xx yanıtlarında), yoksa None
+
 
 class KaynakIzniYok(KaynakHatasi):
     """Kaynak izin listesinde olmadığı için istek atılmadı."""

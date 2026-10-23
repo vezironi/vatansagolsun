@@ -101,3 +101,10 @@ def test_json_gecersiz_govde_kaynak_hatasi():
     g, _ = _getirici(lambda r: httpx.Response(404 if r.url.path == "/robots.txt" else 200, text="<html>"))
     with pytest.raises(KaynakHatasi):
         g.json("egm", "https://x.test/a")
+
+def test_4xx_hatasi_durum_kodunu_tasir():
+    g, _ = _getirici(lambda r: httpx.Response(404, text="yok"))
+    with pytest.raises(KaynakHatasi) as hata:
+        g.metin("egm", "https://x.test/yok")
+    assert hata.value.durum_kodu == 404
+    assert KaynakHatasi("x").durum_kodu is None

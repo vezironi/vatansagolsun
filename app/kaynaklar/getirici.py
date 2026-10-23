@@ -60,7 +60,7 @@ class Getirici:
             yanit = self._istek(yontem, url, **kw)
             if yanit.status_code not in YONLENDIRME_KODLARI:
                 if yanit.status_code >= 400:
-                    raise KaynakHatasi(f"{url} HTTP {yanit.status_code} döndü")
+                    raise KaynakHatasi(f"{url} HTTP {yanit.status_code} döndü", durum_kodu=yanit.status_code)
                 return yanit
             konum = yanit.headers.get("location")
             if not konum:
