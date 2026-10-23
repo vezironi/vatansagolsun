@@ -6,6 +6,8 @@ from typing import Literal, Protocol
 import anthropic
 from pydantic import BaseModel, Field
 
+from app.dates import TZ
+
 SISTEM_ISTEMI = """Sen Türk şehitlerini anan bir arşiv için haber metinlerini inceleyen bir analiz asistanısın.
 
 Görevin: verilen haber başlığı ve metninin bir şehadet haberi olup olmadığını belirlemek ve haberdeki şehitlere ait bilgileri yapılandırılmış biçimde çıkarmak.
@@ -62,7 +64,8 @@ class ClaudeAnalizci:
         self.istemci = istemci
 
     def analiz_et(self, *, baslik: str, govde: str, yayin: datetime) -> HaberAnalizi:
-        icerik = f"Yayın tarihi: {yayin.date().isoformat()}\nBaşlık: {baslik}\n\n{govde}"
+        yerel = yayin.astimezone(TZ)
+        icerik = f"Yayın tarihi: {yerel:%Y-%m-%d %H:%M} (Europe/Istanbul)\nBaşlık: {baslik}\n\n{govde}"
         try:
             yanit = self.istemci.messages.parse(
                 model=self.model,
@@ -75,6 +78,8 @@ class ClaudeAnalizci:
             raise AnalizYapilandirilmamis("Claude kimlik doğrulaması başarısız") from e
         except anthropic.APIError as e:
             raise AnalizHatasi(f"Claude isteği başarısız: {type(e).__name__}") from e
+        except ValueError as e:  # parse() çıktıyı kendisi doğrular (ValidationError)
+            raise AnalizHatasi("Claude çıktısı çözümlenemedi") from e
         if yanit.stop_reason == "refusal":
             raise AnalizHatasi("Claude isteği reddetti")
         if yanit.parsed_output is None:

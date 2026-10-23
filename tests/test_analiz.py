@@ -99,3 +99,18 @@ def test_analizci_olustur(monkeypatch):
 def test_sistem_istemi_sabit():
     assert "uydurma" in SISTEM_ISTEMI
     assert "2026" not in SISTEM_ISTEMI
+
+
+def test_dogrulama_hatasi_analiz_hatasi():
+    with pytest.raises(ValidationError) as ve:
+        HaberAnalizi.model_validate({})
+    with pytest.raises(AnalizHatasi):
+        analizci(hata=ve.value).analiz_et(baslik="B", govde="G", yayin=YAYIN)
+
+
+def test_yayin_tarihi_istanbul_saatiyle():
+    ist = sahte_istemci(None)
+    with pytest.raises(AnalizHatasi):
+        ClaudeAnalizci(model="m", istemci=ist).analiz_et(
+            baslik="B", govde="G", yayin=datetime(2026, 10, 22, 21, 30, tzinfo=timezone.utc))
+    assert "2026-10-23 00:30" in type(ist.messages).kw["messages"][0]["content"]
