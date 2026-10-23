@@ -1,12 +1,14 @@
 from datetime import date
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app import models  # noqa: F401  (tabloları Base'e kaydeder)
-from app.db import Base
+from app.db import Base, get_session
+from app.main import create_app
 from app.models import Sehit
 
 
@@ -41,3 +43,15 @@ def sehit_ekle(session):
         return s
 
     return _ekle
+
+
+@pytest.fixture
+def app(session):
+    uygulama = create_app()
+    uygulama.dependency_overrides[get_session] = lambda: session
+    return uygulama
+
+
+@pytest.fixture
+def client(app):
+    return TestClient(app)

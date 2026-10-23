@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models import Hassasiyet, Kategori
 
@@ -32,3 +32,57 @@ class SehitVeri(BaseModel):
         if self.tarih_hassasiyeti == Hassasiyet.yil and self.yil is None:
             raise ValueError("Yıl hassasiyeti için yıl zorunludur.")
         return self
+
+
+class KaynakYanit(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    kaynak_adi: str
+    url: str | None = None
+
+
+class SehitOzet(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ad: str
+    soyad: str | None
+    lakap: str | None
+    gorunen_ad: str
+    sehadet_yili: int | None = Field(validation_alias="yil")
+    sehadet_tarihi: date | None
+    tarih_hassasiyeti: Hassasiyet
+    gorev: str | None
+    kategori: Kategori
+    memleket: str | None
+    url: str
+
+
+class SehitDetay(SehitOzet):
+    kurum: str | None
+    baba_adi: str | None
+    dogum_yili: int | None
+    donem: str | None
+    kaynaklar: list[KaynakYanit]
+
+
+class IstatistikYanit(BaseModel):
+    toplam: int
+    bu_yil: int
+    yil: int
+
+
+class ListeYanit(BaseModel):
+    toplam: int
+    sayfa: int
+    adet: int
+    kayitlar: list[SehitOzet]
+
+
+class BugunKayit(SehitOzet):
+    yil_donumu: int
+
+
+class BugunYanit(BaseModel):
+    tarih: str
+    kayitlar: list[BugunKayit]
