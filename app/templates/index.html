@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block icerik %}
+{% include "_bugun.html" %}
+
+<div class="wrap">
+  <div class="hero">
+    <div class="flagline"></div>
+    <div class="stats">
+      <div class="stat"><div class="num" data-hedef="{{ istatistik.toplam }}">{{ "{:,}".format(istatistik.toplam).replace(",", ".") }}</div><div class="lbl">Toplam Şehit</div></div>
+      <div class="stat"><div class="num" data-hedef="{{ istatistik.bu_yil }}">{{ "{:,}".format(istatistik.bu_yil).replace(",", ".") }}</div><div class="lbl">{{ istatistik.yil }} Yılında</div></div>
+    </div>
+  </div>
+  <div class="years">
+    {% for etiket, href, secili in yillar %}<a href="{{ href }}" class="{{ 'on' if secili else '' }}">{{ etiket }}</a>{% endfor %}
+  </div>
+  <form id="ara" class="tools" method="get" action="/">
+    <input type="hidden" name="yil" value="{{ secili_yil }}">
+    <input class="search" type="search" name="q" value="{{ q }}" placeholder="İsim, il veya görev ara…">
+    <div class="countline">
+      {% if secili_yil == "tumu" %}Toplam <b>{{ sayfa_sonucu.toplam }}</b> kayıt
+      {% elif secili_yil == "2000-oncesi" %}2000 öncesi <b>{{ sayfa_sonucu.toplam }}</b> kayıt
+      {% else %}<b>{{ secili_etiket }}</b> yılında <b>{{ sayfa_sonucu.toplam }}</b> şehit{% endif %}
+    </div>
+  </form>
+  {% include "_tablo.html" %}
+</div>
+{% endblock %}
+
+{% block son %}
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <button class="x" type="button" aria-label="Kapat">×</button>
+    <h3 id="m-ad"></h3>
+    <div class="role" id="m-gorev"></div>
+    <dl id="m-dl"></dl>
+    <div class="src" id="m-kaynak"></div>
+    <div class="rip">Mekânı cennet olsun.</div>
+    <div class="kayit-link"><a id="m-link" href="#">Kayıt sayfası</a></div>
+  </div>
+</div>
+<script src="/static/site.js"></script>
+{% endblock %}

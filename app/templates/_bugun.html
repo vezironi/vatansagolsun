@@ -1,0 +1,19 @@
+{% if bugun_kayitlari %}
+<div class="wrap">
+  <div class="today">
+    <div class="head">
+      <h2>Bugün, {{ bugun_metni }}</h2>
+      <div class="sub">2000 yılından bu yana bu tarihte şehit düşenler</div>
+    </div>
+    <div class="today-grid">
+      {% for b in bugun_kayitlari %}
+      <div class="tcard" data-id="{{ b.kayit.id }}">
+        <span class="y">{% if b.yil_donumu > 0 %}{{ b.yil_donumu }}. yıl dönümü{% else %}Bugün{% endif %}</span>
+        <div class="n">{{ b.kayit.gorunen_ad }}</div>
+        <div class="m">{{ b.kayit|tarih_metni }}{% if b.kayit.gorev %} · {{ b.kayit.gorev }}{% endif %}{% if b.kayit.memleket %}<br>{{ b.kayit.memleket }}{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}

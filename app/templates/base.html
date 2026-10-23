@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block baslik %}Vatan Sağ Olsun{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/site.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="logo" href="/">VATAN<b>SAĞOLSUN</b></a>
+    <nav><a href="/#ara">Ara</a><a href="/yil-donumleri">Yıl Dönümleri</a><a href="/hakkinda">Hakkında</a><a href="/api/belgeler">API</a></nav>
+  </div>
+</header>
+
+{% block icerik %}{% endblock %}
+
+<footer>
+  <div class="wrap cols">
+    <div>
+      <p><b class="strong">vatansagolsun</b> — Türk askerleri, polisleri, öğretmenleri ve görev başında hayatını kaybeden tüm şehitlerimiz için dijital bir anıt.</p>
+      <p>Geçmiş kayıtlar kamuya açık resmî kaynaklardan derlenmiştir. Yeni kayıtlar MSB açıklamaları ve haber kaynaklarından toplanır, yayından önce elle doğrulanır.</p>
+      <p>Buradaki sayılar arşivimizdeki kayıt sayısıdır, resmî toplam değildir.</p>
+      <p>Hatalı ya da eksik bir kayıt mı gördünüz? <a class="ul" href="/bildir">Hatalı kayıt bildir</a>.</p>
+    </div>
+    <div>
+      <p class="strong">Açık API</p>
+      <p><code>GET /api/istatistik</code></p>
+      <p><code>GET /api/sehitler?yil=2026&amp;sayfa=1</code></p>
+      <p><code>GET /api/bugun</code></p>
+    </div>
+  </div>
+</footer>
+{% block son %}{% endblock %}
+</body>
+</html>

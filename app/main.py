@@ -12,6 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.api import api_router_olustur
 from app.config import Settings, get_settings
 from app.db import motor_olustur
+from app.site import router as site_router
 
 PAKET_DIZINI = Path(__file__).resolve().parent
 
@@ -39,6 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.mount("/static", StaticFiles(directory=static_dizini), name="static")
 
     app.include_router(api_router_olustur(app.state.limiter, settings.istek_siniri))
+    app.include_router(site_router)
     return app
 
 

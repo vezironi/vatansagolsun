@@ -1,0 +1,24 @@
+<table>
+  <thead><tr><th>Ad Soyad</th><th>Şehadet Tarihi</th><th>Görev</th><th class="h-m">Memleket</th><th class="h-m">Kurum</th></tr></thead>
+  <tbody>
+    {% for k in sayfa_sonucu.kayitlar %}
+    <tr data-id="{{ k.id }}">
+      <td class="name">{{ k.gorunen_ad }}</td>
+      <td>{{ k|tarih_metni }}</td>
+      <td>{% if k.gorev %}<span class="tag r-{{ k.kategori }}">{{ k.gorev }}</span>{% endif %}</td>
+      <td class="h-m">{{ k.memleket or "" }}</td>
+      <td class="h-m">{{ k.kurum or "" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="bos">Kayıt yok.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if sayfa_sayisi > 1 %}
+<div class="pager">
+  {% for n, href in sayfalar %}
+    {% if n is none %}<span class="gap">…</span>
+    {% else %}<a href="{{ href }}" class="{{ 'on' if n == sayfa else '' }}">{{ n }}</a>{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
