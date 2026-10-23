@@ -8,10 +8,32 @@
 
 <p class="sayilar">
   Bugünkü analiz: <b>{{ analiz_sayisi }} / {{ analiz_siniri }}</b>
-  · Claude API: <b>{% if api_yapilandirildi %}yapılandırıldı{% else %}anahtar yok{% endif %}</b>
+  · Analiz anahtarı: <b>{% if api_yapilandirildi %}yapılandırıldı{% else %}anahtar yok{% endif %}</b>
   · Zamanlayıcı: <b>{% if zamanlayici_acik %}açık{% else %}kapalı{% endif %}</b>
   {% if sonraki_calisma %}· Sonraki çalışma: <b>{{ sonraki_calisma|istanbul_saati }}</b>{% endif %}
 </p>
+
+<h2 class="serif">Analiz sağlayıcıları</h2>
+<table class="tablo">
+  <thead><tr><th>Sıra</th><th>Sağlayıcı</th><th>Anahtar</th><th>Model</th><th>Durum</th><th>Son başarılı kullanım</th></tr></thead>
+  <tbody>
+  {% for x in saglayicilar %}
+    <tr>
+      <td>{{ x.sira }}</td><td>{{ x.ad }}</td>
+      {% if x.durum == "bilinmeyen" %}
+      <td>-</td><td>-</td><td>bilinmeyen sağlayıcı</td><td>-</td>
+      {% else %}
+      <td>{% if x.anahtar_var %}var{% else %}yok{% endif %}</td>
+      <td>{{ x.model }}</td>
+      <td>{% if x.durum == "tukendi" %}tükendi — {{ x.tukenme_bitis|istanbul_saati }}'e kadar
+          {% elif x.durum == "anahtar_yok" %}kullanılmıyor (anahtar yok)
+          {% else %}kullanılabilir{% endif %}</td>
+      <td>{% if x.son_basarili %}{{ x.son_basarili|istanbul_saati }}{% else %}-{% endif %}</td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
 
 <table class="tablo">
   <thead>

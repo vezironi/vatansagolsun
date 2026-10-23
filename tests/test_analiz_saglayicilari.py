@@ -476,3 +476,55 @@ def test_gemini_belirsiz_429_gecici_gunluk_tukendi():
     assert _gemini_kota_bitti(_gemini_429("GenerateRequestsPerDayPerProjectPerModel")) is True
     assert _gemini_kota_bitti(_gemini_429(mesaj="You exceeded your daily quota")) is True
     assert _gemini_kota_bitti(_gemini_429(mesaj="limit of 50 requests per day")) is True
+
+
+# --- panel tablosu ---------------------------------------------------------------------------------
+from app.analiz import saglayici_tablosu  # noqa: E402
+
+
+def _park(fabrika, ad, *, durum, imlec=None, an=T0):
+    with fabrika() as s:
+        s.add(KaynakDurumu(kaynak_kodu=f"analiz_{ad}", tamamlandi=False, eklenen=0, birlesen=0, atlanan=0,
+                           hatali=0, son_calisma=an, son_durum=durum, imlec=imlec))
+        s.commit()
+
+
+def test_saglayici_tablosu_siraya_gore_anahtar_ve_durum(monkeypatch, fabrika):
+    _anahtarsiz(monkeypatch)
+    _park(fabrika, "openai", durum="tukendi", imlec=T0.isoformat())
+    _park(fabrika, "claude", durum="basarili", an=T0 - timedelta(hours=1))
+    ayar = _ayar(openai_api_key="gizli-o", anthropic_api_key="gizli-c")
+    with fabrika() as s:
+        satirlar = saglayici_tablosu(ayar, s, simdi=T0 + timedelta(hours=2))
+    assert [x["ad"] for x in satirlar] == ["openai", "gemini", "claude"]
+    o, g, c = satirlar
+    assert (o["sira"], o["anahtar_var"], o["model"], o["durum"]) == (1, True, "o-model", "tukendi")
+    assert o["tukenme_bitis"] == T0 + timedelta(hours=24)
+    assert g["anahtar_var"] is False and g["durum"] == "anahtar_yok" and g["model"] == "g-model"
+    assert c["durum"] == "kullanilabilir" and c["son_basarili"].replace(tzinfo=None) == (T0 - timedelta(hours=1)).replace(tzinfo=None)  # SQLite saat dilimsiz
+    assert o["son_basarili"] is None
+    assert "gizli" not in repr(satirlar)
+
+
+def test_saglayici_tablosu_suresi_dolan_tukendi_kullanilabilir(monkeypatch, fabrika):
+    _anahtarsiz(monkeypatch)
+    _park(fabrika, "openai", durum="tukendi", imlec=T0.isoformat())
+    with fabrika() as s:
+        (o,) = saglayici_tablosu(_ayar(openai_api_key="a", analiz_sirasi=["openai"]), s,
+                                 simdi=T0 + timedelta(hours=25))
+    assert o["durum"] == "kullanilabilir" and o["tukenme_bitis"] is None
+
+
+def test_saglayici_tablosu_bilinmeyen_ad(monkeypatch, fabrika):
+    _anahtarsiz(monkeypatch)
+    with fabrika() as s:
+        satirlar = saglayici_tablosu(_ayar(analiz_sirasi=["mistral"]), s, simdi=T0)
+    assert satirlar[0]["ad"] == "mistral" and satirlar[0]["durum"] == "bilinmeyen"
+    assert satirlar[0]["anahtar_var"] is False
+
+
+def test_analizci_olustur_bilinmeyen_adi_uyarir(monkeypatch, fabrika, caplog):
+    _anahtarsiz(monkeypatch)
+    z = analizci_olustur(_ayar(analiz_sirasi=["mistral", "openai"], openai_api_key="a"), fabrika)
+    assert [s.ad for s in z.saglayicilar] == ["openai"]
+    assert "mistral" in caplog.text

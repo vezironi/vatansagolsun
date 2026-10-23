@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import repo
-from app.analiz import analiz_yapilandirildi_mi
+from app.analiz import analiz_yapilandirildi_mi, saglayici_tablosu
 from app.dates import TZ, bugun
 from app.db import get_session
 from app.kaynaklar import haber
@@ -406,6 +406,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
                 "analiz_sayisi": int(sayi) if gun == bugun().isoformat() and sayi.isdigit() else 0,
                 "analiz_siniri": ayarlar.gunluk_analiz_siniri,
                 # Anahtarın kendisi şablona hiç verilmez; yalnızca var/yok bilgisi.
+                "saglayicilar": saglayici_tablosu(ayarlar, s),
                 "api_yapilandirildi": analiz_yapilandirildi_mi(ayarlar),
                 "zamanlayici_acik": zamanlayici is not None,
                 "sonraki_calisma": getattr(is_, "next_run_time", None),

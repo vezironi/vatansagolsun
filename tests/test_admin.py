@@ -586,3 +586,36 @@ def test_izni_kaldirilmis_kaynagin_eski_hatasi_uyarmaz(panel_client, session, ap
     monkeypatch.setattr(app.state.settings, "kaynak_izinleri", ["egm"])  # egm izinliyse egm_toplayici sayılır
     assert "Toplayıcıda hata var" in panel_client.get("/panel").text
     assert "eski egm hatası" in panel_client.get("/panel/toplayici").text
+
+
+def test_toplayici_analiz_saglayicilari_tablosu(panel_client, app, session, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
+
+    from app.models import KaynakDurumu
+
+    ayar = app.state.settings
+    for ad in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.delenv(ad, raising=False)
+    monkeypatch.setattr(ayar, "analiz_sirasi", ["openai", "gemini", "claude"])
+    monkeypatch.setattr(ayar, "openai_api_key", "sk-openai-gizli-111")
+    monkeypatch.setattr(ayar, "gemini_api_key", "")
+    monkeypatch.setattr(ayar, "anthropic_api_key", "sk-ant-gizli-222")
+    an = datetime.now(timezone.utc) - timedelta(hours=1)
+    session.add(KaynakDurumu(kaynak_kodu="analiz_openai", tamamlandi=False, eklenen=0, birlesen=0, atlanan=0,
+                             hatali=0, son_calisma=an, son_durum="tukendi", imlec=an.isoformat()))
+    session.commit()
+    t = panel_client.get("/panel/toplayici").text
+    assert "Analiz sağlayıcıları" in t
+    assert ayar.openai_modeli in t and ayar.gemini_modeli in t and ayar.analiz_modeli in t
+    assert t.index("openai") < t.index("gemini") < t.index("claude")
+    bitis = (an + timedelta(hours=24)).astimezone(ZoneInfo("Europe/Istanbul")).strftime("%d.%m.%Y %H:%M")
+    assert f"tükendi — {bitis}'e kadar" in t
+    assert "kullanılabilir" in t
+    assert "gizli" not in t
+
+
+def test_toplayici_bilinmeyen_saglayici_satiri(panel_client, app, monkeypatch):
+    monkeypatch.setattr(app.state.settings, "analiz_sirasi", ["mistral"])
+    t = panel_client.get("/panel/toplayici").text
+    assert "mistral" in t and "bilinmeyen sağlayıcı" in t

@@ -187,29 +187,49 @@ docker compose exec app python -m app.cli sehitlerimiz-kontrol
 Site, **30 dakikada bir** (sunucu açıldıktan 2 dakika sonra ilk tur) yeni şehit haberlerini kendisi arar. Bunun için `.env` içinde `ZAMANLAYICI_AKTIF=true` olmalıdır (`docker-compose.yml` bunu zaten açar). Her tur şunlara bakar:
 
 - Resmî sayfalar: Emniyet (`egm`) ve Sahil Güvenlik (`sg`) sitelerinin en yeni kayıtları.
-- Haber siteleri: **Hürriyet** ve **Sabah**. Bu sitelerin haber akışındaki, şehitlik içeren haberler yapay zekâ (Claude) ile okunur; haberde geçen şehitlerin adı, görevi, tarihi çıkarılır. Her haber yalnızca bir kez okunur.
+- Haber siteleri: **Hürriyet** ve **Sabah**. Bu sitelerin haber akışındaki, şehitlik içeren haberler yapay zekâ (OpenAI, Gemini veya Claude) ile okunur; haberde geçen şehitlerin adı, görevi, tarihi çıkarılır. Her haber yalnızca bir kez okunur.
 - AA ve TRT de desteklenir ama **varsayılan kapalıdır**. Açmak için `.env` içindeki `KAYNAK_IZINLERI` listesine `"aa"` ve/veya `"trt"` ekleyip `docker compose up -d` çalıştırın.
 
 **Toplayıcı hiçbir kaydı kendi başına yayına almaz.** Bulduğu her yeni kayıt panelde **onay bekleyenler** arasına düşer; siz bakıp onaylayınca yayınlanır.
 
-### Claude API anahtarı
+### Yapay zekâ analizi (OpenAI, Gemini, Claude)
 
-Haber okuma için bir Claude API anahtarı gerekir (resmî sayfa taraması anahtarsız da çalışır):
+Haber okuma için en az bir yapay zekâ anahtarı gerekir. Üç sağlayıcı desteklenir ve **sırayla** denenir: önce **OpenAI**, o kullanılamazsa **Gemini**, o da olmazsa **Claude**. Hepsini girmeniz gerekmez; anahtarını girdiğiniz sağlayıcılar kullanılır, anahtarı olmayan atlanır. Hiç anahtar yoksa haber analizi yapılmaz, yalnızca resmî sayfalar taranır (panelde "API anahtarı yok" görünür ve "Toplayıcıda hata var" uyarısı çıkar; bu beklenen bir durumdur, anahtar ekleyince kaybolur).
+
+**1. OpenAI (ücretli, kullandıkça kredi düşer)**
+
+1. https://platform.openai.com adresinde hesap açın, **Billing** bölümünden kredi yükleyin.
+2. **API keys** bölümünden yeni anahtar oluşturup kopyalayın (yalnızca bir kez gösterilir).
+3. `.env` dosyasına yapıştırın: `OPENAI_API_KEY=sk-...`
+
+Dikkat: ChatGPT uygulamasındaki abonelik veya bakiye API'de **geçmez**. API için platform.openai.com'a ayrıca kredi yüklemeniz gerekir.
+
+**2. Gemini (ücretsiz katmanı var)**
+
+1. https://aistudio.google.com adresine Google hesabınızla girin, **Get API key** düğmesiyle anahtar oluşturun.
+2. `.env` dosyasına yapıştırın: `GEMINI_API_KEY=...`
+
+Ücretsiz katmanın günlük sınırı vardır; kalan hakkınızı AI Studio'da görürsünüz. Sınır dolunca Gemini o gün için "tükendi" sayılır. Ücretsiz katmanda gönderilen metinler Google tarafından ürün geliştirmede kullanılabilir; ancak gönderilenler zaten herkese açık haber metinleridir.
+
+**3. Claude**
 
 1. https://console.anthropic.com adresinde hesap açın, faturalandırma bilgisi ekleyin.
-2. **API Keys** bölümünden yeni bir anahtar oluşturun ve kopyalayın (yalnızca bir kez gösterilir).
-3. `.env` dosyasındaki satıra yapıştırın: `ANTHROPIC_API_KEY=sk-ant-...`
-4. `docker compose up -d` ile yeniden başlatın.
+2. **API Keys** bölümünden yeni anahtar oluşturup kopyalayın (yalnızca bir kez gösterilir).
+3. `.env` dosyasına yapıştırın: `ANTHROPIC_API_KEY=sk-ant-...`
 
-Anahtarı kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "yapılandırıldı" ya da "anahtar yok" yazar. Anahtar yoksa haber siteleri atlanır ("API anahtarı yok" durumu), resmî sayfalar taranmaya devam eder. Bu yüzden anahtar eklenene kadar panelin üstünde "Toplayıcıda hata var" uyarısı görünür; bu beklenen bir durumdur, anahtarı ekleyince kaybolur.
+Anahtarları ekledikten sonra `docker compose up -d` ile yeniden başlatın. Anahtarları kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "var" ya da "yok" yazar.
 
-**Tahmini maliyet:** günde birkaç düzine haber okunur. Küçük ve ucuz model (Haiku 5.5) kullanıldığı için olağan bir ayda maliyet birkaç doların altında kalır. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır.
+**Sırayı değiştirmek:** `.env` dosyasındaki `ANALIZ_SIRASI` satırını düzenleyin; örneğin Claude'u öne almak için `ANALIZ_SIRASI=["claude","openai","gemini"]`. Her sağlayıcının modeli `OPENAI_MODELI`, `GEMINI_MODELI` ve `ANALIZ_MODELI` (Claude) ile değiştirilebilir; varsayılanlar ucuz modellerdir, değiştirmeniz gerekmez.
 
-**Üst sınır:** yoğun bir dönemde her gün 200 sınırına ulaşılır ve haberler uzunsa, aylık maliyet **onlarca dolara** çıkabilir. Daha düşük bir tavan için `.env` dosyasında `GUNLUK_ANALIZ_SINIRI` değerini küçültün (örneğin `GUNLUK_ANALIZ_SINIRI=50`) ve `docker compose up -d` ile yeniden başlatın. Sınır dolunca o günün kalan haberleri ertesi güne kalır (3 güne kadar telafi edilir). Ayrıca console.anthropic.com'da aylık harcama limiti koymanızı öneririz.
+**Otomatik geçiş nasıl çalışır:** Bir haber için sırayla sağlayıcılar denenir. Geçici bir sorun olursa (internet kesintisi, yoğunluk) aynı haber sıradaki sağlayıcıya verilir. Bir sağlayıcının kredisi ya da günlük hakkı bittiyse veya anahtarı geçersizse panelde **"tükendi"** yazar; sistem onu **24 saat** hiç denemez, haberleri sıradakilere verir. 24 saat dolunca kendiliğinden tekrar dener; sizin bir şey yapmanız gerekmez (kredi yüklediyseniz bile bekleyip kendiliğinden devreye girmesini görürsünüz). Tüm sağlayıcılar tükenmişse haberler bekletilir, kredi yükleyince ya da süre dolunca işlenir.
+
+**Tahmini maliyet:** günde birkaç düzine haber okunur ve ucuz modeller kullanılır; olağan bir ayda maliyet birkaç doların altında kalır. Gemini ücretsiz katmanı yetiyorsa hiç ödemeyebilirsiniz. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır; haber başına bir sayılır.
+
+**Üst sınır:** yoğun bir dönemde her gün 200 sınırına ulaşılır ve haberler uzunsa, ücretli sağlayıcılarda aylık maliyet **onlarca dolara** çıkabilir. Daha düşük bir tavan için `.env` dosyasında `GUNLUK_ANALIZ_SINIRI` değerini küçültün (örneğin `GUNLUK_ANALIZ_SINIRI=50`) ve `docker compose up -d` ile yeniden başlatın. Sınır dolunca o günün kalan haberleri ertesi güne kalır (3 güne kadar telafi edilir). Ayrıca sağlayıcıların sitelerinde aylık harcama limiti koymanızı öneririz.
 
 ### Panelde izleme
 
-Panelde **Toplayıcı** sekmesi her kaynağın son çalışma zamanını, durumunu ve kaç kayıt eklediğini gösterir; bugün kaç haberin okunduğunu ve anahtarın tanımlı olup olmadığını da yazar. **Şimdi çalıştır** düğmesi turu beklemeden başlatır (bir tur zaten sürüyorsa "Toplayıcı zaten çalışıyor; bittiğinde tekrar deneyin" yazar). Eklenen/Birleşen/Atlanan/Hatalı sütunları ilk çalışmadan bu yana **toplam** sayılardır. Toplayıcıda hata varsa ana panelin üstünde kısa bir uyarı çıkar. Zamanlayıcı kapalıysa elle çalıştırın:
+Panelde **Toplayıcı** sekmesi her kaynağın son çalışma zamanını, durumunu ve kaç kayıt eklediğini gösterir; bugün kaç haberin okunduğunu da yazar. **Analiz sağlayıcıları** tablosu her sağlayıcının sırasını, anahtarının var olup olmadığını (anahtarın kendisi görünmez), modelini, durumunu ("kullanılabilir" ya da "tükendi — ... kadar") ve son başarılı kullanımını gösterir. **Şimdi çalıştır** düğmesi turu beklemeden başlatır (bir tur zaten sürüyorsa "Toplayıcı zaten çalışıyor; bittiğinde tekrar deneyin" yazar). Eklenen/Birleşen/Atlanan/Hatalı sütunları ilk çalışmadan bu yana **toplam** sayılardır. Toplayıcıda hata varsa ana panelin üstünde kısa bir uyarı çıkar. Zamanlayıcı kapalıysa elle çalıştırın:
 
 ```bash
 docker compose exec app python -m app.cli topla

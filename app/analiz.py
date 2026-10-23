@@ -129,6 +129,33 @@ def _etkin_saglayicilar(settings) -> list[str]:
     return etkin
 
 
+def saglayici_tablosu(settings, session, simdi: datetime | None = None) -> list[dict]:
+    """Panel için `analiz_sirasi` sırasıyla sağlayıcı satırları. Anahtarın kendisi asla dönmez."""
+    simdi = simdi or utc_now()
+    anahtarlar = _anahtarlar(settings)
+    modeller = {"openai": getattr(settings, "openai_modeli", ""), "gemini": getattr(settings, "gemini_modeli", ""),
+                "claude": getattr(settings, "analiz_modeli", "")}
+    satirlar: list[dict] = []
+    for sira, ad in enumerate(getattr(settings, "analiz_sirasi", None) or VARSAYILAN_SIRA, start=1):
+        satir = {"sira": sira, "ad": ad, "anahtar_var": False, "model": "", "durum": "bilinmeyen",
+                 "tukenme_bitis": None, "son_basarili": None}
+        if ad in anahtarlar:
+            satir["anahtar_var"] = bool(anahtarlar[ad])
+            satir["model"] = modeller[ad]
+            satir["durum"] = "kullanilabilir" if satir["anahtar_var"] else "anahtar_yok"
+            durum = session.get(KaynakDurumu, park_kodu(ad))
+            if durum is not None:
+                if durum.son_durum == "basarili":
+                    satir["son_basarili"] = durum.son_calisma
+                if satir["anahtar_var"] and _park_suresinde_mi(durum.imlec, simdi):
+                    bitis = datetime.fromisoformat(durum.imlec)
+                    if bitis.tzinfo is None:
+                        bitis = bitis.replace(tzinfo=timezone.utc)
+                    satir["durum"], satir["tukenme_bitis"] = "tukendi", bitis + TUKENME_SURESI
+        satirlar.append(satir)
+    return satirlar
+
+
 def analiz_yapilandirildi_mi(settings) -> bool:
     """Sıradaki herhangi bir sağlayıcının kimlik bilgisi var mı? (İstemci kurmadan, ucuz denetim.)"""
     return bool(_etkin_saglayicilar(settings))
@@ -226,6 +253,9 @@ def _varsayilan_oturum_fabrikasi(settings):
 
 def analizci_olustur(settings, session_factory=None) -> ZincirAnalizci | None:
     """`analiz_sirasi` sırasıyla, anahtarı olan sağlayıcılardan zincir kurar; hiç yoksa None."""
+    for ad in getattr(settings, "analiz_sirasi", None) or []:
+        if ad not in VARSAYILAN_SIRA:
+            logger.warning("analiz_sirasi içinde bilinmeyen sağlayıcı yok sayıldı: %s", ad)
     etkin = _etkin_saglayicilar(settings)
     if not etkin:
         return None

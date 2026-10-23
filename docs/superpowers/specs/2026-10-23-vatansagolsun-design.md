@@ -56,7 +56,7 @@ Sistem üç iş yapar:
 | Web/API | FastAPI; site ve panel sunucu tarafında Jinja2 şablonlarıyla üretilir |
 | Veritabanı | PostgreSQL |
 | Zamanlayıcı | Uygulama içinde 30 dakikalık iş (APScheduler veya eşdeğeri) |
-| Haber analizi | Anthropic Claude Haiku (`claude-haiku-5-5`) |
+| Haber analizi | OpenAI → Gemini → Claude sırasıyla otomatik geçiş; anahtarı olmayan sağlayıcı atlanır, kredisi/kotası biten 24 saat atlanır (kullanıcı kararı 2026-10-23) |
 | Dağıtım | Docker Compose; tek bir ucuz VPS (ör. Hetzner); HTTPS (ör. Caddy) |
 | Alan adı | vatansagolsun.com veya benzeri (kullanıcı alır) |
 
