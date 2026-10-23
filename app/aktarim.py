@@ -80,14 +80,45 @@ def _ham_yil(ham: HamKayit) -> int | None:
     return ham.tarih.year if ham.tarih else None
 
 
+def _il(memleket: str | None) -> str | None:
+    """Memleketin ilk sözcüğü (il), katlanmış."""
+    sozcukler = katla(memleket or "").split()
+    return sozcukler[0] if sozcukler else None
+
+
+def _celisir(a: Sehit, ham: HamKayit) -> bool:
+    """İki kaydın aynı kişi olamayacağını gösteren bilinen alan farkı var mı?"""
+    if a.baba_adi and ham.baba_adi and katla(a.baba_adi) != katla(ham.baba_adi):
+        return True
+    if a.dogum_yili is not None and ham.dogum_yili is not None and a.dogum_yili != ham.dogum_yili:
+        return True
+    if not a.soyad and not _kirp(ham.soyad, 200):  # tek isimli çift: memleketin ili de ayırt eder
+        il_a, il_h = _il(a.memleket), _il(ham.memleket)
+        if il_a and il_h and il_a != il_h:
+            return True
+    return False
+
+
 def eslesen_bul(s: Session, ham: HamKayit) -> Sehit | None:
-    """Durumdan bağımsız, isim anahtarı + tarih/ek alan kurallarıyla aynı kişiyi bulur."""
+    """Durumdan bağımsız, isim anahtarı + tarih/ek alan kurallarıyla aynı kişiyi bulur.
+
+    Osmanlı dönemi kayıtlarının çoğu tek isimlidir ("MUSTAFA"): bu adlar tek başına kişiyi
+    ayırt etmez. Bu yüzden çelişen aday (baba adı, doğum yılı, tek isimlide il farkı) baştan
+    elenir; tek isimli kayıt tarihsizken yalnızca aynı baba adıyla birleşir.
+    """
     anahtar = isim_anahtari(_kirp(ham.ad, 200) or "", _kirp(ham.soyad, 200), _kirp(ham.lakap, 200))
     if not anahtar:
         return None
-    adaylar = list(s.scalars(select(Sehit).where(Sehit.isim_anahtari == anahtar).order_by(Sehit.id)))
+    adaylar = [
+        a for a in s.scalars(select(Sehit).where(Sehit.isim_anahtari == anahtar).order_by(Sehit.id))
+        if not _celisir(a, ham)
+    ]
     if not adaylar:
         return None
+    ham_tek_isim = not (_kirp(ham.soyad, 200) or _kirp(ham.lakap, 200))
+
+    def tek_isim(a: Sehit) -> bool:
+        return ham_tek_isim or not (a.soyad or a.lakap)
 
     h_hass = Hassasiyet(ham.hassasiyet)
     if h_hass == Hassasiyet.tam and ham.tarih is None:
@@ -120,18 +151,24 @@ def eslesen_bul(s: Session, ham: HamKayit) -> Sehit | None:
         if uyanlar:
             return tek("2", uyanlar)
     # 3. en az biri tarihsiz/yıl-hassas + baba adı / dönem / kurum eşit
+    #    (tek isimli kayıtta yalnızca baba adı: aynı dönem/kurum binlerce "Mustafa"yı birleştirirdi)
     uyanlar = []
     for a in adaylar:
         if hass(a) == Hassasiyet.tam and h_hass == Hassasiyet.tam:
             continue
         if h_yil is not None and a.yil is not None and h_yil != a.yil:
             continue  # bilinen yıllar çelişiyorsa asla eşleşmez
-        if _ayni(ham.baba_adi, a.baba_adi) or _ayni(ham.donem, a.donem) or _ayni(ham.kurum, a.kurum):
+        if _ayni(ham.baba_adi, a.baba_adi) or (
+            not tek_isim(a) and (_ayni(ham.donem, a.donem) or _ayni(ham.kurum, a.kurum))
+        ):
             uyanlar.append(a)
     if uyanlar:
         return tek("3", uyanlar)
-    # 4. tek aday, ikisinin de tarihi yok
-    if len(adaylar) == 1 and h_hass == Hassasiyet.bilinmiyor and hass(adaylar[0]) == Hassasiyet.bilinmiyor:
+    # 4. tek aday, ikisinin de tarihi yok; yalnızca soyadlı/lakaplı isimde
+    if (
+        len(adaylar) == 1 and not tek_isim(adaylar[0])
+        and h_hass == Hassasiyet.bilinmiyor and hass(adaylar[0]) == Hassasiyet.bilinmiyor
+    ):
         return adaylar[0]
     return None
 
@@ -159,7 +196,10 @@ def _birlestir(sehit: Sehit, veri: SehitVeri) -> None:
         if Kategori(veri.kategori) != Kategori.diger:
             sehit.kategori = veri.kategori
         sehit.kaynak_kodu = veri.kaynak_kodu
-    elif Kategori(sehit.kategori) == Kategori.diger and Kategori(veri.kategori) != Kategori.diger:
+    elif (
+        not sehit.elle_duzenlendi
+        and Kategori(sehit.kategori) == Kategori.diger and Kategori(veri.kategori) != Kategori.diger
+    ):
         sehit.kategori = veri.kategori
     # Hassasiyet asla düşmez: eşleşen kayıtların bilinen yılları zaten çelişmez.
     _tarihi_guncelle(sehit, veri, esit_olsa_da=ham_ustun, kilitli=bool(sehit.elle_duzenlendi))

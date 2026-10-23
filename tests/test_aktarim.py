@@ -198,17 +198,15 @@ def test_mesaj_sql_dokumu_atilir_ve_kirpilir():
 
 
 def test_elle_duzenlenmis_kayit_ezilmez(session, sehit_ekle):
-    s = sehit_ekle(ad="Tayfun", soyad="Baş", sehadet_tarihi=date(2026, 6, 14), kaynak_kodu="panel",
-                   elle_duzenlendi=True, gorev=None)
+    # Panelde yalnızca yılı girilmiş tek kayıt; egm (öncelik 3) aynı yıl, tam tarih ve büyük harfli adla gelir.
+    s = sehit_ekle(ad="Tayfun", soyad="Baş", tarih_hassasiyeti="yil", sehadet_tarihi=None, yil=2026,
+                   kaynak_kodu="kahramanlar", elle_duzenlendi=True, gorev=None)
     r = aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="e", ad="TAYFUN", soyad="BAŞ",
-                                         tarih=date(2026, 6, 15), gorev="Polis Memuru"))
+                                         tarih=date(2026, 6, 15), gorev="Polis Memuru", memleket="Sivas"))
     session.refresh(s)
-    assert r.durum == "yeni"  # farklı tam tarih eşleşmez; aynı tarihle deneyelim
-    r = aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="e2", ad="Tayfun", soyad="Baş", lakap=None,
-                                         gorev="Polis Memuru", memleket="Sivas"))
-    session.refresh(s)
-    assert r.durum == "birlesti" and r.sehit_id == s.id
-    assert (s.ad, s.sehadet_tarihi, s.kaynak_kodu) == ("Tayfun", date(2026, 6, 14), "panel")
+    assert r.durum == "birlesti" and r.sehit_id == s.id and session.query(Sehit).count() == 1
+    assert (s.ad, s.kaynak_kodu) == ("Tayfun", "kahramanlar")  # ad ("TAYFUN" değil) ve kaynak ezilmez
+    assert (s.tarih_hassasiyeti, s.sehadet_tarihi, s.yil) == (H.yil, None, 2026)  # bilinen tarih kilitli
     assert (s.gorev, s.memleket) == ("Polis Memuru", "Sivas")  # boşlar dolar
 
 
@@ -272,3 +270,75 @@ def test_savepoint_kaynak_insert_hatasinda_sehit_satiri_geri_alinir(session, mon
     adlar = sorted(x.ad for x in session.query(Sehit))
     assert adlar == ["Ali", "Can"]  # Veli'nin Sehit INSERT'i geri alındı
     assert session.query(Kaynak).count() == 2
+
+
+# --- son inceleme: C1 farklı kişiler birleşmez ---
+
+def _osmanli(**kw):
+    v = dict(kaynak_kodu="kahramanlar", ad="Mustafa", soyad=None, tarih=None, hassasiyet=H.bilinmiyor, yil=None,
+             donem="BİRİNCİ DÜNYA SAVAŞI (1914-1918) ÇANAKKALE CEPHESİ", kurum=None)
+    v.update(kw)
+    return ham(**v)
+
+
+def test_dort_farkli_mustafa_dort_satir(session):
+    kayitlar = [
+        _osmanli(dk="m1", baba_adi="Hasan", memleket="Kastamonu Araç", dogum_yili=1885),
+        _osmanli(dk="m2", baba_adi="Ali", memleket="Çorum Kargı", dogum_yili=1885,
+                 donem="BİRİNCİ DÜNYA SAVAŞI (1914-1918) IRAK CEPHESİ"),
+        _osmanli(dk="m3", baba_adi="Osman", memleket="Mersin Mut", donem="BALKAN SAVAŞLARI"),
+        _osmanli(dk="m4", memleket="Tekirdağ Malkara"),
+    ]
+    assert [aktarim.kayit_aktar(session, k).durum for k in kayitlar] == ["yeni"] * 4
+    assert session.query(Sehit).count() == 4
+
+
+def test_ayni_donem_ya_da_kurum_tek_isimde_yetmez(session):
+    aktarim.kayit_aktar(session, _osmanli(dk="a", kurum="Kara Kuvvetleri"))
+    assert aktarim.kayit_aktar(session, _osmanli(dk="b", kurum="Kara Kuvvetleri")).durum == "yeni"
+
+
+def test_ayni_mustafa_iki_kaynaktan_birlesir(session):
+    aktarim.kayit_aktar(session, _osmanli(kaynak_kodu="sehitlerimiz", dk="116", ad="MUSTAFA", baba_adi="Hasan",
+                                          memleket="Kastamonu"))
+    r = aktarim.kayit_aktar(session, _osmanli(dk="kh:1", baba_adi="HASAN", memleket="Kastamonu Araç",
+                                              dogum_yili=1885))
+    s = session.get(Sehit, r.sehit_id)
+    assert r.durum == "birlesti" and session.query(Sehit).count() == 1
+    assert (s.kaynak_kodu, s.dogum_yili, len(s.kaynaklar)) == ("sehitlerimiz", 1885, 2)
+
+
+def test_tarihsiz_soyadli_iki_kaynaktan_birlesir(session):
+    kw = dict(ad="Ali", soyad="KAYA", tarih=None, hassasiyet=H.bilinmiyor, yil=None)
+    aktarim.kayit_aktar(session, ham(kaynak_kodu="sehitlerimiz", dk="1", **kw))
+    assert aktarim.kayit_aktar(session, ham(dk="kh:1", memleket="Sivas", **kw)).durum == "birlesti"
+
+
+def test_tek_isim_tarihsiz_tek_aday_birlesmez(session):
+    aktarim.kayit_aktar(session, _osmanli(dk="a"))
+    assert aktarim.kayit_aktar(session, _osmanli(dk="b", kaynak_kodu="sehitlerimiz")).durum == "yeni"
+
+
+def test_ayni_tarih_ve_isim_farkli_baba_birlesmez(session):
+    aktarim.kayit_aktar(session, ham(dk="a", baba_adi="Ali"))
+    assert aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="b", baba_adi="Veli")).durum == "yeni"
+
+
+def test_farkli_dogum_yili_birlesmez(session):
+    aktarim.kayit_aktar(session, ham(dk="a", dogum_yili=1990))
+    assert aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="b", dogum_yili=1991)).durum == "yeni"
+    assert aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="c", dogum_yili=1990)).durum == "birlesti"
+
+
+def test_tek_isimde_farkli_il_birlesmez_ayni_il_birlesir(session):
+    aktarim.kayit_aktar(session, _osmanli(dk="a", baba_adi="Hasan", memleket="Kastamonu Araç"))
+    assert aktarim.kayit_aktar(session, _osmanli(dk="b", baba_adi="Hasan", memleket="Antalya Alanya")).durum == "yeni"
+    assert aktarim.kayit_aktar(session, _osmanli(dk="c", baba_adi="Hasan", memleket="KASTAMONU")).durum == "birlesti"
+
+
+def test_elle_duzenlenmis_diger_kategorisi_ezilmez(session, sehit_ekle):
+    s = sehit_ekle(ad="Tayfun", soyad="Baş", sehadet_tarihi=date(2026, 6, 14), kategori="diger",
+                   elle_duzenlendi=True)
+    r = aktarim.kayit_aktar(session, ham(kategori="polis"))
+    session.refresh(s)
+    assert r.durum == "birlesti" and s.kategori == "diger"
