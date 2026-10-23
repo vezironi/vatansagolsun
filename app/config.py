@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     api_haric_kaynaklar: list[str] = []
     istek_siniri: str = "60/minute"
     site_url: str = "http://localhost:8000"
+    kaynak_izinleri: list[str] = ["egm", "sg", "kahramanlar", "sehitlerimiz"]
+    istek_araligi_sn: float = 2.0
     oturum_https: bool = False  # üretimde True: oturum çerezi yalnızca HTTPS ile gider
 
 
