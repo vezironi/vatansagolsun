@@ -39,3 +39,11 @@ def test_postgresql_icin_eminim_gerekir(monkeypatch, capsys):
     monkeypatch.setattr(get_settings(), "database_url", "postgresql+psycopg://x@yok/yok")
     assert cli.main(["ornek-veri"]) == 1
     assert "--eminim" in capsys.readouterr().err
+
+
+def test_bos_env_degiskenleri_varsayilana_duser(monkeypatch):
+    from app.config import Settings
+    monkeypatch.setenv("OTURUM_HTTPS", "")
+    monkeypatch.setenv("API_HARIC_KAYNAKLAR", "")
+    ayar = Settings(_env_file=None)
+    assert ayar.oturum_https is False and ayar.api_haric_kaynaklar == []

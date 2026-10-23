@@ -63,7 +63,7 @@ nano .env        # kaydet: Ctrl+O, Enter; çık: Ctrl+X
 Doldurmanız gerekenler:
 
 - `ALAN_ADI` ve `SITE_URL`: kendi alan adınız (`ornek.com` / `https://ornek.com`).
-- `OTURUM_HTTPS=true`: olduğu gibi bırakın (sunucuda HTTPS ile çalışır). Yalnızca bilgisayarınızda HTTP ile deneyecekseniz boş bırakın ya da silin.
+- `OTURUM_HTTPS=true`: olduğu gibi bırakın (sunucuda HTTPS ile çalışır). Yalnızca bilgisayarınızda HTTP ile deneyecekseniz `OTURUM_HTTPS=false` yazın (ya da satırı silin).
 - `SECRET_KEY`: **en az 32 rastgele karakter olmalıdır.** Kısa ya da `degistir` kalırsa **yönetici paneli kilitli kalır**. Üretmek için:
 
   ```bash
@@ -113,13 +113,15 @@ git pull && docker compose up -d --build
 Veritabanının yedeğini alın (düzenli olarak, örneğin haftada bir):
 
 ```bash
-docker compose exec -T db pg_dump -U vatansagolsun vatansagolsun > yedek-$(date +%F).sql
+docker compose exec -T db pg_dump --clean --if-exists -U vatansagolsun vatansagolsun > yedek-$(date +%F).sql
 ```
 
-Yedeği geri yüklemek için:
+Yedeği geri yüklemek için önce uygulamayı durdurun, yükleyin, sonra yeniden başlatın:
 
 ```bash
+docker compose stop app
 docker compose exec -T db psql -U vatansagolsun vatansagolsun < yedek-2026-01-01.sql
+docker compose start app
 ```
 
 Yedek dosyasını sunucudan başka bir yere (kendi bilgisayarınıza) kopyalamayı unutmayın.
