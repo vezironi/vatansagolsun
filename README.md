@@ -152,6 +152,25 @@ docker compose exec app python -m app.cli aktarim-durumu  # her kaynak için say
 
 Toplu aktarımla gelen kayıtlar doğrudan yayına girer. Aynı kayıt iki kez eklenmez; komutu tekrar çalıştırmak güvenlidir.
 
+### Fotoğraf ve şehadet ayrıntısı
+
+Şehit penceresinde ve kayıt sayfasında, kaynak veriyorsa fotoğraf, şehadet yeri ve "Şehadeti" (nasıl şehit düştüğü) gösterilir:
+
+| Kaynak | Fotoğraf | Şehadet yeri | Şehadeti |
+|---|---|---|---|
+| `temmuz15` | ✓ | ✓ | ✓ (biyografi, son tam cümlede kesilir) |
+| `egm` | ✓ (tek kişilik kartlar) | | |
+| `sg` | ✓ | | |
+| `sehitlerimiz` | | ✓ | |
+| haber taraması | | | ✓ (yapay zekâ olay özeti) |
+
+Fotoğraflar kaynağın kendi sunucusundan gösterilir; açılmayan fotoğraf gizlenir. Yönetici panelinde her kayıt için bu üç alan elle de girilebilir. Bu özellikten önce aktarılmış kayıtlar için kaynağı baştan okuyun; yalnızca boş olan bu üç alan doldurulur, başka alana dokunulmaz:
+
+```bash
+docker compose exec app python -m app.cli aktar temmuz15 --bastan
+docker compose exec app python -m app.cli aktar egm --bastan
+```
+
 ### Ne kadar sürer?
 
 - `egm` ve `sg`: birkaç dakika.

@@ -93,3 +93,22 @@ def test_kisileri_ayir():
     assert kisileri_ayir("Şehit Polis Memuru Ahmet ER") == ["Şehit Polis Memuru Ahmet ER"]
     assert kisileri_ayir("Şehit Polis Memuru") == ["Şehit Polis Memuru"]
     assert kisileri_ayir("​") == []
+
+
+def test_cumleye_kirp():
+    from app.kaynaklar.ayristir import cumleye_kirp
+    assert cumleye_kirp("Bir. İki üç") == "Bir."
+    assert cumleye_kirp("Bir. İki.") == "Bir. İki."
+    assert cumleye_kirp('Dedi ki "geldim." Sonra') == 'Dedi ki "geldim."'
+    assert cumleye_kirp("Nokta yok") == "Nokta yok…"
+    assert cumleye_kirp("  ") is None and cumleye_kirp(None) is None
+
+
+def test_gorsel_adresi():
+    from selectolax.parser import HTMLParser
+    from app.kaynaklar.ayristir import gorsel_adresi
+    img = lambda html: HTMLParser(html).css_first("img")
+    assert gorsel_adresi(img('<img src="/a/b.jpg?w=1&amp;h=2">'), "https://x.gov.tr") == "https://x.gov.tr/a/b.jpg?w=1&h=2"
+    assert gorsel_adresi(img('<img src="data:image/gif;base64,R0" data-src="/c.png">'), "https://x.gov.tr") == "https://x.gov.tr/c.png"
+    assert gorsel_adresi(img('<img src="javascript:alert(1)">'), "https://x.gov.tr") is None
+    assert gorsel_adresi(None, "https://x.gov.tr") is None

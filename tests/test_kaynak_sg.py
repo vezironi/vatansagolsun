@@ -56,3 +56,9 @@ def test_adsiz_kart_atlanir_ve_gunluge_yazilir(caplog):
         k = sg.ayristir(html)
     assert [(x.ad, x.soyad) for x in k] == [("Ali", "VELİ")]
     assert "Şehit Uzman Çavuş" in caplog.text
+
+
+def test_fotograf():
+    hakan = next(x for x in sg.ayristir(HTML) if x.soyad == "KARATAŞ")
+    assert hakan.fotograf_url == (
+        "https://www.sg.gov.tr/kurumlar/sg.gov.tr/sehitlerimiz/18_HAKAN-KARATAS_20-Kasim-2019.jpg?mode=resize&width=200")

@@ -11,21 +11,22 @@ from sqlalchemy.orm import Session
 
 from app import repo
 from app.config import get_settings
-from app.kaynaklar import HamKayit, KaynakHatasi, egm, kahramanlar, sehitlerimiz, sg
+from app.kaynaklar import HamKayit, KaynakHatasi, egm, kahramanlar, sehitlerimiz, sg, temmuz15
 from app.kaynaklar import sehitlerimiz as sh
 from app.kaynaklar.getirici import Getirici
 from app.models import Durum, Hassasiyet, Kaynak, KaynakDurumu, Kategori, Sehit
-from app.schemas import SehitVeri
+from app.schemas import OLAY_UZUNLUGU, URL_UZUNLUGU, SehitVeri, http_adresi_mi
 from app.text import isim_anahtari, katla
 
 logger = logging.getLogger(__name__)
 
 ONCELIK: dict[str, int] = {
-    "panel": 4, "egm": 3, "sg": 3, "sehitlerimiz": 2, "kahramanlar": 1, "haber": 0, "ornek": 0,
+    "panel": 4, "egm": 3, "sg": 3, "sehitlerimiz": 2, "temmuz15": 2, "kahramanlar": 1, "haber": 0, "ornek": 0,
 }
 
 _HASSASIYET_SIRASI = {Hassasiyet.bilinmiyor: 0, Hassasiyet.yil: 1, Hassasiyet.tam: 2}
-_DOLDURULACAK = ("soyad", "lakap", "gorev", "kurum", "memleket", "baba_adi", "dogum_yili", "donem")
+_AYRINTI = ("sehadet_yeri", "sehadet_olayi", "fotograf_url")
+_DOLDURULACAK = ("soyad", "lakap", "gorev", "kurum", "memleket", "baba_adi", "dogum_yili", "donem", *_AYRINTI)
 DIS_KIMLIK_SINIRI = 300  # Kaynak.dis_kimlik String(300)
 _OZET_UZUNLUGU = 16
 
@@ -59,6 +60,20 @@ def _kirp(deger: str | None, uzunluk: int) -> str | None:
     return deger[:uzunluk] or None
 
 
+def _fotograf(url: str | None) -> str | None:
+    """Kaynaktan gelen geçersiz ya da çok uzun adres aktarımı düşürmez: atılır."""
+    url = _kirp(url, URL_UZUNLUGU + 1)
+    return url if url and len(url) <= URL_UZUNLUGU and http_adresi_mi(url) else None
+
+
+def _ayrinti_degerleri(ham: HamKayit) -> dict[str, str | None]:
+    return {
+        "sehadet_yeri": _kirp(ham.sehadet_yeri, 200),
+        "sehadet_olayi": _kirp(ham.sehadet_olayi, OLAY_UZUNLUGU),
+        "fotograf_url": _fotograf(ham.fotograf_url),
+    }
+
+
 def ham_to_veri(ham: HamKayit) -> SehitVeri:
     hassasiyet = Hassasiyet(ham.hassasiyet)
     yil = ham.yil
@@ -78,6 +93,7 @@ def ham_to_veri(ham: HamKayit) -> SehitVeri:
         baba_adi=_kirp(ham.baba_adi, 200),
         dogum_yili=ham.dogum_yili,
         donem=_kirp(ham.donem, 100),
+        **_ayrinti_degerleri(ham),
         resmi_teyit=ham.resmi_teyit,
         isimsiz=ham.isimsiz,
         kaynak_kodu=ham.kaynak_kodu[:50],
@@ -224,6 +240,17 @@ def _birlestir(sehit: Sehit, veri: SehitVeri) -> None:
     sehit.alanlari_yenile()  # durum'a dokunulmaz
 
 
+def _ayrintilari_tamamla(s: Session, kaynak_id: int, ham: HamKayit) -> None:
+    """Daha önce aktarılmış kaynak yeniden okununca (ör. `--bastan`), bağlı kaydın boş
+    şehadet ayrıntıları (yer, olay, fotoğraf) doldurulur; başka alana dokunulmaz."""
+    sehit = s.get(Kaynak, kaynak_id).sehit
+    if ham.kaynak_kodu == "haber" and Durum(sehit.durum) != Durum.onay_bekliyor:
+        return  # Karar Q9: haber yayındaki/reddedilmiş kaydı değiştirmez
+    for alan, deger in _ayrinti_degerleri(ham).items():
+        if getattr(sehit, alan) in (None, "") and deger:
+            setattr(sehit, alan, deger)
+
+
 def _kaynak_kaydi(sehit: Sehit, ham: HamKayit) -> Kaynak:
     return Kaynak(
         sehit=sehit,
@@ -248,6 +275,7 @@ def kayit_aktar(s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda)
                 )
             )
             if var is not None:
+                _ayrintilari_tamamla(s, var, ham)
                 return Sonuc("atlandi", None)
             veri = ham_to_veri(ham)
             mevcut = None if ham.isimsiz else eslesen_bul(s, ham)
@@ -340,6 +368,7 @@ OKUYUCULAR: dict[str, Callable[[Getirici, str | None], Iterator[tuple[str, list[
     "sg": lambda g, imlec: sg.sayfalar(g, baslangic=imlec),
     "kahramanlar": lambda g, imlec: kahramanlar.sayfalar(g, baslangic=imlec),
     "sehitlerimiz": lambda g, imlec: sehitlerimiz.sayfalar(g, baslangic=imlec),
+    "temmuz15": lambda g, imlec: temmuz15.sayfalar(g, baslangic=imlec),
 }
 
 KONTROL_KODU = "sehitlerimiz_kontrol"

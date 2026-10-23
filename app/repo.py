@@ -1,6 +1,6 @@
 """Şehit sorguları ve yazma işlemleri."""
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Literal
 
 from sqlalchemy import func, or_, select
@@ -87,6 +87,19 @@ def yil_donumu(
     return list(s.scalars(sorgu.order_by(Sehit.yil.desc(), Sehit.id)))
 
 
+def yeni_sehitler(
+    s: Session, bugun: date, *, gun_sayisi: int = 7, adet: int = 20, api: bool = False
+) -> list[Sehit]:
+    """Şehadet tarihi son `gun_sayisi` gün içinde (bugün dahil) olan yayındaki kayıtlar, en yeni önce."""
+    baslangic = bugun - timedelta(days=gun_sayisi - 1)
+    sorgu = _gorunur(select(Sehit), api).where(
+        Sehit.tarih_hassasiyeti == Hassasiyet.tam,
+        Sehit.sehadet_tarihi >= baslangic,
+        Sehit.sehadet_tarihi <= bugun,
+    )
+    return list(s.scalars(sorgu.order_by(Sehit.sehadet_tarihi.desc(), Sehit.id.desc()).limit(adet)))
+
+
 def getir(
     s: Session, sehit_id: int, *, sadece_yayinda: bool = True, api: bool = False
 ) -> Sehit | None:
@@ -139,6 +152,7 @@ def durum_degistir(s: Session, sehit: Sehit, durum: Durum) -> None:
 
 _BIRLESTIRME_ALANLARI = (
     "soyad", "lakap", "gorev", "kurum", "memleket", "baba_adi", "dogum_yili", "donem",
+    "sehadet_yeri", "sehadet_olayi", "fotograf_url",
 )
 
 

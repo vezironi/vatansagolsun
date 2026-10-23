@@ -10,19 +10,22 @@
       <div class="stat"><div class="num" data-hedef="{{ istatistik.bu_yil }}">{{ "{:,}".format(istatistik.bu_yil).replace(",", ".") }}</div><div class="lbl">{{ istatistik.yil }} Yılında</div></div>
     </div>
   </div>
-  <div class="years">
+  <div class="years" id="yillar">
     {% for etiket, href, secili in yillar %}<a href="{{ href }}" class="{{ 'on' if secili else '' }}">{{ etiket }}</a>{% endfor %}
   </div>
   <form id="ara" class="tools" method="get" action="/">
     <input type="hidden" name="yil" value="{{ secili_yil }}">
-    <input class="search" type="search" name="q" value="{{ q }}" placeholder="İsim, il veya görev ara…">
-    <div class="countline">
+    <div class="ara-kutu">
+      <input class="search" type="search" name="q" value="{{ q }}" placeholder="İsim, il veya görev ara…" aria-label="Ara" autocomplete="off">
+      <button class="ara-temizle" type="button" aria-label="Aramayı temizle"{% if not q %} hidden{% endif %}>×</button>
+    </div>
+    <div class="countline" id="sayim" aria-live="polite">
       {% if secili_yil == "tumu" %}Toplam <b>{{ sayfa_sonucu.toplam }}</b> kayıt
       {% elif secili_yil == "2000-oncesi" %}2000 öncesi <b>{{ sayfa_sonucu.toplam }}</b> kayıt
       {% else %}<b>{{ secili_etiket }}</b> yılında <b>{{ sayfa_sonucu.toplam }}</b> şehit{% endif %}
     </div>
   </form>
-  {% include "_tablo.html" %}
+  <div id="sonuclar">{% include "_tablo.html" %}</div>
 </div>
 {% endblock %}
 
@@ -30,13 +33,15 @@
 <div class="modal-bg" id="modal">
   <div class="modal">
     <button class="x" type="button" aria-label="Kapat">×</button>
+    <img class="foto" id="m-foto" alt="" referrerpolicy="no-referrer" hidden>
     <h3 id="m-ad"></h3>
     <div class="role" id="m-gorev"></div>
     <dl id="m-dl"></dl>
+    <div class="olay" id="m-olay" hidden><h4>Şehadeti</h4><p></p></div>
     <div class="src" id="m-kaynak"></div>
     <div class="rip">Mekânı cennet olsun.</div>
     <div class="kayit-link"><a id="m-link" href="#">Kayıt sayfası</a></div>
   </div>
 </div>
-<script src="/static/site.js"></script>
+<script src="{{ statik('site.js') }}"></script>
 {% endblock %}

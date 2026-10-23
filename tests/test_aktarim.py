@@ -378,3 +378,42 @@ def test_uzun_dis_kimlik_300_karaktere_ozetlenir(session):
     assert kayit_aktar(session, ham).durum == "yeni"
     assert session.query(Kaynak).one().dis_kimlik == kisa
     assert kayit_aktar(session, ham).durum == "atlandi"  # aynı uzun kimlik tekrar gelirse eşleşir
+
+
+def test_sehadet_ayrintilari_aktarilir_ve_bos_alani_doldurur(session):
+    r = aktarim.kayit_aktar(session, ham(sehadet_yeri="Hakkâri", fotograf_url="https://x/a.jpg"))
+    r2 = aktarim.kayit_aktar(session, ham(kaynak_kodu="egm", dk="/e", sehadet_olayi="Çatışmada şehit oldu.",
+                                          sehadet_yeri="Şırnak", fotograf_url="https://y/b.jpg"))
+    s = session.get(Sehit, r.sehit_id)
+    assert r2.sehit_id == s.id
+    assert (s.sehadet_yeri, s.sehadet_olayi, s.fotograf_url) == ("Hakkâri", "Çatışmada şehit oldu.", "https://x/a.jpg")
+
+
+def test_gecersiz_fotograf_adresi_atilir(session):
+    r = aktarim.kayit_aktar(session, ham(fotograf_url="javascript:alert(1)"))
+    assert r.durum == "yeni" and session.get(Sehit, r.sehit_id).fotograf_url is None
+
+
+def test_yeniden_okunan_kaynak_eksik_ayrintilari_tamamlar(session):
+    r = aktarim.kayit_aktar(session, ham())
+    s = session.get(Sehit, r.sehit_id)
+    s.sehadet_yeri = "Elle yazılmış"
+    session.commit()
+    r2 = aktarim.kayit_aktar(session, ham(sehadet_yeri="Kaynaktan", sehadet_olayi="Olay.",
+                                          fotograf_url="https://x/a.jpg", memleket="Sivas"))
+    session.refresh(s)
+    assert r2.durum == "atlandi"
+    assert (s.sehadet_yeri, s.sehadet_olayi, s.fotograf_url) == ("Elle yazılmış", "Olay.", "https://x/a.jpg")
+    assert s.memleket is None  # yalnızca şehadet ayrıntıları tamamlanır
+
+
+def test_yeniden_okunan_haber_yayindaki_kaydi_degistirmez(session):
+    h = ham(kaynak_kodu="haber", dk="hurriyet:1#ali")
+    r = aktarim.kayit_aktar(session, h)
+    s = session.get(Sehit, r.sehit_id)
+    s.durum = Durum.yayinda
+    session.commit()
+    h.sehadet_olayi = "Olay."
+    assert aktarim.kayit_aktar(session, h).durum == "atlandi"
+    session.refresh(s)
+    assert s.sehadet_olayi is None

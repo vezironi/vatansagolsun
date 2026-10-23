@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Şehitlerimizi anıyoruz — vatansagolsun</title>
+<style>
+  :root { --zemin: {{ renk.zemin }}; --yazi: {{ renk.yazi }}; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--zemin); color: var(--yazi); font-family: Georgia, "Times New Roman", serif; }
+  a { color: inherit; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .ay-yildiz { flex: none; color: var(--zemin); }
+  .ay-yildiz.ters { transform: scaleX(-1); }
+  .degisen { transition: opacity .4s ease, transform .4s ease; }
+  .degisen.gizli { opacity: 0; transform: translateY(4px); }
+  @media (prefers-reduced-motion: reduce) { .degisen { transition: none; } }
+
+  /* bant: tek satır, 44px */
+  .bant { height: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 12px;
+          {% if renk.vurgu %}border-bottom: 2px solid {{ renk.vurgu }};{% endif %} }
+  .bant .ay-yildiz { width: 30px; height: 21px; }
+  .bant .orta { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 17px; font-weight: 600; letter-spacing: .3px; }
+  .bant .ust { font-size: 13px; font-weight: 400; opacity: .85; margin-right: 6px; }
+  .bant .yazi { font-weight: 400; margin-left: 6px; opacity: .92; }
+  @media (max-width: 640px) { .bant .yazi { display: none; } .bant .orta { font-size: 15px; } }
+
+  /* kart: 300×250 */
+  .kart { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+          padding: 18px; text-align: center; {% if renk.vurgu %}border: 2px solid {{ renk.vurgu }};{% endif %} }
+  .kart .ciftler { display: flex; gap: 18px; }
+  .kart .ay-yildiz { width: 40px; height: 28px; }
+  .kart .ust { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .85; }
+  .kart .ad { font-size: 21px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .kart .yazi { font-size: 13.5px; line-height: 1.4; opacity: .92; }
+  .kart .imza { font-size: 11px; letter-spacing: 1px; opacity: .7; margin-top: 2px; }
+</style>
+</head>
+<body>
+{% macro ay_yildiz(ters=False) -%}
+<svg class="ay-yildiz{% if ters %} ters{% endif %}" viewBox="225 200 565 400" aria-hidden="true"><circle cx="425" cy="400" r="200" fill="#fff"/><circle cx="475" cy="400" r="160" fill="currentColor"/><polygon fill="#fff" points="583.334,400 764.235,458.779 652.431,304.894 652.431,495.106 764.235,341.221"/></svg>
+{%- endmacro %}
+{% set ilk = icerik.kisiler[0] if icerik.kisiler else None %}
+{% if bicim == "kart" %}
+<div class="kart" role="note" aria-label="Anma">
+  <div class="ciftler">{{ ay_yildiz() }}{{ ay_yildiz(True) }}</div>
+  {% if ilk %}
+  <div class="degisen" aria-live="polite">
+    <div class="ust" data-ust>{{ ilk.ust_yazi }}</div>
+    <a class="ad" data-ad href="{{ site }}{{ ilk.url }}" target="_blank" rel="noopener">{{ ilk.ad }}</a>
+  </div>
+  <div class="yazi">{{ icerik.yazi }}</div>
+  {% else %}
+  <div class="ad">{{ icerik.yazi }}</div>
+  <div class="ust">Vatan sağ olsun</div>
+  {% endif %}
+  <a class="imza" href="{{ site }}/" target="_blank" rel="noopener">vatansagolsun</a>
+</div>
+{% else %}
+<div class="bant" role="note" aria-label="Anma">
+  {{ ay_yildiz() }}
+  <div class="orta">
+    {% if ilk %}
+    <span class="degisen" aria-live="polite"><span class="ust" data-ust>{{ ilk.ust_yazi }}</span><a data-ad href="{{ site }}{{ ilk.url }}" target="_blank" rel="noopener">{{ ilk.ad }}</a></span><span class="yazi">· {{ icerik.yazi }}</span>
+    {% else %}
+    {{ icerik.yazi }} · Vatan sağ olsun
+    {% endif %}
+  </div>
+  {{ ay_yildiz(True) }}
+</div>
+{% endif %}
+{% if icerik.kisiler|length > 1 %}
+<script>
+(function () {
+  var kisiler = {{ kisiler_json|safe }};
+  var site = {{ site_json|safe }};
+  var kutu = document.querySelector(".degisen");
+  var ad = document.querySelector("[data-ad]");
+  var ust = document.querySelector("[data-ust]");
+  var i = 0;
+  setInterval(function () {
+    kutu.classList.add("gizli");
+    setTimeout(function () {
+      i = (i + 1) % kisiler.length;
+      ad.textContent = kisiler[i].ad;
+      ad.href = site + kisiler[i].url;
+      ust.textContent = kisiler[i].ust_yazi;
+      kutu.classList.remove("gizli");
+    }, 400);
+  }, 5000);
+})();
+</script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,23 @@
+{% set m = ayarlar() %}
+{% if m.muzik_aktif and m.muzik_dosyasi %}
+<div class="muzik" id="muzik" data-ses="{{ m.muzik_baslangic_sesi }}" role="region" aria-label="Müzik çalar">
+  <audio id="muzik-ses-dosyasi" src="{{ m.muzik_dosyasi }}" preload="auto" loop></audio>
+  <button type="button" class="muzik-dugme muzik-oynat" id="muzik-oynat" aria-label="Oynat: {{ m.muzik_basligi }}" title="Oynat / duraklat">
+    <svg class="ikon-oynat" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+    <svg class="ikon-duraklat" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+  </button>
+  <span class="muzik-dalga" aria-hidden="true"><i></i><i></i><i></i></span>
+  <span class="muzik-baslik" title="{{ m.muzik_basligi }}">{{ m.muzik_basligi }}</span>
+  <div class="muzik-ses-alani">
+    <button type="button" class="muzik-dugme" id="muzik-sessiz" aria-label="Sesi kapat" title="Sessiz">
+      <svg class="ikon-ses" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
+      <svg class="ikon-sessiz" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/></svg>
+    </button>
+    <label class="muzik-ses">
+      <span class="gizli-etiket">Ses düzeyi</span>
+      <input type="range" id="muzik-ses" min="0" max="100" step="1" value="{{ (m.muzik_baslangic_sesi * 100)|round|int }}">
+    </label>
+  </div>
+</div>
+<script src="{{ statik('muzik.js') }}" defer></script>
+{% endif %}

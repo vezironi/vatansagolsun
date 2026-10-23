@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 from selectolax.parser import HTMLParser
 
 from app.kaynaklar import HamKayit
-from app.kaynaklar.ayristir import isim_ayir, metin_temizle, tarih_coz
+from app.kaynaklar.ayristir import gorsel_adresi, isim_ayir, metin_temizle, tarih_coz
 from app.models import Kategori
 from app.text import slug
 
@@ -33,7 +33,8 @@ def ayristir(html: str) -> list[HamKayit]:
         kayitlar.append(HamKayit(
             kaynak_kodu=KAYNAK_KODU, dis_kimlik=yol or "sg:" + slug(ham), ad=ad, soyad=soyad,
             gorev=gorev, tarih=tarih, hassasiyet=hassasiyet, yil=yil, kategori=Kategori.asker,
-            kurum=KAYNAK_ADI, kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + "/sehitlerimiz",
+            kurum=KAYNAK_ADI, fotograf_url=gorsel_adresi(kart.css_first(".manager-sm-img img"), KOK),
+            kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + "/sehitlerimiz",
         ))
     return kayitlar
 

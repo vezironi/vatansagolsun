@@ -1,19 +1,22 @@
 """Herkese açık site sayfaları."""
 import calendar
+import json
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from slowapi import Limiter
 from sqlalchemy.orm import Session
 
-from app import repo
+from app import bannerlar, repo
+from app.config import get_settings
 from app.dates import bugun
 from app.db import get_session
 from app.models import Hassasiyet, Sehit
+from app.statik import statik
 
 ADET = 25
 AYLAR = [
@@ -22,6 +25,8 @@ AYLAR = [
 ]
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
+templates.env.globals["ayarlar"] = get_settings  # şablonlar çağrı anındaki ayarları okur (müzik çalar vb.)
+templates.env.globals["statik"] = statik
 router = APIRouter()
 Oturum = Annotated[Session, Depends(get_session)]
 
@@ -183,6 +188,47 @@ def yil_donumleri(request: Request, s: Oturum, ay: str | None = None, gun: str |
 @router.get("/hakkinda")
 def hakkinda(request: Request):
     return templates.TemplateResponse(request, "hakkinda.html", {})
+
+
+@router.get("/bannerlar")
+def bannerlar_sayfasi(request: Request):
+    site_url = str(request.base_url).rstrip("/")
+    kartlar = []
+    for b in bannerlar.BANNERLAR:
+        varyantlar = []
+        for kose, ad in bannerlar.koseler(b):
+            kose = kose or bannerlar.VARSAYILAN_KOSE
+            varyantlar.append({
+                "kod": kose, "ad": ad,
+                "onizleme": bannerlar.onizleme_html(b, kose),
+                "sekmeler": bannerlar.kod_sekmeleri(b, site_url, kose),
+            })
+        kartlar.append({"banner": b, "varyantlar": varyantlar})
+    return templates.TemplateResponse(request, "bannerlar.html", {"kartlar": kartlar})
+
+
+@router.get("/bant.js")
+def bant_js(request: Request):
+    return Response(bannerlar.bant_js(str(request.base_url)), media_type="application/javascript; charset=utf-8",
+                    headers={"Cache-Control": "public, max-age=3600"})
+
+
+@router.get("/gomulu/guncel")
+def gomulu_guncel(request: Request, s: Oturum, bicim: str = "bant", renk: str = "kirmizi"):
+    """Başka sitelere iframe ile gömülen güncel banner (yeni şehit / yıl dönümü / anma)."""
+    bicim = bicim if bicim in ("bant", "kart") else "bant"
+    renk_tanimi = bannerlar.RENKLER.get(renk, bannerlar.RENKLER["kirmizi"])
+    icerik = bannerlar.guncel_icerik(s, bugun())
+    site = str(request.base_url).rstrip("/")
+    kisiler = [{"ad": k.ad, "url": k.url, "ust_yazi": k.ust_yazi} for k in icerik.kisiler]
+    yanit = templates.TemplateResponse(request, "gomulu_guncel.html", {
+        "bicim": bicim, "renk": renk_tanimi, "icerik": icerik, "site": site,
+        # </script> kaçışı: JSON içinde "<" kodlanır
+        "kisiler_json": json.dumps(kisiler, ensure_ascii=False).replace("<", "\\u003c"),
+        "site_json": json.dumps(site).replace("<", "\\u003c"),
+    })
+    yanit.headers["Cache-Control"] = "public, max-age=300"
+    return yanit
 
 
 MESAJ_EN_COK = 2000

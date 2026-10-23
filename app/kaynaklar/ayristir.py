@@ -1,6 +1,7 @@
 """Kaynak metinlerini ayrıştıran saf yardımcılar (ağa çıkmaz)."""
 import re
 from datetime import date
+from urllib.parse import urljoin, urlsplit
 
 from app.models import Hassasiyet, Kategori
 from app.text import ad_duzenle, katla, soyad_duzenle
@@ -35,6 +36,32 @@ def _tam(yil: int, ay: int, gun: int):
         return date(yil, ay, gun), Hassasiyet.tam, yil
     except ValueError:
         return _YOK
+
+
+_CUMLE_SONU = re.compile(r"[.!?…][\"'”’»)]*(?=\s)")
+
+
+def cumleye_kirp(metin: str | None) -> str | None:
+    """Kaynağın yarıda kestiği metni son tam cümlede bitirir; tam cümle yoksa "…" ekler."""
+    metin = alan_temizle(metin)
+    if metin is None or metin[-1] in ".!?…\"'”’»)":
+        return metin
+    sonlar = list(_CUMLE_SONU.finditer(metin))
+    return metin[:sonlar[-1].end()] if sonlar else metin + "…"
+
+
+def gorsel_adresi(img, kok: str) -> str | None:
+    """<img> düğümünün mutlak http(s) adresi: önce src, gömülü/boşsa tembel yüklemenin data-src'si."""
+    if img is None:
+        return None
+    for anahtar in ("src", "data-src"):
+        deger = metin_temizle(img.attributes.get(anahtar))
+        if not deger or deger.startswith("data:"):
+            continue
+        url = urljoin(kok + "/", deger)
+        if urlsplit(url).scheme in ("http", "https"):
+            return url
+    return None
 
 
 def tarih_coz(metin: str | None) -> tuple[date | None, Hassasiyet, int | None]:

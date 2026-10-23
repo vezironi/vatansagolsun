@@ -3,10 +3,14 @@
 {% block meta %}<meta name="description" content="{{ sehit.gorunen_ad }}{% if sehit.gorev %}, {{ sehit.gorev }}{% endif %}{% if tarih %} — {{ tarih }}{% endif %}{% if sehit.memleket %} — {{ sehit.memleket }}{% endif %}. Mekânı cennet olsun.">{% endblock %}
 {% block icerik %}
 <div class="wrap page">
+  {% if sehit.fotograf_url and sehit.fotograf_url.startswith(("http://", "https://")) %}
+  <img class="foto" src="{{ sehit.fotograf_url }}" alt="{{ sehit.gorunen_ad }}" referrerpolicy="no-referrer" onerror="this.hidden=true">
+  {% endif %}
   <h1 class="pname">{{ sehit.gorunen_ad }}</h1>
   {% if sehit.gorev %}<div class="role">{{ sehit.gorev }}</div>{% endif %}
   <dl class="info">
     {% if tarih %}<dt>Şehadet tarihi</dt><dd>{{ tarih }}</dd>{% endif %}
+    {% if sehit.sehadet_yeri %}<dt>Şehadet yeri</dt><dd>{{ sehit.sehadet_yeri }}</dd>{% endif %}
     {% if sehit.memleket %}<dt>Memleket</dt><dd>{{ sehit.memleket }}</dd>{% endif %}
     {% if sehit.baba_adi %}<dt>Baba adı</dt><dd>{{ sehit.baba_adi }}</dd>{% endif %}
     {% if sehit.dogum_yili %}<dt>Doğum yılı</dt><dd>{{ sehit.dogum_yili }}</dd>{% endif %}
@@ -14,6 +18,7 @@
     {% if sehit.donem %}<dt>Dönem</dt><dd>{{ sehit.donem }}</dd>{% endif %}
     {% if sehit.lakap and sehit.soyad %}<dt>Lakap</dt><dd>{{ sehit.lakap }}</dd>{% endif %}
   </dl>
+  {% if sehit.sehadet_olayi %}<div class="olay"><h4>Şehadeti</h4><p>{{ sehit.sehadet_olayi }}</p></div>{% endif %}
   {% if kaynaklar %}
   <div class="src">Kaynak:
     {% for k in kaynaklar %}<a href="{{ k.url }}" rel="noopener nofollow" target="_blank">{{ k.baslik or k.kaynak_adi }}</a>{% if not loop.last %}, {% endif %}{% endfor %}

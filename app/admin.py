@@ -22,6 +22,7 @@ from app.kaynaklar import haber
 from app.models import Bildirim, Durum, Hassasiyet, Kategori, KaynakDurumu, Sehit
 from app.toplayici import RESMI_KAYNAKLAR, SAYAC_KODU, toplayici_calisiyor_mu, toplayici_kodu
 from app.schemas import SehitVeri
+from app.statik import statik
 
 GIRIS_ADRESI = "/panel/giris"
 BCRYPT_EN_COK_BAYT = 72
@@ -37,10 +38,12 @@ SAYFA_EN_COK = 1_000_000
 SAYISAL_ALANLAR = {"yil": "Yıl", "dogum_yili": "Doğum yılı"}
 FORM_ALANLARI = (
     "ad", "soyad", "lakap", "tarih_hassasiyeti", "sehadet_tarihi", "yil", "gorev", "kategori",
-    "kurum", "memleket", "baba_adi", "dogum_yili", "donem", "kaynak_kodu",
+    "kurum", "memleket", "baba_adi", "dogum_yili", "donem", "sehadet_yeri", "sehadet_olayi",
+    "fotograf_url", "kaynak_kodu",
 )
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
+templates.env.globals["statik"] = statik
 
 
 def guvenli_url(url: str | None) -> str | None:
@@ -139,6 +142,9 @@ def form_oku(
     baba_adi: Annotated[str, Form()] = "",
     dogum_yili: Annotated[str, Form()] = "",
     donem: Annotated[str, Form()] = "",
+    sehadet_yeri: Annotated[str, Form()] = "",
+    sehadet_olayi: Annotated[str, Form()] = "",
+    fotograf_url: Annotated[str, Form()] = "",
     kaynak_kodu: Annotated[str, Form()] = "",
     resmi_teyit: Annotated[str | None, Form()] = None,
     isimsiz: Annotated[str | None, Form()] = None,
@@ -147,6 +153,7 @@ def form_oku(
         ad=ad, soyad=soyad, lakap=lakap, tarih_hassasiyeti=tarih_hassasiyeti,
         sehadet_tarihi=sehadet_tarihi, yil=yil, gorev=gorev, kategori=kategori, kurum=kurum,
         memleket=memleket, baba_adi=baba_adi, dogum_yili=dogum_yili, donem=donem,
+        sehadet_yeri=sehadet_yeri, sehadet_olayi=sehadet_olayi, fotograf_url=fotograf_url,
         kaynak_kodu=kaynak_kodu, resmi_teyit=resmi_teyit is not None, isimsiz=isimsiz is not None,
     )
 

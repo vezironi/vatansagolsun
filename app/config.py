@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     api_haric_kaynaklar: list[str] = []
     istek_siniri: str = "60/minute"
     site_url: str = "http://localhost:8000"
-    kaynak_izinleri: list[str] = ["egm", "sg", "kahramanlar", "sehitlerimiz", "hurriyet", "sabah"]
+    kaynak_izinleri: list[str] = ["egm", "sg", "kahramanlar", "sehitlerimiz", "temmuz15", "hurriyet", "sabah"]
     istek_araligi_sn: float = 2.0
     zamanlayici_aktif: bool = False  # docker-compose'ta True: 12 saatlik sehitlerimiz kontrolü
     analiz_sirasi: list[str] = ["openai", "gemini", "claude"]  # anahtarı olmayan sağlayıcı zincire girmez
@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     openai_api_key: str = ""  # boşsa OPENAI_API_KEY ortam değişkenine bakılır
     gemini_api_key: str = ""  # boşsa GEMINI_API_KEY / GOOGLE_API_KEY ortam değişkenine bakılır
     oturum_https: bool = False  # üretimde True: oturum çerezi yalnızca HTTPS ile gider
+    muzik_aktif: bool = True  # sitenin sol altındaki müzik çalar
+    muzik_dosyasi: str = "/public/kolaydegildir.mp3"  # proje kökündeki public/ klasörü /public altında sunulur
+    muzik_basligi: str = "Duman — Kolay Değildir"
+    muzik_baslangic_sesi: float = 0.4  # 0–1; ziyaretçi değiştirince tarayıcıda hatırlanır
 
 
 @lru_cache

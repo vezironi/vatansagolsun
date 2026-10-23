@@ -203,3 +203,8 @@ def test_yeni_kayitlar_bosluk_uyarisi(caplog):
     with caplog.at_level(logging.WARNING, logger="app.kaynaklar.sehitlerimiz"):
         sh.yeni_kayitlar(G(), son_id=116000)
     assert "kaçmış olabilir" in caplog.text and "116824" in caplog.text
+
+
+def test_kayit_sehadet_yeri():
+    h = sh.kayit_ayristir(oku("sh_kayit.html"), "/sehit/mustafa-aslan-116814")
+    assert h.sehadet_yeri == "Hakkâri" and h.fotograf_url is None

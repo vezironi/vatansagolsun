@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block baslik %}Bannerlar — vatansagolsun{% endblock %}
+{% block icerik %}
+<div class="wrap page prose bannerlar">
+  <h1 class="ptitle">Bannerlar</h1>
+  <p>Şehitlerimizi kendi sitenizde de anmak için aşağıdaki bannerları kullanabilirsiniz. <b>Bant</b> biçimi sayfanın
+    üstüne ya da altına, <b>kart</b> (300×250) biçimi kenar çubuğuna, yazı arasına ya da sayfa sonuna uygundur.
+    Her bannerın altındaki <b>Kod</b> bölümünden sitenizin altyapısına uygun sürümü kopyalayın.</p>
+  <p><b>Güncel</b> bannerlar her gün kendiliğinden değişir: yeni bir şehidimiz varsa yalnızca onun adı, yoksa bugün
+    şehadetinin yıl dönümü olan şehitlerimizin adları tek tek değişerek, ikisi de yoksa anma yazısı görünür.
+    <b>Sabit</b> bannerlar hiçbir dış dosyaya ihtiyaç duymaz.</p>
+
+  {% for kart in kartlar %}
+  <section class="banner-kart" id="{{ kart.banner.kod }}">
+    <h2>{{ kart.banner.ad }}</h2>
+    <p class="banner-aciklama">{{ kart.banner.aciklama }}</p>
+    {% if kart.varyantlar|length > 1 %}
+    <div class="varyant-secici" role="radiogroup" aria-label="Köşe">
+      <span>Köşe:</span>
+      {% for v in kart.varyantlar %}
+      <button type="button" role="radio" class="varyant-sec{% if loop.first %} on{% endif %}"
+              aria-checked="{{ 'true' if loop.first else 'false' }}"
+              data-varyant="{{ kart.banner.kod }}-{{ v.kod }}">{{ v.ad }}</button>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% for v in kart.varyantlar %}
+    {% set on = kart.banner.kod ~ "-" ~ v.kod %}
+    <div class="varyant" id="varyant-{{ on }}"{% if not loop.first %} hidden{% endif %}>
+      <div class="banner-onizleme onizleme-{{ kart.banner.bicim }}">{{ v.onizleme|safe }}</div>
+
+      <h3>Kod</h3>
+      <div class="kod-sekmeleri" role="tablist" aria-label="{{ kart.banner.ad }} kodu">
+        {% for s in v.sekmeler %}
+        <button type="button" role="tab" class="kod-sekme{% if loop.first %} on{% endif %}"
+                aria-selected="{{ 'true' if loop.first else 'false' }}"
+                aria-controls="kod-{{ on }}-{{ s.kod }}"
+                data-hedef="kod-{{ on }}-{{ s.kod }}">{{ s.ad }}</button>
+        {% endfor %}
+      </div>
+      {% for s in v.sekmeler %}
+      <div class="kod-alani" role="tabpanel" id="kod-{{ on }}-{{ s.kod }}"{% if not loop.first %} hidden{% endif %}>
+        <button type="button" class="kopyala" data-kaynak="kod-{{ on }}-{{ s.kod }}-metin">Kopyala</button>
+        <pre><code id="kod-{{ on }}-{{ s.kod }}-metin">{{ s.icerik }}</code></pre>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block son %}
+<script>
+document.querySelectorAll(".banner-kart").forEach(function (kart) {
+  var secenekler = kart.querySelectorAll(".varyant-sec");
+  secenekler.forEach(function (secenek) {
+    secenek.addEventListener("click", function () {
+      secenekler.forEach(function (d) {
+        var acik = d === secenek;
+        d.classList.toggle("on", acik);
+        d.setAttribute("aria-checked", acik ? "true" : "false");
+        document.getElementById("varyant-" + d.dataset.varyant).hidden = !acik;
+      });
+    });
+  });
+});
+document.querySelectorAll(".varyant").forEach(function (kart) {
+  var sekmeler = kart.querySelectorAll(".kod-sekme");
+  sekmeler.forEach(function (sekme) {
+    sekme.addEventListener("click", function () {
+      sekmeler.forEach(function (d) {
+        var acik = d === sekme;
+        d.classList.toggle("on", acik);
+        d.setAttribute("aria-selected", acik ? "true" : "false");
+        document.getElementById(d.dataset.hedef).hidden = !acik;
+      });
+    });
+  });
+});
+document.querySelectorAll(".kopyala").forEach(function (dugme) {
+  dugme.addEventListener("click", function () {
+    var metin = document.getElementById(dugme.dataset.kaynak).textContent;
+    var bitti = function () {
+      dugme.textContent = "Kopyalandı";
+      setTimeout(function () { dugme.textContent = "Kopyala"; }, 1500);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(metin).then(bitti);
+    } else {
+      var alan = document.createElement("textarea");
+      alan.value = metin; document.body.appendChild(alan); alan.select();
+      document.execCommand("copy"); alan.remove(); bitti();
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -676,3 +676,20 @@ def test_toplayici_sifirla_csrf_giris_ve_ad_korumasi(panel_client, csrf, client,
     assert session.get(KaynakDurumu, "analiz_openai").imlec.startswith("until:")
     r = client.post("/panel/toplayici/saglayici/openai/sifirla", data={"csrf": "x"}, follow_redirects=False)
     assert r.status_code == 303 and "giris" in r.headers["location"]
+
+
+def test_duzenle_sehadet_ayrintilari(panel_client, csrf, sehit_ekle, session):
+    s = sehit_ekle(durum="onay_bekliyor")
+    form = _form(csrf(panel_client), sehadet_yeri="Hakkâri", sehadet_olayi="Çatışmada şehit oldu.",
+                 fotograf_url="https://x/a.jpg")
+    assert panel_client.post(f"/panel/sehit/{s.id}", data=form, follow_redirects=False).status_code == 303
+    session.refresh(s)
+    assert (s.sehadet_yeri, s.sehadet_olayi, s.fotograf_url) == ("Hakkâri", "Çatışmada şehit oldu.", "https://x/a.jpg")
+    h = panel_client.get(f"/panel/sehit/{s.id}").text
+    assert "Çatışmada şehit oldu.</textarea>" in h and 'class="onizleme" src="https://x/a.jpg"' in h
+
+
+def test_duzenle_http_olmayan_fotograf_400(panel_client, csrf, sehit_ekle):
+    s = sehit_ekle(durum="onay_bekliyor")
+    r = panel_client.post(f"/panel/sehit/{s.id}", data=_form(csrf(panel_client), fotograf_url="javascript:alert(1)"))
+    assert r.status_code == 400 and "Fotoğraf adresi" in r.text and "onizleme" not in r.text

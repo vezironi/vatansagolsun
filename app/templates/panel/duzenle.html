@@ -26,6 +26,10 @@
   <label>Baba adı <input name="baba_adi" value="{{ f.baba_adi }}"></label>
   <label>Doğum yılı <input name="dogum_yili" inputmode="numeric" value="{{ f.dogum_yili }}"></label>
   <label>Dönem <input name="donem" value="{{ f.donem }}"></label>
+  <label>Şehadet yeri <input name="sehadet_yeri" value="{{ f.sehadet_yeri }}"></label>
+  <label>Nasıl şehit oldu <textarea name="sehadet_olayi" rows="5">{{ f.sehadet_olayi }}</textarea></label>
+  <label>Fotoğraf adresi <input name="fotograf_url" type="url" placeholder="https://…" value="{{ f.fotograf_url }}"></label>
+  {% if f.fotograf_url and f.fotograf_url.startswith(("http://", "https://")) %}<img class="onizleme" src="{{ f.fotograf_url }}" alt="" referrerpolicy="no-referrer" loading="lazy">{% endif %}
   <label>Kaynak kodu <input name="kaynak_kodu" value="{{ f.kaynak_kodu }}"></label>
   <label class="onay"><input type="checkbox" name="resmi_teyit"{% if f.resmi_teyit %} checked{% endif %}> Resmî teyit var</label>
   <label class="onay"><input type="checkbox" name="isimsiz"{% if f.isimsiz %} checked{% endif %}> İsimsiz kayıt</label>

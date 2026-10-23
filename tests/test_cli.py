@@ -138,23 +138,23 @@ def test_izin_yoksa_atlanir_ve_okuyucu_cagrilmaz(cli_db, monkeypatch, capsys):
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["egm"])
-    cagrilar = {"egm": [], "sg": [], "sehitlerimiz": [], "kahramanlar": []}
+    cagrilar = {"egm": [], "sg": [], "sehitlerimiz": [], "kahramanlar": [], "temmuz15": []}
     for kod, liste in cagrilar.items():
         monkeypatch.setitem(aktarim.OKUYUCULAR, kod, sahte_okuyucu(kod, sayfa_sayisi=1, cagrilar=liste))
     monkeypatch.setattr(cli, "Getirici", lambda: object())
     assert cli.main(["aktar", "hepsi"]) == 0
     cikti = capsys.readouterr().out
     assert "sehitlerimiz: atlandı: izin yok (KAYNAK_IZINLERI)" in cikti
-    assert cagrilar == {"egm": [None], "sg": [], "sehitlerimiz": [], "kahramanlar": []}
+    assert cagrilar == {"egm": [None], "sg": [], "sehitlerimiz": [], "kahramanlar": [], "temmuz15": []}
 
 
 def test_hepsi_sirasi(cli_db, monkeypatch, capsys):
-    for kod in ("egm", "sg", "sehitlerimiz", "kahramanlar"):
+    for kod in ("egm", "sg", "sehitlerimiz", "kahramanlar", "temmuz15"):
         monkeypatch.setitem(aktarim.OKUYUCULAR, kod, sahte_okuyucu(kod, sayfa_sayisi=1))
     monkeypatch.setattr(cli, "Getirici", lambda: object())
     assert cli.main(["aktar", "hepsi"]) == 0
     satirlar = [s.split(":")[0] for s in capsys.readouterr().out.splitlines() if "eklenen=" in s]
-    assert satirlar == ["egm", "sg", "sehitlerimiz", "kahramanlar"]
+    assert satirlar == ["egm", "sg", "sehitlerimiz", "kahramanlar", "temmuz15"]
 
 
 def test_sehitlerimiz_kontrol_imleci_en_buyuk_kimlik(session, monkeypatch):
@@ -226,7 +226,7 @@ def test_hepsi_erken_hata_sonrakileri_durdurmaz(cli_db, monkeypatch, capsys):
         yield  # pragma: no cover
     monkeypatch.setitem(aktarim.OKUYUCULAR, "egm", sahte_okuyucu("egm", hata={"sayfa": 1}))
     monkeypatch.setitem(aktarim.OKUYUCULAR, "sg", patlayan)
-    for kod in ("sehitlerimiz", "kahramanlar"):
+    for kod in ("sehitlerimiz", "kahramanlar", "temmuz15"):
         monkeypatch.setitem(aktarim.OKUYUCULAR, kod, sahte_okuyucu(kod, sayfa_sayisi=1))
     monkeypatch.setattr(cli, "Getirici", lambda: object())
     assert cli.main(["aktar", "hepsi"]) == 1

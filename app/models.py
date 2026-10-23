@@ -61,6 +61,9 @@ class Sehit(Base):
     baba_adi: Mapped[str | None] = mapped_column(String(200))
     dogum_yili: Mapped[int | None] = mapped_column(Integer)
     donem: Mapped[str | None] = mapped_column(String(100))
+    sehadet_yeri: Mapped[str | None] = mapped_column(String(200))
+    sehadet_olayi: Mapped[str | None] = mapped_column(Text)  # nasıl şehit düştüğü (kaynak anlatımı)
+    fotograf_url: Mapped[str | None] = mapped_column(Text)  # yalnızca http(s); kaynağın sunucusundan gösterilir
     durum: Mapped[Durum] = mapped_column(_enum(Durum), default=Durum.onay_bekliyor, index=True)
     resmi_teyit: Mapped[bool] = mapped_column(Boolean, default=False)
     isimsiz: Mapped[bool] = mapped_column(Boolean, default=False)

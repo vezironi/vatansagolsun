@@ -125,7 +125,7 @@ def sifre_olustur() -> int:
     return 0
 
 
-HEPSI_SIRASI = ["egm", "sg", "sehitlerimiz", "kahramanlar"]
+HEPSI_SIRASI = ["egm", "sg", "sehitlerimiz", "kahramanlar", "temmuz15"]
 SAYACLAR = ("eklenen", "birlesen", "atlanan", "hatali")
 
 
@@ -268,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     if argv == ["aktarim-durumu"]:
         return aktarim_durumu()
     print("Kullanım: python -m app.cli sifre-olustur | ornek-veri [--sil] [--eminim] | "
-          "aktar <egm|sg|kahramanlar|sehitlerimiz|hepsi> [--bastan] | aktarim-durumu | sehitlerimiz-kontrol | topla [--kaynak KOD]", file=sys.stderr)
+          "aktar <egm|sg|kahramanlar|sehitlerimiz|temmuz15|hepsi> [--bastan] | aktarim-durumu | sehitlerimiz-kontrol | topla [--kaynak KOD]", file=sys.stderr)
     return 2
 
 

@@ -6,14 +6,15 @@
 <title>{% block baslik %}Vatan Sağ Olsun{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/site.css">
+<link rel="stylesheet" href="{{ statik('site.css') }}">
 {% block meta %}{% endblock %}
 </head>
 <body>
+{% include "_bant.html" %}
 <header>
   <div class="wrap">
     <a class="logo" href="/">VATAN<b>SAĞOLSUN</b></a>
-    <nav><a href="/#ara">Ara</a><a href="/yil-donumleri">Yıl Dönümleri</a><a href="/hakkinda">Hakkında</a><a href="/api/belgeler">API</a></nav>
+    <nav><a href="/#ara">Ara</a><a href="/yil-donumleri">Yıl Dönümleri</a><a href="/bannerlar">Bannerlar</a><a href="/hakkinda">Hakkında</a><a href="/api/belgeler">API</a></nav>
   </div>
 </header>
 
@@ -35,6 +36,8 @@
     </div>
   </div>
 </footer>
+{% include "_muzik_calar.html" %}
+<script src="{{ statik('secim.js') }}" defer></script>
 {% block son %}{% endblock %}
 </body>
 </html>

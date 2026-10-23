@@ -175,3 +175,20 @@ def test_ajax_sayfa_siniri_hata(monkeypatch):
 
     with pytest.raises(KaynakHatasi, match="5 sayfayı"):
         list(egm.sayfalar(Sonsuz({}), baslangic=None))
+
+
+def test_kart_ve_istihbarat_fotografi():
+    ilk = egm.kartlari_ayristir(oku("egm_liste.html"), bolum="sehitlerimiz")[0]
+    assert ilk.fotograf_url == (
+        "https://www.egm.gov.tr/kurumlar/egm.gov.tr/Sehit%20Görsel/ahmet_turkoglu.jpg?mode=resize&width=500")
+    bekir = next(k for k in egm.istihbarat_ayristir(oku("egm_istihbarat.html")) if k.soyad == "KILIÇTEPE")
+    assert bekir.fotograf_url == ("https://www.egm.gov.tr/kurumlar/egm.gov.tr/IcSite/istihbarat/Arsiv/"
+                                  "SiteAssets/Sayfalar/Sehitlerimiz/bekir_kilictepe.png")
+
+
+def test_cok_kisili_kartin_toplu_fotografi_atanmaz():
+    html = ('<a class="news-card-horizontal" href="/sehitlerimiz-ali-veli">'
+            '<div class="card-img"><img src="/toplu.jpg"></div>'
+            '<h5 class="card-title">Şehit Polis Memurları Ali KAYA ve Veli DEMİR</h5></a>')
+    kayitlar = egm.kartlari_ayristir(html, bolum="sehitlerimiz")
+    assert len(kayitlar) == 2 and all(k.fotograf_url is None for k in kayitlar)

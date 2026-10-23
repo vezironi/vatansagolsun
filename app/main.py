@@ -71,6 +71,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     static_dizini = PAKET_DIZINI / "static"
     if static_dizini.is_dir():
         app.mount("/static", StaticFiles(directory=static_dizini), name="static")
+    public_dizini = PAKET_DIZINI.parent / "public"  # site sahibinin koyduğu dosyalar (ör. müzik)
+    if public_dizini.is_dir():
+        app.mount("/public", StaticFiles(directory=public_dizini), name="public")
 
     app.include_router(api_router_olustur(app.state.limiter, settings.istek_siniri))
     app.include_router(panel_router_olustur(app.state.limiter))

@@ -22,6 +22,9 @@ class HamKayit:
     baba_adi: str | None = None
     dogum_yili: int | None = None
     donem: str | None = None
+    sehadet_yeri: str | None = None
+    sehadet_olayi: str | None = None  # nasıl şehit düştüğü
+    fotograf_url: str | None = None  # mutlak http(s) adresi
     kaynak_adi: str = ""
     kaynak_url: str | None = None
     metin: str | None = None

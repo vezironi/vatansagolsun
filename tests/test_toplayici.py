@@ -676,3 +676,8 @@ def test_calistir_session_factory_analizci_olusturaya_gecer(fabrika, monkeypatch
     monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar, sf=None: gelen.append(sf))
     toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), simdi=SIMDI)
     assert gelen == [fabrika]
+
+
+def test_olay_ozeti_sehadet_olayi_olur(session, ortam):
+    tara(session, ortam, [oge(1)], SahteAnalizci(analiz(olay_ozeti="Hain saldırıda şehit oldu.")))
+    assert session.query(Sehit).one().sehadet_olayi == "Hain saldırıda şehit oldu."

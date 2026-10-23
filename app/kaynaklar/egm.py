@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 from selectolax.parser import HTMLParser
 
 from app.kaynaklar import HamKayit, KaynakHatasi
-from app.kaynaklar.ayristir import isim_ayir, kisileri_ayir, metin_temizle, tarih_coz
+from app.kaynaklar.ayristir import gorsel_adresi, isim_ayir, kisileri_ayir, metin_temizle, tarih_coz
 from app.models import Kategori
 from app.text import slug
 
@@ -54,12 +54,14 @@ def kartlari_ayristir(html: str, *, bolum: str) -> list[HamKayit]:
             kisiler.append((ad, soyad, gorev))
         tarih_dugumu = kart.css_first(".cardDate")
         tarih, hassasiyet, yil = tarih_coz(tarih_dugumu.text() if tarih_dugumu else None)
+        # çok kişili kartın görseli toplu fotoğraftır: kimseye tek başına atanmaz
+        fotograf = gorsel_adresi(kart.css_first(".card-img img"), KOK) if len(kisiler) == 1 else None
         for ad, soyad, gorev in kisiler:
             dis_kimlik = yol if len(kisiler) == 1 else f"{yol}#{slug(ad + ' ' + (soyad or ''))}"
             kayitlar.append(HamKayit(
                 kaynak_kodu=KAYNAK_KODU, dis_kimlik=dis_kimlik, ad=ad, soyad=soyad, gorev=gorev,
                 tarih=tarih, hassasiyet=hassasiyet, yil=yil, kategori=Kategori.polis,
-                kurum=_KURUMLAR[bolum], kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + yol,
+                kurum=_KURUMLAR[bolum], fotograf_url=fotograf, kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + yol,
             ))
     return kayitlar
 
@@ -100,7 +102,7 @@ def istihbarat_ayristir(html: str) -> list[HamKayit]:
         kayitlar.append(HamKayit(
             kaynak_kodu=KAYNAK_KODU, dis_kimlik="istihbarat:" + slug(ham), ad=ad, soyad=soyad,
             gorev=gorev, kategori=Kategori.polis, kurum=_ISTIHBARAT_KURUMU,
-            kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + ISTIHBARAT,
+            fotograf_url=gorsel_adresi(img, KOK), kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + ISTIHBARAT,
         ))
     return kayitlar
 

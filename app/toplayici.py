@@ -140,7 +140,7 @@ def _kisi_taslagi(kod: str, kaynak, oge, makale, analiz: HaberAnalizi, kisi) -> 
         ad=ad, soyad=soyad, gorev=kisi.gorev, kategori=Kategori(kisi.kategori),
         memleket=kisi.memleket, kurum=kisi.kurum, tarih=tarih, hassasiyet=hassasiyet, yil=yil,
         resmi_teyit=analiz.resmi_kurum_duyurusu, kaynak_adi=kaynak.ad, kaynak_url=oge.url,
-        metin=f"{makale.baslik}\n\n{makale.govde[:4000]}",
+        sehadet_olayi=analiz.olay_ozeti or None, metin=f"{makale.baslik}\n\n{makale.govde[:4000]}",
     )
 
 
@@ -150,7 +150,7 @@ def _isimsiz_taslagi(kod: str, kaynak, oge, makale, analiz: HaberAnalizi) -> Ham
     return HamKayit(
         kaynak_kodu="haber", dis_kimlik=f"{kod}:{oge.kimlik}#isimsiz", ad="İsimsiz", isimsiz=True,
         tarih=gun, hassasiyet=Hassasiyet.tam, yil=gun.year, resmi_teyit=analiz.resmi_kurum_duyurusu,
-        kaynak_adi=kaynak.ad, kaynak_url=oge.url, metin=metin,
+        kaynak_adi=kaynak.ad, kaynak_url=oge.url, sehadet_olayi=analiz.olay_ozeti or None, metin=metin,
     )
 
 

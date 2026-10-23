@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 COPY pyproject.toml alembic.ini ./
 COPY app ./app
 COPY migrations ./migrations
+COPY public ./public
 RUN pip install --no-cache-dir .
 
 EXPOSE 8000

@@ -94,6 +94,7 @@ def kayit_ayristir(html: str, url: str) -> HamKayit:
         kategori=kategori_bul(gorev, kurum, donem), kurum=kurum,
         memleket=ad_duzenle(memleket) if memleket else None,
         baba_adi=ad_duzenle(baba) if baba else None, donem=donem,
+        sehadet_yeri=alanlar.get("Şehadet Yeri") or _ad_alani(kisi, "deathPlace"),
         kaynak_adi=KAYNAK_ADI, kaynak_url=KOK + yol,
     )
 

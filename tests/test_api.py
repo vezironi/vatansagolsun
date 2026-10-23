@@ -55,3 +55,10 @@ def test_cok_buyuk_id_ve_sayfa_422(client):
     assert client.get("/api/sehitler", params={"sayfa": "99999999999999999999"}).status_code == 422
     assert client.get("/api/sehitler", params={"sayfa": 1_000_001}).status_code == 422
     assert client.get("/api/sehitler/2147483647").status_code == 404
+
+
+def test_detay_sehadet_ayrintilari(client, sehit_ekle):
+    s = sehit_ekle(sehadet_yeri="Hakkâri", sehadet_olayi="Çatışmada şehit oldu.", fotograf_url="https://x/a.jpg")
+    j = client.get(f"/api/sehitler/{s.id}").json()
+    assert (j["sehadet_yeri"], j["sehadet_olayi"], j["fotograf_url"]) == (
+        "Hakkâri", "Çatışmada şehit oldu.", "https://x/a.jpg")
