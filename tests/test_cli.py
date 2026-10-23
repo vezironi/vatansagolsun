@@ -249,7 +249,7 @@ def topla_ortam(cli_db, monkeypatch):
 
     monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["egm", "sg", "hurriyet"])
     monkeypatch.setattr(cli, "Getirici", lambda: object())
-    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar: None)
+    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar, session_factory=None: None)
     monkeypatch.setattr(haber_modulu, "ogeleri_getir", lambda g, k: [])
     with cli_db() as s:
         for kod in ("egm", "sg"):
@@ -263,7 +263,7 @@ def topla_ortam(cli_db, monkeypatch):
 
 
 def test_topla_hata_yoksa_0_ve_bu_calisma_satirlari(topla_ortam, monkeypatch, capsys):
-    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar: object())
+    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar, session_factory=None: object())
     assert cli.main(["topla"]) == 0
     cikti = capsys.readouterr().out
     assert "egm: eklenen=1 birlesen=0 atlanan=0 hatali=0 durum=basarili" in cikti
@@ -326,3 +326,15 @@ def test_topla_kilit_tutuluyorsa_mesaj_ve_0(topla_ortam, capsys):
     assert "toplayıcı zaten çalışıyor" in capsys.readouterr().out
     assert cli.main(["aktarim-durumu"]) == 0
     assert "toplayici_kilidi" not in capsys.readouterr().out
+
+
+def test_aktarim_durumu_saglayici_park_satirlarini_listelemez(cli_db, capsys):
+    with cli_db() as s:
+        for ad in ("openai", "gemini", "claude"):
+            s.add(KaynakDurumu(kaynak_kodu=f"analiz_{ad}", son_durum="tukendi",
+                               eklenen=0, birlesen=0, atlanan=0, hatali=0))
+        s.add(KaynakDurumu(kaynak_kodu="egm_toplayici", eklenen=2, birlesen=0, atlanan=0, hatali=0))
+        s.commit()
+    assert cli.main(["aktarim-durumu"]) == 0
+    cikti = capsys.readouterr().out
+    assert "analiz_" not in cikti and "egm_toplayici: eklenen=2" in cikti

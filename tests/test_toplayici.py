@@ -507,7 +507,7 @@ def test_calistir_bir_kaynak_patlarsa_digerleri_calisir(fabrika, monkeypatch, or
 
 def test_calistir_analizci_yoksa_haber_api_anahtari_yok(fabrika, monkeypatch, ortam):
     monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["hurriyet"])
-    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar: None)
+    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar, session_factory=None: None)
     sonuc = toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), simdi=SIMDI)
     assert [(d.kaynak_kodu, d.son_durum) for d in sonuc] == [
         ("egm_toplayici", "atlandi"), ("sg_toplayici", "atlandi"), ("hurriyet", "hata")]
@@ -607,3 +607,52 @@ def test_calisiyor_mu_postgresqlde_advisory_lock_dener():
     bos = Sahte(True)  # alınabildi: hemen bırakılır
     assert toplayici.toplayici_calisiyor_mu(bos) is False
     assert [q for q, _ in bos.sorgular] == ["SELECT pg_try_advisory_lock(:k)", "SELECT pg_advisory_unlock(:k)"]
+
+
+# --- zincirli analizci ile toplayıcı entegrasyonu ---------------------------------------------------
+def _zincir_ile(fabrika, *saglayicilar):
+    from app.analiz import ZincirAnalizci
+
+    return ZincirAnalizci(list(saglayicilar), session_factory=fabrika)
+
+
+class _SahteSaglayici(SahteAnalizci):
+    def __init__(self, ad, *cevaplar):
+        super().__init__(*cevaplar)
+        self.ad = ad
+
+
+def test_zincir_hepsi_tukendi_toplayici_anahtar_gecersiz_der(session, ortam, fabrika):
+    from app.analiz import SaglayiciTukendi
+
+    z = _zincir_ile(fabrika, _SahteSaglayici("openai", SaglayiciTukendi("a")))
+    d = tara(session, ortam, [oge(1)], z)
+    assert d.son_durum == "hata" and d.son_mesaj == "API anahtarı geçersiz/yok"
+    assert imlec(session) is None  # takılı sayacı artmadı
+
+
+def test_zincir_gecici_hata_takili_korumasina_girer(session, ortam, fabrika):
+    from app.analiz import SaglayiciGecici
+
+    z = _zincir_ile(fabrika, _SahteSaglayici("openai", SaglayiciGecici("ağ"), SaglayiciGecici("ağ")))
+    d = tara(session, ortam, [oge(1)], z)
+    assert d.son_durum == "hata" and d.son_mesaj != "API anahtarı geçersiz/yok" and d.imlec
+
+
+def test_zincir_toplayici_oturumuna_dokunmaz_ve_park_satiri_ayri_kalir(session, ortam, fabrika):
+    from app.analiz import SaglayiciTukendi
+
+    z = _zincir_ile(fabrika, _SahteSaglayici("openai", SaglayiciTukendi("a")), _SahteSaglayici("gemini", analiz()))
+    d = tara(session, ortam, [oge(1)], z)
+    assert d.son_durum == "basarili" and d.eklenen == 1
+    assert session.get(KaynakDurumu, "analiz_openai") is None  # toplayıcı oturumunda değil
+    with fabrika() as s:
+        assert s.get(KaynakDurumu, "analiz_openai").son_durum == "tukendi"
+
+
+def test_calistir_session_factory_analizci_olusturaya_gecer(fabrika, monkeypatch, ortam):
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["hurriyet"])
+    gelen = []
+    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar, sf=None: gelen.append(sf))
+    toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), simdi=SIMDI)
+    assert gelen == [fabrika]

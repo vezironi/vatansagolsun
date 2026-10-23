@@ -9,6 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import aktarim, toplayici
+from app.analiz import PARK_ONEKI
 from app.admin import BCRYPT_EN_COK_BAYT, sifre_hashle
 from app.config import get_settings
 from app.dates import bugun
@@ -209,7 +210,8 @@ def sehitlerimiz_kontrol() -> int:
 def aktarim_durumu() -> int:
     with sessionmaker(motor_olustur(get_settings().database_url))() as session:
         tum = list(session.scalars(select(KaynakDurumu).order_by(KaynakDurumu.kaynak_kodu)))
-        satirlar = [d for d in tum if d.kaynak_kodu not in (toplayici.SAYAC_KODU, toplayici.KILIT_KODU)]
+        satirlar = [d for d in tum if d.kaynak_kodu != toplayici.KILIT_KODU
+                    and not d.kaynak_kodu.startswith(PARK_ONEKI)]  # dahili: sayaç, kilit, sağlayıcı park satırları
         sayac = next((d for d in tum if d.kaynak_kodu == toplayici.SAYAC_KODU), None)
         if not satirlar:
             print("Henüz aktarım yapılmadı.")

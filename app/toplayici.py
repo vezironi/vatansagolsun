@@ -387,7 +387,7 @@ def toplayici_calistir(
 def _tur(session_factory, *, g, analizci, simdi, kodlar) -> list[KaynakDurumu]:
     simdi = simdi or datetime.now(timezone.utc)
     g = g or Getirici()
-    analizci = analizci or analizci_olustur(get_settings())
+    analizci = analizci or analizci_olustur(get_settings(), session_factory)
     if kodlar is None:
         izinler = get_settings().kaynak_izinleri
         kodlar = [*RESMI_KAYNAKLAR, *(k for k in haber.HABER_KAYNAKLARI if k in izinler)]

@@ -472,8 +472,9 @@ def test_toplayici_sayfasi_anahtari_asla_gostermez(panel_client, app, monkeypatc
     r = panel_client.get("/panel/toplayici")
     assert "yapılandırıldı" in r.text
     assert "sk-ant" not in r.text and "gizli-deger" not in r.text
-    monkeypatch.setattr(app.state.settings, "anthropic_api_key", "")
-    for ad in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+    for alan in ("anthropic_api_key", "openai_api_key", "gemini_api_key"):
+        monkeypatch.setattr(app.state.settings, alan, "")
+    for ad in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
         monkeypatch.delenv(ad, raising=False)
     assert "anahtar yok" in panel_client.get("/panel/toplayici").text
 

@@ -74,24 +74,19 @@ class OpenAIAnalizci:
 
 
 def _gemini_kota_bitti(e: gerrors.APIError) -> bool:
-    """429 RESOURCE_EXHAUSTED kalıcı kota mı, dakikalık hız sınırı mı?
+    """429 RESOURCE_EXHAUSTED günlük kota bitişi mi, yoksa geçici hız sınırı mı?
 
-    API, QuotaFailure ayrıntısında quotaId verir ("...PerDay..." günlük, "...PerMinute..." dakikalık).
-    Ayrım yapılamazsa kota bitti sayılır (en güvenli seçim: sağlayıcı bir süre atlanır).
+    Yalnızca açıkça günlük olan kota "tükendi" sayılır: QuotaFailure quotaId'sinde "PerDay" ya da
+    iletide "per day"/"daily". Dakikalık ya da belirsiz 429 geçicidir (sağlayıcı 24 saat parka alınmaz).
     """
     ayrinti = e.details.get("error", e.details) if isinstance(e.details, dict) else {}
-    kimlikler = [str(v.get("quotaId", ""))
+    kimlikler = [str(v.get("quotaId", "")).lower()
                  for d in (ayrinti.get("details") or []) if isinstance(d, dict)
                  for v in (d.get("violations") or []) if isinstance(v, dict)]
-    kimlikler = [k.lower() for k in kimlikler if k]
     if any("perday" in k for k in kimlikler):
         return True
-    if kimlikler:
-        return not any("perminute" in k for k in kimlikler)
     mesaj = str(ayrinti.get("message", "")).lower()
-    if "per minute" in mesaj and "per day" not in mesaj:
-        return False
-    return True
+    return "per day" in mesaj or "daily" in mesaj
 
 
 class GeminiAnalizci:

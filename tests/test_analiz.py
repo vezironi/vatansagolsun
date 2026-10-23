@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.analiz import (
+    SaglayiciTukendi,
     AnalizHatasi,
     AnalizYapilandirilmamis,
     ClaudeAnalizci,
@@ -59,9 +60,9 @@ def _yanit(kod):
     return httpx2.Response(kod, request=istek)
 
 
-def test_kimlik_hatasi_yapilandirilmamis():
+def test_kimlik_hatasi_saglayici_tukendi():
     hata = anthropic.AuthenticationError("bad key", response=_yanit(401), body=None)
-    with pytest.raises(AnalizYapilandirilmamis):
+    with pytest.raises(SaglayiciTukendi):
         analizci(hata=hata).analiz_et(baslik="B", govde="G", yayin=YAYIN)
 
 
@@ -84,16 +85,16 @@ def test_model_kisitlari():
 
 
 def test_analizci_olustur(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
-    ayar = SimpleNamespace(anthropic_api_key="", analiz_modeli="claude-haiku-5-5")
+    for k in ("OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    ayar = SimpleNamespace(anthropic_api_key="", analiz_modeli="claude-haiku-5-5", database_url="sqlite://")
     assert analizci_olustur(ayar) is None
     ayar.anthropic_api_key = "sk-test"
     a = analizci_olustur(ayar)
-    assert isinstance(a, ClaudeAnalizci) and a.model == "claude-haiku-5-5"
+    assert [type(s) for s in a.saglayicilar] == [ClaudeAnalizci] and a.saglayicilar[0].model == "claude-haiku-5-5"
     ayar.anthropic_api_key = ""
     monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "tok")
-    assert isinstance(analizci_olustur(ayar), ClaudeAnalizci)
+    assert isinstance(analizci_olustur(ayar).saglayicilar[0], ClaudeAnalizci)
 
 
 def test_sistem_istemi_sabit():
@@ -145,8 +146,8 @@ def test_analiz_yapilandirildi_mi_istemci_kurmaz(monkeypatch):
     from app.analiz import analiz_yapilandirildi_mi
 
     monkeypatch.setattr(anthropic, "Anthropic", lambda **kw: pytest.fail("istemci kurulmamalı"))
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    for k in ("OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
     assert analiz_yapilandirildi_mi(SimpleNamespace(anthropic_api_key="")) is False
     assert analiz_yapilandirildi_mi(SimpleNamespace(anthropic_api_key="sk")) is True
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-env")

@@ -143,7 +143,7 @@ def _gemini_hatalari():
 TUKENDI = {
     "claude": {"kimlik", "yetki", "kredi"},
     "openai": {"kimlik", "yetki", "kota", "odeme"},
-    "gemini": {"kimlik", "yetki", "gecersiz_anahtar", "gunluk_kota", "kota_belirsiz"},
+    "gemini": {"kimlik", "yetki", "gecersiz_anahtar", "gunluk_kota"},  # belirsiz 429 geçici (R4-2)
 }
 SAGLAYICILAR = {
     "claude": (claude_uret, _claude_hatalari),
@@ -166,7 +166,8 @@ def test_sdk_hatalari_siniflanir(ad, vaka):
 
 def test_sinif_hiyerarsisi():
     assert issubclass(SaglayiciTukendi, AnalizHatasi) and issubclass(SaglayiciGecici, AnalizHatasi)
-    assert issubclass(SaglayiciTukendi, AnalizYapilandirilmamis)  # toplayıcının mevcut işleyişi korunur
+    # Zincir SaglayiciTukendi'yi dışarı sızdırmaz; düz AnalizHatasi alt sınıfıdır.
+    assert not issubclass(SaglayiciTukendi, AnalizYapilandirilmamis)
     assert not issubclass(SaglayiciGecici, AnalizYapilandirilmamis)
 
 
@@ -301,3 +302,177 @@ def test_geriye_uyum_ve_ayarlar():
     assert s.analiz_sirasi == ["openai", "gemini", "claude"]
     assert s.openai_api_key == "" and s.gemini_api_key == ""
     assert s.openai_modeli and s.gemini_modeli and s.analiz_modeli == "claude-haiku-5-5"
+
+
+# --- ZincirAnalizci ------------------------------------------------------------------------------
+from datetime import timedelta  # noqa: E402
+
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
+
+from app.analiz import ZincirAnalizci, analiz_yapilandirildi_mi, analizci_olustur  # noqa: E402
+from app.analiz_saglayicilari import _gemini_kota_bitti  # noqa: E402
+from app.db import Base  # noqa: E402
+from app.models import KaynakDurumu  # noqa: E402
+
+T0 = datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc)
+
+
+class _Sahte:
+    def __init__(self, ad, davranis):
+        self.ad, self.davranis, self.cagri = ad, davranis, 0
+
+    def analiz_et(self, *, baslik, govde, yayin):
+        self.cagri += 1
+        if isinstance(self.davranis, Exception):
+            raise self.davranis
+        return self.davranis
+
+
+class _Saat:
+    def __init__(self):
+        self.an = T0
+
+    def __call__(self):
+        return self.an
+
+
+@pytest.fixture
+def fabrika():
+    motor = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(motor)
+    yield sessionmaker(motor)
+    motor.dispose()
+
+
+def _satir(fabrika, ad):
+    with fabrika() as s:
+        return s.get(KaynakDurumu, f"analiz_{ad}")
+
+
+def _zincir(fabrika, *saglayicilar, saat=None):
+    return ZincirAnalizci(list(saglayicilar), session_factory=fabrika, saat=saat or _Saat())
+
+
+def _cagir(z):
+    return z.analiz_et(baslik="B", govde="G", yayin=YAYIN)
+
+
+def test_zincir_tukenen_atlanir_sonraki_sonuc_doner(fabrika):
+    oa = _Sahte("openai", SaglayiciTukendi("OpenAI kredisi/kotası bitti"))
+    ge = _Sahte("gemini", GECERLI)
+    z = _zincir(fabrika, oa, ge)
+    assert _cagir(z) is GECERLI and z.kullanilan_saglayici == "gemini"
+    satir = _satir(fabrika, "openai")
+    assert satir.son_durum == "tukendi" and satir.imlec == T0.isoformat() and "OpenAI" in satir.son_mesaj
+    assert _satir(fabrika, "gemini").son_durum == "basarili" and _satir(fabrika, "gemini").imlec is None
+    assert _cagir(z) is GECERLI
+    assert oa.cagri == 1  # ikinci çağrıda hiç denenmedi
+
+
+def test_zincir_24_saat_sonra_tekrar_dener(fabrika):
+    saat = _Saat()
+    oa = _Sahte("openai", SaglayiciTukendi("x"))
+    z = _zincir(fabrika, oa, _Sahte("gemini", GECERLI), saat=saat)
+    _cagir(z)
+    saat.an = T0 + timedelta(hours=23, minutes=59)
+    _cagir(z)
+    assert oa.cagri == 1
+    saat.an = T0 + timedelta(hours=25)
+    oa.davranis = GECERLI
+    _cagir(z)
+    assert oa.cagri == 2 and z.kullanilan_saglayici == "openai"
+    assert _satir(fabrika, "openai").imlec is None and _satir(fabrika, "openai").son_durum == "basarili"
+
+
+def test_zincir_gecici_hata_tukendi_saymaz(fabrika):
+    z = _zincir(fabrika, _Sahte("openai", SaglayiciGecici("ağ")), _Sahte("gemini", GECERLI))
+    assert _cagir(z) is GECERLI
+    assert _satir(fabrika, "openai") is None  # işaretlenmedi
+
+
+def test_zincir_hepsi_tukendi_yapilandirilmamis(fabrika):
+    z = _zincir(fabrika, _Sahte("openai", SaglayiciTukendi("a")), _Sahte("gemini", SaglayiciTukendi("b")))
+    with pytest.raises(AnalizYapilandirilmamis, match="Tüm analiz sağlayıcıları tükendi"):
+        _cagir(z)
+    with pytest.raises(AnalizYapilandirilmamis):  # hepsi parkta: hiç çağrı yok
+        _cagir(z)
+    assert [s.cagri for s in z.saglayicilar] == [1, 1]
+
+
+def test_zincir_biri_gecici_digeri_tukendi_analiz_hatasi(fabrika):
+    z = _zincir(fabrika, _Sahte("openai", SaglayiciTukendi("a")), _Sahte("gemini", SaglayiciGecici("ağ")))
+    with pytest.raises(AnalizHatasi) as e:
+        _cagir(z)
+    assert not isinstance(e.value, (AnalizYapilandirilmamis, SaglayiciTukendi))
+
+
+def test_zincir_tek_tukenen_saglayici_disari_sizmaz(fabrika):
+    z = _zincir(fabrika, _Sahte("openai", SaglayiciTukendi("a")), _Sahte("gemini", SaglayiciGecici("ağ")))
+    for _ in range(2):  # ikincisinde openai parkta, gemini yine geçici
+        with pytest.raises(AnalizHatasi) as e:
+            _cagir(z)
+        assert not isinstance(e.value, SaglayiciTukendi)
+
+
+def test_zincir_kendi_oturumunu_kullanir_cagiranin_islemine_dokunmaz(fabrika):
+    with fabrika() as dis:
+        dis.add(KaynakDurumu(kaynak_kodu="x", eklenen=0, birlesen=0, atlanan=0, hatali=0))  # bekleyen, commit'siz
+        z = _zincir(fabrika, _Sahte("openai", SaglayiciTukendi("a")), _Sahte("gemini", GECERLI))
+        _cagir(z)
+        assert dis.new  # dış oturumun bekleyen değişikliği commit/rollback ile bozulmadı
+        dis.rollback()
+    assert _satir(fabrika, "openai") is not None  # zincirin satırı kendi commit'iyle kalıcı
+
+
+def test_zincir_yazma_hatasi_sonucu_kaybetmez():
+    def bozuk():
+        raise RuntimeError("db yok")
+
+    z = ZincirAnalizci([_Sahte("openai", GECERLI)], session_factory=bozuk, saat=_Saat())
+    assert _cagir(z) is GECERLI
+
+
+def _ayar(**kw):
+    taban = dict(anthropic_api_key="", openai_api_key="", gemini_api_key="", analiz_modeli="claude-haiku-5-5",
+                 openai_modeli="o-model", gemini_modeli="g-model", analiz_sirasi=["openai", "gemini", "claude"],
+                 database_url="sqlite://")
+    return SimpleNamespace(**{**taban, **kw})
+
+
+def _anahtarsiz(monkeypatch):
+    for k in ("OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+
+
+def test_analizci_olustur_anahtar_yoksa_none(monkeypatch):
+    _anahtarsiz(monkeypatch)
+    assert analizci_olustur(_ayar()) is None
+    assert analiz_yapilandirildi_mi(_ayar()) is False
+
+
+def test_analizci_olustur_sirayla_yalniz_anahtarlilar(monkeypatch, fabrika):
+    _anahtarsiz(monkeypatch)
+    z = analizci_olustur(_ayar(openai_api_key="a", anthropic_api_key="c"), fabrika)
+    assert [s.ad for s in z.saglayicilar] == ["openai", "claude"] and z.session_factory is fabrika
+    assert z.saglayicilar[0].model == "o-model"
+    monkeypatch.setenv("GOOGLE_API_KEY", "g")
+    z = analizci_olustur(_ayar(analiz_sirasi=["claude", "gemini", "openai"], anthropic_api_key="c"), fabrika)
+    assert [s.ad for s in z.saglayicilar] == ["claude", "gemini"]
+    assert analiz_yapilandirildi_mi(_ayar()) is True  # yalnız ortamdaki Gemini anahtarı
+
+
+def test_analizci_olustur_varsayilan_fabrika(monkeypatch):
+    _anahtarsiz(monkeypatch)
+    z = analizci_olustur(_ayar(openai_api_key="a"))
+    assert z.session_factory is not None
+
+
+def test_gemini_belirsiz_429_gecici_gunluk_tukendi():
+    assert _gemini_kota_bitti(_gemini_429()) is False
+    assert _gemini_kota_bitti(_gemini_429(mesaj="Quota exceeded for requests per minute")) is False
+    assert _gemini_kota_bitti(_gemini_429("SomethingOther")) is False
+    assert _gemini_kota_bitti(_gemini_429("GenerateRequestsPerDayPerProjectPerModel")) is True
+    assert _gemini_kota_bitti(_gemini_429(mesaj="You exceeded your daily quota")) is True
+    assert _gemini_kota_bitti(_gemini_429(mesaj="limit of 50 requests per day")) is True
