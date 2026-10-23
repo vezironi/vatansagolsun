@@ -23,6 +23,7 @@ from app.analiz import (
     SISTEM_ISTEMI,
     SaglayiciGecici,
     SaglayiciTukendi,
+    gemini_gunluk_bitis,
     kullanici_icerigi,
 )
 
@@ -33,6 +34,16 @@ __all__ = ["ClaudeAnalizci", "GeminiAnalizci", "OpenAIAnalizci", "SaglayiciGecic
 def gemini_anahtari(ayar_anahtari: str = "") -> str:
     """Ayar, sonra GEMINI_API_KEY, sonra GOOGLE_API_KEY."""
     return ayar_anahtari or os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")
+
+
+def _model_yok(model: str) -> SaglayiciTukendi:
+    # Model adı gizli değildir; ham SDK iletisi yazılmaz.
+    return SaglayiciTukendi(f"model bulunamadı veya desteklenmiyor: {model}")
+
+
+def _model_hatasi_mi(durum: int | None, iletisi: str, anahtarlar: tuple[str, ...]) -> bool:
+    """404 ya da iletisi modeli/şema desteğini anan 400: yanlış ya da desteklenmeyen model."""
+    return durum == 404 or (durum == 400 and any(k in iletisi.lower() for k in anahtarlar))
 
 
 class OpenAIAnalizci:
@@ -59,6 +70,8 @@ class OpenAIAnalizci:
             # insufficient_quota: kredi/kota bitti (kalıcı). Düz 429 hız sınırıdır (geçici).
             if e.status_code == 402 or getattr(e, "code", None) == "insufficient_quota":
                 raise SaglayiciTukendi("OpenAI kredisi/kotası bitti") from e
+            if _model_hatasi_mi(e.status_code, str(e), ("model", "json_schema", "structured output")):
+                raise _model_yok(self.model) from e
             raise SaglayiciGecici(f"OpenAI isteği başarısız: {type(e).__name__} {e.status_code}") from e
         except openai.APIError as e:  # bağlantı ve zaman aşımı dahil
             raise SaglayiciGecici(f"OpenAI isteği başarısız: {type(e).__name__}") from e
@@ -120,7 +133,9 @@ class GeminiAnalizci:
             if e.code in (401, 402, 403) or (e.code == 400 and "api key" in mesaj):
                 raise SaglayiciTukendi("Gemini kimlik doğrulaması/yetkisi başarısız") from e
             if e.code == 429 and _gemini_kota_bitti(e):
-                raise SaglayiciTukendi("Gemini kotası bitti") from e
+                raise SaglayiciTukendi("Gemini kotası bitti", bitis=gemini_gunluk_bitis) from e
+            if _model_hatasi_mi(e.code, mesaj, ("model", "response_schema")):
+                raise _model_yok(self.model) from e
             raise SaglayiciGecici(f"Gemini isteği başarısız: {type(e).__name__} {e.code}") from e
         except gerrors.APIError as e:  # ServerError dahil
             raise SaglayiciGecici(f"Gemini isteği başarısız: {type(e).__name__} {e.code}") from e
@@ -163,6 +178,8 @@ class ClaudeAnalizci:
         except anthropic.APIStatusError as e:
             if e.status_code == 402 or (e.status_code == 400 and "credit balance" in str(e).lower()):
                 raise SaglayiciTukendi("Claude kredi bakiyesi yetersiz") from e
+            if _model_hatasi_mi(e.status_code, str(e), ("model",)):
+                raise _model_yok(self.model) from e
             raise SaglayiciGecici(f"Claude isteği başarısız: {type(e).__name__} {e.status_code}") from e
         except anthropic.APIError as e:
             raise SaglayiciGecici(f"Claude isteği başarısız: {type(e).__name__}") from e

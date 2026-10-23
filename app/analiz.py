@@ -2,7 +2,8 @@
 import logging
 import os
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
@@ -59,11 +60,17 @@ class AnalizYapilandirilmamis(AnalizHatasi):
 
 
 class SaglayiciTukendi(AnalizHatasi):
-    """Sağlayıcı kalıcı olarak kullanılamıyor (kimlik/yetki/kredi/kota): zincir onu bir süre atlar.
+    """Sağlayıcı kalıcı olarak kullanılamıyor (kimlik/yetki/kredi/kota/model): zincir onu bir süre atlar.
+
+    `bitis` verilirse park bitişini hesaplar (simdi -> bitiş); yoksa TUKENME_SURESI (24 saat) uygulanır.
 
     Yalnızca zincirin içinde anlamlıdır: ZincirAnalizci bunu asla dışarı sızdırmaz; tüm sağlayıcılar
     tükenmişse AnalizYapilandirilmamis, biri geçici hata vermişse AnalizHatasi yükseltir.
     """
+
+    def __init__(self, mesaj: str = "", *, bitis: "Callable[[datetime], datetime] | None" = None):
+        super().__init__(mesaj)
+        self.bitis = bitis
 
 
 class SaglayiciGecici(AnalizHatasi):
@@ -100,6 +107,18 @@ def utc_now() -> datetime:
 
 VARSAYILAN_SIRA = ["openai", "gemini", "claude"]
 TUKENME_SURESI = timedelta(hours=24)
+TUKENDI_MESAJI = "Tüm analiz sağlayıcıları tükendi"
+BITIS_ONEKI = "until:"  # imlec = "until:<ISO>" (park bitişi); önek yoksa eski biçim: tükenme anı, +24 saat
+GEMINI_SIFIRLANMA_TZ = ZoneInfo("America/Los_Angeles")
+
+
+def gemini_gunluk_bitis(simdi: datetime) -> datetime:
+    """Gemini günlük kotası bir sonraki America/Los_Angeles gece yarısında (+5 dk) sıfırlanır."""
+    if simdi.tzinfo is None:
+        simdi = simdi.replace(tzinfo=timezone.utc)
+    yerel = simdi.astimezone(GEMINI_SIFIRLANMA_TZ)
+    ertesi = datetime.combine(yerel.date() + timedelta(days=1), time(0, 5), tzinfo=GEMINI_SIFIRLANMA_TZ)
+    return ertesi.astimezone(timezone.utc)
 PARK_ONEKI = "analiz_"  # KaynakDurumu'nda "analiz_openai" vb.: dahili sağlayıcı satırları (kaynak değildir)
 
 
@@ -138,7 +157,7 @@ def saglayici_tablosu(settings, session, simdi: datetime | None = None) -> list[
     satirlar: list[dict] = []
     for sira, ad in enumerate(getattr(settings, "analiz_sirasi", None) or VARSAYILAN_SIRA, start=1):
         satir = {"sira": sira, "ad": ad, "anahtar_var": False, "model": "", "durum": "bilinmeyen",
-                 "tukenme_bitis": None, "son_basarili": None}
+                 "tukenme_bitis": None, "son_basarili": None, "son_hata": None, "son_hata_zamani": None}
         if ad in anahtarlar:
             satir["anahtar_var"] = bool(anahtarlar[ad])
             satir["model"] = modeller[ad]
@@ -147,11 +166,11 @@ def saglayici_tablosu(settings, session, simdi: datetime | None = None) -> list[
             if durum is not None:
                 if durum.son_durum == "basarili":
                     satir["son_basarili"] = durum.son_calisma
-                if satir["anahtar_var"] and _park_suresinde_mi(durum.imlec, simdi):
-                    bitis = datetime.fromisoformat(durum.imlec)
-                    if bitis.tzinfo is None:
-                        bitis = bitis.replace(tzinfo=timezone.utc)
-                    satir["durum"], satir["tukenme_bitis"] = "tukendi", bitis + TUKENME_SURESI
+                if durum.son_durum == "gecici_hata":
+                    satir["son_hata"], satir["son_hata_zamani"] = durum.son_mesaj, durum.son_calisma
+                bitis = _park_bitisi(durum.imlec)
+                if satir["anahtar_var"] and bitis is not None and simdi < bitis:
+                    satir["durum"], satir["tukenme_bitis"] = "tukendi", bitis
         satirlar.append(satir)
     return satirlar
 
@@ -161,23 +180,51 @@ def analiz_yapilandirildi_mi(settings) -> bool:
     return bool(_etkin_saglayicilar(settings))
 
 
-def _park_suresinde_mi(tukenme: str | None, simdi: datetime) -> bool:
-    """imlec'teki tükenme zamanı hâlâ 24 saat içinde mi? Çözülemeyen değer park sayılmaz."""
-    if not tukenme:
-        return False
+def _park_bitisi(imlec: str | None) -> datetime | None:
+    """imlec'ten park bitişi (UTC). Yeni biçim "until:<ISO>"; eski biçim tükenme anıdır (+24 saat).
+    Çözülemeyen değer park sayılmaz (None)."""
+    if not imlec:
+        return None
+    eski = not imlec.startswith(BITIS_ONEKI)
     try:
-        an = datetime.fromisoformat(tukenme)
+        an = datetime.fromisoformat(imlec if eski else imlec[len(BITIS_ONEKI):])
     except ValueError:
-        return False
+        return None
     if an.tzinfo is None:
         an = an.replace(tzinfo=timezone.utc)
-    return simdi - an < TUKENME_SURESI
+    return an + TUKENME_SURESI if eski else an
+
+
+def _park_suresinde_mi(imlec: str | None, simdi: datetime) -> bool:
+    bitis = _park_bitisi(imlec)
+    return bitis is not None and simdi < bitis
+
+
+def park_temizle(session, ad: str) -> bool:
+    """Sağlayıcının parkını hemen kaldırır (panel "Yeniden dene"). Satır yoksa False."""
+    satir = session.get(KaynakDurumu, park_kodu(ad))
+    if satir is None:
+        return False
+    satir.imlec = None
+    satir.son_durum = "sifirlandi"
+    satir.son_mesaj = None
+    session.commit()
+    return True
+
+
+def _gecici_ozet(e: Exception) -> str:
+    """"<HataSinifi> <durum>" ya da sabit metin; ham SDK iletisi/anahtar yazılmaz."""
+    neden = e.__cause__ or e
+    if neden is e:
+        return str(e)[:200]
+    durum = getattr(neden, "status_code", None) or getattr(neden, "code", None)
+    return f"{type(neden).__name__} {durum}" if isinstance(durum, int) else type(neden).__name__
 
 
 class ZincirAnalizci:
-    """Sağlayıcıları sırayla dener; tükenen sağlayıcıyı 24 saat atlar.
+    """Sağlayıcıları sırayla dener; tükenen sağlayıcıyı bitiş zamanına dek atlar.
 
-    Park durumu `KaynakDurumu("analiz_<ad>")` satırında tutulur (imlec = tükenme zamanı, ISO). Zincir bu
+    Park durumu `KaynakDurumu("analiz_<ad>")` satırında tutulur (imlec = "until:<ISO>" park bitişi; eski satırlarda tükenme anı, +24 saat). Zincir bu
     satırları KENDİ kısa oturumunda yazıp commit eder; toplayıcının oturumuna dokunmaz.
     """
 
@@ -187,8 +234,12 @@ class ZincirAnalizci:
         self.saat = saat
         self.kullanilan_saglayici: str | None = None  # son başarılı sağlayıcı (log/panel için)
 
+    def kullanilabilir_mi(self) -> bool:
+        """Parkta olmayan en az bir sağlayıcı var mı?"""
+        return any(not self._park_mi(s.ad) for s in self.saglayicilar)
+
     def analiz_et(self, *, baslik: str, govde: str, yayin: datetime) -> HaberAnalizi:
-        gecici: SaglayiciGecici | None = None
+        gecici: AnalizHatasi | None = None
         self.kullanilan_saglayici = None
         for saglayici in self.saglayicilar:
             if self._park_mi(saglayici.ad):
@@ -197,18 +248,27 @@ class ZincirAnalizci:
                 sonuc = saglayici.analiz_et(baslik=baslik, govde=govde, yayin=yayin)
             except SaglayiciTukendi as e:
                 logger.warning("analiz sağlayıcısı %s tükendi: %s", saglayici.ad, e)
-                self._yaz(saglayici.ad, tukendi=True, mesaj=self._mesaj(e))
+                simdi = self.saat()
+                bitis = e.bitis(simdi) if e.bitis is not None else simdi + TUKENME_SURESI
+                self._yaz(saglayici.ad, "tukendi", self._mesaj(e), imlec=BITIS_ONEKI + bitis.isoformat())
                 continue
             except SaglayiciGecici as e:
                 logger.warning("analiz sağlayıcısı %s geçici hata verdi: %s", saglayici.ad, e)
                 gecici = e
+                self._yaz(saglayici.ad, "gecici_hata", _gecici_ozet(e))
+                continue
+            except Exception as e:  # noqa: BLE001 - son çare: beklenmeyen hata geçici sayılır
+                logger.exception("analiz sağlayıcısı %s beklenmeyen hata verdi", saglayici.ad)
+                gecici = SaglayiciGecici(f"{saglayici.ad} beklenmeyen hata: {type(e).__name__}")
+                gecici.__cause__ = e
+                self._yaz(saglayici.ad, "gecici_hata", type(e).__name__)
                 continue
             self.kullanilan_saglayici = saglayici.ad
-            self._yaz(saglayici.ad, tukendi=False, mesaj=None)
+            self._yaz(saglayici.ad, "basarili", None)
             return sonuc
         if gecici is not None:
             raise AnalizHatasi(f"Analiz sağlayıcıları başarısız oldu: {gecici}") from gecici
-        raise AnalizYapilandirilmamis("Tüm analiz sağlayıcıları tükendi")
+        raise AnalizYapilandirilmamis(TUKENDI_MESAJI)
 
     @staticmethod
     def _mesaj(e: Exception) -> str:
@@ -225,7 +285,7 @@ class ZincirAnalizci:
             return False
         return _park_suresinde_mi(tukenme, self.saat())
 
-    def _yaz(self, ad: str, *, tukendi: bool, mesaj: str | None) -> None:
+    def _yaz(self, ad: str, durum: str, mesaj: str | None, *, imlec: str | None = None) -> None:
         simdi = self.saat()
         try:
             with self.session_factory() as s:
@@ -235,9 +295,9 @@ class ZincirAnalizci:
                                          eklenen=0, birlesen=0, atlanan=0, hatali=0)
                     s.add(satir)
                 satir.son_calisma = simdi
-                satir.son_durum = "tukendi" if tukendi else "basarili"
+                satir.son_durum = durum
                 satir.son_mesaj = mesaj
-                satir.imlec = simdi.isoformat() if tukendi else None
+                satir.imlec = imlec
                 s.commit()
         except Exception:  # noqa: BLE001 - durum yazılamasa da analiz sonucu kaybolmasın
             logger.exception("analiz sağlayıcı durumu yazılamadı: %s", ad)

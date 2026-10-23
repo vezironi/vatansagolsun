@@ -365,7 +365,7 @@ def test_zincir_tukenen_atlanir_sonraki_sonuc_doner(fabrika):
     z = _zincir(fabrika, oa, ge)
     assert _cagir(z) is GECERLI and z.kullanilan_saglayici == "gemini"
     satir = _satir(fabrika, "openai")
-    assert satir.son_durum == "tukendi" and satir.imlec == T0.isoformat() and "OpenAI" in satir.son_mesaj
+    assert satir.son_durum == "tukendi" and satir.imlec == "until:" + (T0 + timedelta(hours=24)).isoformat() and "OpenAI" in satir.son_mesaj
     assert _satir(fabrika, "gemini").son_durum == "basarili" and _satir(fabrika, "gemini").imlec is None
     assert _cagir(z) is GECERLI
     assert oa.cagri == 1  # ikinci çağrıda hiç denenmedi
@@ -389,7 +389,9 @@ def test_zincir_24_saat_sonra_tekrar_dener(fabrika):
 def test_zincir_gecici_hata_tukendi_saymaz(fabrika):
     z = _zincir(fabrika, _Sahte("openai", SaglayiciGecici("ağ")), _Sahte("gemini", GECERLI))
     assert _cagir(z) is GECERLI
-    assert _satir(fabrika, "openai") is None  # işaretlenmedi
+    satir = _satir(fabrika, "openai")  # parka alınmadı; yalnız son hata kaydedildi
+    assert satir.son_durum == "gecici_hata" and satir.imlec is None and satir.son_calisma is not None
+    assert z.kullanilabilir_mi()
 
 
 def test_zincir_hepsi_tukendi_yapilandirilmamis(fabrika):
@@ -528,3 +530,132 @@ def test_analizci_olustur_bilinmeyen_adi_uyarir(monkeypatch, fabrika, caplog):
     z = analizci_olustur(_ayar(analiz_sirasi=["mistral", "openai"], openai_api_key="a"), fabrika)
     assert [s.ad for s in z.saglayicilar] == ["openai"]
     assert "mistral" in caplog.text
+
+
+# --- final inceleme düzeltmeleri ----------------------------------------------------------------------
+def _model_hatalari():
+    def g(kod, durum, mesaj):
+        return gerrors.ClientError(kod, {"error": {"code": kod, "status": durum, "message": mesaj}})
+
+    return {
+        "claude": [anthropic.NotFoundError("The model foo does not exist", response=_yanit(404), body=None),
+                   anthropic.BadRequestError("model: foo is not supported", response=_yanit(400), body=None)],
+        "openai": [openai.NotFoundError("The model `foo` does not exist", response=_yanit(404), body=None),
+                   openai.BadRequestError("Invalid parameter: model foo", response=_yanit(400), body=None),
+                   openai.BadRequestError("json_schema is not supported with this", response=_yanit(400), body=None),
+                   openai.BadRequestError("Structured Output not supported", response=_yanit(400), body=None)],
+        "gemini": [g(404, "NOT_FOUND", "models/foo sk-gizli"),
+                   g(400, "INVALID_ARGUMENT", "model does not support sk-gizli"),
+                   g(400, "INVALID_ARGUMENT", "Unknown name response_schema sk-gizli")],
+    }
+
+
+@pytest.mark.parametrize("ad,hata", [(a, h) for a, hs in _model_hatalari().items() for h in hs])
+def test_model_bulunamadi_tukendi_sabit_mesaj(ad, hata):
+    uret, _ = SAGLAYICILAR[ad]
+    a, _ = uret(hata=hata)
+    a.model = "foo-model"
+    with pytest.raises(SaglayiciTukendi) as e:
+        a.analiz_et(baslik="B", govde="G", yayin=YAYIN)
+    assert str(e.value) == "model bulunamadı veya desteklenmiyor: foo-model"
+    assert "gizli" not in str(e.value) and e.value.bitis is None
+
+
+def test_gemini_gunluk_kota_bitisi_los_angeles_gece_yarisi():
+    from app.analiz import gemini_gunluk_bitis
+
+    # Ekim: PDT (UTC-7). 12:00 UTC = 05:00 PDT -> ertesi PDT 00:05 = 07:05 UTC ertesi gün
+    assert gemini_gunluk_bitis(T0) == datetime(2026, 10, 24, 7, 5, tzinfo=timezone.utc)
+    # 06:59 UTC = 23:59 PDT (önceki gün): 5 dakika sonra
+    assert gemini_gunluk_bitis(datetime(2026, 10, 24, 6, 59, tzinfo=timezone.utc)) == datetime(
+        2026, 10, 24, 7, 5, tzinfo=timezone.utc)
+    # Kış: PST (UTC-8)
+    assert gemini_gunluk_bitis(datetime(2026, 12, 1, 12, tzinfo=timezone.utc)) == datetime(
+        2026, 12, 2, 8, 5, tzinfo=timezone.utc)
+
+
+def test_gemini_gunluk_kota_hatasi_bitis_tasir():
+    a, _ = gemini_uret(hata=_gemini_429("GenerateRequestsPerDayPerProjectPerModel-FreeTier"))
+    with pytest.raises(SaglayiciTukendi) as e:
+        a.analiz_et(baslik="B", govde="G", yayin=YAYIN)
+    assert e.value.bitis(T0) == datetime(2026, 10, 24, 7, 5, tzinfo=timezone.utc)
+
+
+def test_zincir_gemini_gunluk_kota_los_angeles_sifirlanana_kadar_park(fabrika):
+    from app.analiz import gemini_gunluk_bitis
+
+    saat = _Saat()
+    ge = _Sahte("gemini", SaglayiciTukendi("Gemini kotası bitti", bitis=gemini_gunluk_bitis))
+    z = _zincir(fabrika, ge, _Sahte("claude", GECERLI), saat=saat)
+    _cagir(z)
+    assert _satir(fabrika, "gemini").imlec == "until:2026-10-24T07:05:00+00:00"
+    saat.an = datetime(2026, 10, 24, 7, 4, tzinfo=timezone.utc)
+    ge.davranis = GECERLI
+    _cagir(z)
+    assert ge.cagri == 1  # hâlâ parkta
+    saat.an = datetime(2026, 10, 24, 7, 6, tzinfo=timezone.utc)
+    _cagir(z)
+    assert ge.cagri == 2 and z.kullanilan_saglayici == "gemini"  # 24 saat dolmadan açıldı
+
+
+def test_eski_bicim_imlec_24_saat_okunur(fabrika, monkeypatch):
+    _anahtarsiz(monkeypatch)
+    _park(fabrika, "openai", durum="tukendi", imlec=T0.isoformat())  # eski satır: tükenme anı
+    oa = _Sahte("openai", GECERLI)
+    saat = _Saat()
+    saat.an = T0 + timedelta(hours=23)
+    z = _zincir(fabrika, oa, _Sahte("claude", GECERLI), saat=saat)
+    _cagir(z)
+    assert oa.cagri == 0
+    saat.an = T0 + timedelta(hours=24, minutes=1)
+    _cagir(z)
+    assert oa.cagri == 1
+
+
+def test_kullanilabilir_mi(fabrika):
+    z = _zincir(fabrika, _Sahte("openai", SaglayiciTukendi("a")), _Sahte("gemini", SaglayiciTukendi("b")))
+    assert z.kullanilabilir_mi()
+    with pytest.raises(AnalizYapilandirilmamis):
+        _cagir(z)
+    assert not z.kullanilabilir_mi()
+
+
+def test_zincir_gecici_hata_sinif_ve_durum_yazar_basari_ustune_yazar(fabrika):
+    a, _ = openai_uret(hata=openai.RateLimitError("limit sk-gizli", response=_yanit(429), body=None))
+    z = _zincir(fabrika, a, _Sahte("gemini", GECERLI))
+    _cagir(z)
+    satir = _satir(fabrika, "openai")
+    assert (satir.son_durum, satir.son_mesaj, satir.imlec) == ("gecici_hata", "RateLimitError 429", None)
+    assert satir.son_calisma is not None
+    with fabrika() as s:  # panel tablosu son hatayı gösterir
+        (x,) = saglayici_tablosu(_ayar(openai_api_key="a", analiz_sirasi=["openai"]), s, simdi=T0)
+    assert x["durum"] == "kullanilabilir" and x["son_hata"] == "RateLimitError 429" and x["son_hata_zamani"]
+    ok, _ = openai_uret(cevap=GECERLI)
+    z.saglayicilar[0] = ok
+    _cagir(z)
+    assert _satir(fabrika, "openai").son_durum == "basarili" and _satir(fabrika, "openai").son_mesaj is None
+
+
+def test_zincir_beklenmeyen_hata_gecici_sayilir_ve_kaydedilir(fabrika, caplog):
+    z = _zincir(fabrika, _Sahte("openai", KeyError("sk-gizli")), _Sahte("gemini", GECERLI))
+    assert _cagir(z) is GECERLI and z.kullanilan_saglayici == "gemini"
+    satir = _satir(fabrika, "openai")
+    assert (satir.son_durum, satir.son_mesaj, satir.imlec) == ("gecici_hata", "KeyError", None)
+    assert "Traceback" in caplog.text
+    z = _zincir(fabrika, _Sahte("openai", RuntimeError("x")))
+    with pytest.raises(AnalizHatasi) as e:
+        _cagir(z)
+    assert not isinstance(e.value, (AnalizYapilandirilmamis, SaglayiciTukendi))
+
+
+def test_park_temizle(fabrika):
+    from app.analiz import park_temizle
+
+    z = _zincir(fabrika, _Sahte("openai", SaglayiciTukendi("a")), _Sahte("gemini", GECERLI))
+    _cagir(z)
+    with fabrika() as s:
+        assert park_temizle(s, "openai") is True and park_temizle(s, "yok") is False
+    assert _satir(fabrika, "openai").imlec is None
+    assert z.saglayicilar[0].cagri == 1
+    _cagir(z)
+    assert z.saglayicilar[0].cagri == 2  # park kalktı, yeniden denendi
