@@ -120,3 +120,12 @@ def test_bildir_uzun_ve_sehit_id(client, session, sehit_ekle):
     client.post("/bildir", data={"mesaj": "x", "sehit": str(s.id)})
     client.post("/bildir", data={"mesaj": "y", "sehit": "abc"})
     assert [b.sehit_id for b in session.query(Bildirim).order_by(Bildirim.id)] == [s.id, None]
+
+
+def test_bildir_hiz_siniri(client):
+    kodlar = [client.post("/bildir", data={"mesaj": "x"}).status_code for _ in range(6)]
+    assert kodlar[:5] == [200] * 5 and kodlar[5] == 429
+
+
+def test_hakkinda_iletisim(client):
+    assert "İletişim" in client.get("/hakkinda").text

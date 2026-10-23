@@ -69,7 +69,7 @@
     fetch("/api/sehitler/" + encodeURIComponent(id))
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (k) { doldur(k); modal.classList.add("show"); })
-      .catch(function () {});
+      .catch(function () { window.location.href = "/sehit/x-" + encodeURIComponent(id); });
   }
   function kapat() { modal.classList.remove("show"); }
 
