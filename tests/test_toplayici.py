@@ -62,7 +62,7 @@ def tara(s, ortam, ogeler, analizci, g=None):
 
 
 def imlec(s):
-    return datetime.fromisoformat(s.get(KaynakDurumu, "hurriyet").imlec)
+    return toplayici.HaberImleci.oku(s.get(KaynakDurumu, "hurriyet").imlec).son_yayin
 
 
 def test_ilk_calisma_yalnizca_bugun(session, ortam):
@@ -73,7 +73,7 @@ def test_ilk_calisma_yalnizca_bugun(session, ortam):
 
 
 def test_imlecten_sonrasi_ve_uc_gun_telafi(session, ortam):
-    session.add(KaynakDurumu(kaynak_kodu="hurriyet", imlec=(SIMDI - timedelta(days=5)).isoformat(),
+    session.add(KaynakDurumu(kaynak_kodu="hurriyet", imlec=(SIMDI - timedelta(days=5)).isoformat(),  # eski düz ISO biçimi de okunur
                              eklenen=0, birlesen=0, atlanan=0, hatali=0))
     session.commit()
     eski, yeni = oge(1, gun_once=4), oge(2, gun_once=2, baslik="Şehit 2")
@@ -108,7 +108,7 @@ def test_isimsiz_taslak(session, ortam):
     tara(session, ortam, [oge(1)], SahteAnalizci(analiz(kisiler=[], isimsiz_sayisi=2)))
     s = session.query(Sehit).one()
     assert s.isimsiz and s.durum == Durum.onay_bekliyor
-    assert "2" in session.query(Kaynak).one().metin
+    assert session.query(Kaynak).one().metin.startswith("İsimsiz şehit sayısı: 2. Olay.")
 
 
 def test_anma_haberi_kayit_uretmez(session, ortam):
@@ -139,6 +139,7 @@ def test_gunluk_sinir(session, ortam, monkeypatch):
     a = SahteAnalizci(analiz())
     d = tara(session, ortam, [o2, o1], a)
     assert a.cagri == 1 and imlec(session) == o1.yayin and d.son_mesaj == "günlük analiz sınırı"
+    assert d.son_durum == "basarili"
 
 
 def test_sehit_gecmeyen_haber_analiz_edilmez(session, ortam):
@@ -164,3 +165,52 @@ def test_analiz_sayaci_gun_degisince_sifirlanir(session):
     assert toplayici.analiz_sayaci_artir(session, date(2026, 10, 22), 1)
     assert not toplayici.analiz_sayaci_artir(session, date(2026, 10, 22), 1)
     assert toplayici.analiz_sayaci_artir(session, date(2026, 10, 23), 1)
+
+
+def test_ayni_saniyedeki_ogeler_kaybolmaz(session, ortam):
+    a, b = oge(1, 2), oge(2, 2)  # aynı yayın anı
+    assert a.yayin == b.yayin
+    tara(session, ortam, [a, b], SahteAnalizci(analiz(), AnalizHatasi("x")))
+    assert imlec(session) == a.yayin
+    an = SahteAnalizci(analiz(kisiler=[Kisi(ad="veli", soyad="demir", kategori="asker")]))
+    tara(session, ortam, [a, b], an)
+    assert an.cagri == 1 and session.query(Sehit).count() == 2
+
+
+def test_gelecek_tarihli_oge_imleci_surmez(session, ortam):
+    gecmis, gelecek = oge(1, 2), oge(2, -3)
+    a = SahteAnalizci()
+    tara(session, ortam, [gecmis, gelecek], a)
+    assert a.cagri == 1 and imlec(session) == gecmis.yayin
+
+
+def test_takili_oge_ucuncu_denemede_atlanir(session, ortam):
+    kotu, iyi = oge(1, 3), oge(2, 2)
+    for _ in range(2):
+        d = tara(session, ortam, [kotu, iyi], SahteAnalizci(AnalizHatasi("x")))
+        assert d.son_durum == "hata" and d.imlec and imlec(session) is None
+    a = SahteAnalizci(AnalizHatasi("x"), analiz())
+    d = tara(session, ortam, [kotu, iyi], a)
+    assert a.cagri == 2 and d.hatali == 1 and d.eklenen == 1
+    assert d.son_mesaj == "3. denemede atlandı: 1" and imlec(session) == iyi.yayin
+
+
+def test_makale_hatasi_sayaci_harcamaz(session, ortam, monkeypatch):
+    def kotu(html, k):
+        raise haber.KaynakHatasi("404")
+    monkeypatch.setattr(haber, "makale_ayristir", kotu)
+    tara(session, ortam, [oge(1)], SahteAnalizci())
+    assert session.get(KaynakDurumu, toplayici.SAYAC_KODU) is None or not session.get(KaynakDurumu, toplayici.SAYAC_KODU).imlec
+
+
+def test_hatali_taslak_mesaja_yazilir(session, ortam):
+    d = tara(session, ortam, [oge(1)], SahteAnalizci(analiz(kisiler=[Kisi(ad="1", kategori="asker")])))
+    assert d.hatali == 1 and "aktarılamadı" in d.son_mesaj
+
+
+def test_ilk_calisma_sinir_istanbul_gece_yarisi(session, ortam):
+    dun = HaberOgesi("hurriyet", "1", "u1", "Şehit", "", datetime(2026, 10, 22, 23, 59, tzinfo=TZ))
+    bugun = HaberOgesi("hurriyet", "2", "u2", "Şehit", "", datetime(2026, 10, 23, 0, 1, tzinfo=TZ))
+    a = SahteAnalizci()
+    tara(session, ortam, [dun, bugun], a)
+    assert a.cagri == 1 and imlec(session) == bugun.yayin

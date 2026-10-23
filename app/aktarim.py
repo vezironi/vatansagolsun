@@ -260,10 +260,13 @@ def kaynak_durumu(s: Session, kaynak_kodu: str) -> KaynakDurumu:
     return durum
 
 
-def _temizle(mesaj: str | None) -> str:
+def temizle(mesaj: str | None) -> str:
     """SQL ve parametre dökümünü atar, 500 karaktere kırpar."""
     mesaj = (mesaj or "").split("[SQL:")[0].split("(Background on")[0].strip()
     return mesaj[:500]
+
+
+_temizle = temizle  # eski ad
 
 
 def _simdi() -> datetime:
