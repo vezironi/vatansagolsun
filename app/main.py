@@ -1,5 +1,6 @@
 """Uygulama fabrikası."""
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -14,6 +15,7 @@ from app.admin import GirisGerekli, secret_zayif_mi, giris_gerekli_isleyici, pan
 from app.api import api_router_olustur
 from app.config import Settings, get_settings
 from app.db import motor_olustur
+from app.zamanlayici import zamanlayici_kur
 from app.site import bildir_router_olustur, router as site_router
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,22 @@ PAKET_DIZINI = Path(__file__).resolve().parent
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        zamanlayici = zamanlayici_kur(app.state.session_factory)
+        app.state.zamanlayici = zamanlayici
+        if zamanlayici is not None:
+            zamanlayici.start()
+            logger.info("sehitlerimiz zamanlayıcısı başladı (12 saatte bir)")
+        try:
+            yield
+        finally:
+            if zamanlayici is not None:
+                zamanlayici.shutdown(wait=False)
+
     app = FastAPI(
+        lifespan=lifespan,
         title="Vatan Sağ Olsun",
         docs_url="/api/belgeler",
         openapi_url="/api/openapi.json",
@@ -35,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.motor = motor
     app.state.session_factory = sessionmaker(motor)
     app.state.settings = settings
+    app.state.zamanlayici = None
 
     # Sınırlayıcı uygulama başına kurulur: testler arasında sayaç sızmaz.
     app.state.limiter = Limiter(key_func=get_remote_address)

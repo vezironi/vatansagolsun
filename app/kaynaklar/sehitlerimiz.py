@@ -185,3 +185,10 @@ def yeni_kayitlar(g, *, son_id: int) -> tuple[list[HamKayit], int]:
             if not kesildi:
                 en_buyuk = kimlik
     return kayitlar, en_buyuk
+
+
+def en_buyuk_id(g) -> int:
+    """/arsiv'deki son eklenenler arasındaki en büyük kayıt kimliği (hiç yoksa 0)."""
+    kimlikler = [k for y in son_eklenenler_ayristir(g.metin(KAYNAK_KODU, KOK + "/arsiv"))
+                 if (k := _kimlik_ya_da_none(y)) is not None]
+    return max(kimlikler, default=0)

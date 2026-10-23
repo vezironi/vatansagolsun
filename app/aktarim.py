@@ -9,7 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import repo
+from app.config import get_settings
 from app.kaynaklar import HamKayit, KaynakHatasi, egm, kahramanlar, sehitlerimiz, sg
+from app.kaynaklar import sehitlerimiz as sh
 from app.kaynaklar.getirici import Getirici
 from app.models import Durum, Hassasiyet, Kaynak, KaynakDurumu, Kategori, Sehit
 from app.schemas import SehitVeri
@@ -319,3 +321,47 @@ def kaynagi_aktar(s: Session, kod: str, g: Getirici, *, bastan: bool = False) ->
     finally:  # başarı, hata ya da Ctrl+C: işlenen sayfalara kadarki en büyük kimlik saklanır
         s.rollback()
         _kontrol_imlecini_ilerlet(s, en_buyuk[0])
+
+
+def sehitlerimiz_kontrol(s: Session, g: Getirici) -> KaynakDurumu:
+    """12 saatlik kontrol: /arsiv'e yeni eklenen kayıtları onay bekleyen olarak alır.
+
+    İmleç, toplu aktarımın da kullandığı `sehitlerimiz_kontrol` satırındaki en büyük kayıt
+    kimliğidir. Hiç yoksa yalnızca imleç kurulur (ilk çalışma geçmişi taşımaz).
+    """
+    durum = kaynak_durumu(s, KONTROL_KODU)
+    if "sehitlerimiz" not in get_settings().kaynak_izinleri:
+        durum.son_durum, durum.son_mesaj, durum.son_calisma = "atlandi", "izin yok", _simdi()
+        s.commit()
+        return durum
+    try:
+        if not (durum.imlec and durum.imlec.isdigit()):
+            en_buyuk = sh.en_buyuk_id(g)
+            if en_buyuk <= 0:
+                raise KaynakHatasi("/arsiv sayfasında kayıt bulunamadı; imleç kurulamadı")
+            durum.imlec = str(en_buyuk)
+            durum.son_durum, durum.son_mesaj = "basarili", "imleç kuruldu"
+        else:
+            son_id = int(durum.imlec)
+            kayitlar, yeni_imlec = sh.yeni_kayitlar(g, son_id=son_id)
+            hatali = 0
+            for ham in kayitlar:
+                sonuc = kayit_aktar(s, ham, yeni_durum=Durum.onay_bekliyor)
+                alan = {"yeni": "eklenen", "birlesti": "birlesen", "atlandi": "atlanan", "hatali": "hatali"}[sonuc.durum]
+                setattr(durum, alan, (getattr(durum, alan) or 0) + 1)
+                if sonuc.durum == "hatali":
+                    hatali += 1
+                    logger.warning("sehitlerimiz/%s kontrolde aktarılamadı: %s", ham.dis_kimlik, _temizle(sonuc.mesaj))
+            if hatali == 0:  # hatalı kayıt varsa imleç ilerlemez: sonraki kontrol yeniden dener
+                durum.imlec = str(max(son_id, yeni_imlec))
+            durum.son_durum, durum.son_mesaj = "basarili", (f"{hatali} kayıt aktarılamadı" if hatali else None)
+        durum.son_calisma = _simdi()
+        s.commit()
+    except Exception as hata:  # noqa: BLE001 - zamanlayıcı işi düşmemeli; hata durum satırına yazılır
+        s.rollback()
+        logger.exception("sehitlerimiz kontrolü başarısız")
+        durum = kaynak_durumu(s, KONTROL_KODU)
+        durum.son_durum, durum.son_calisma = "hata", _simdi()
+        durum.son_mesaj = _temizle(str(hata) if isinstance(hata, KaynakHatasi) else f"{type(hata).__name__}: {hata}")
+        s.commit()
+    return durum

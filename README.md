@@ -128,6 +128,58 @@ Yedek dosyasını sunucudan başka bir yere (kendi bilgisayarınıza) kopyalamay
 
 ---
 
+## 9. Geçmiş verileri aktarma
+
+Site, kamuya açık resmî arşivlerden geçmiş şehit kayıtlarını kendisi toplayabilir. Kaynaklar: `egm` (Emniyet), `sg` (Sahil Güvenlik), `kahramanlar` (kahramanlar.org.tr, 2000 öncesi), `sehitlerimiz` (sehitlerimiz.org.tr, 2000 sonrası). Siteler her istek arasında en az 2 saniye beklenerek, nazikçe taranır.
+
+### Kaynakları açıp kapatma
+
+`.env` içindeki `KAYNAK_IZINLERI` satırı hangi kaynaklardan veri alınacağını belirler:
+
+```
+KAYNAK_IZINLERI=["egm","sg","kahramanlar","sehitlerimiz"]
+```
+
+Bir site itiraz ederse o kaynağın adını listeden **çıkarın** (örnek: `["egm","sg","kahramanlar"]`) ve `docker compose up -d` çalıştırın; o kaynağa artık hiç istek gitmez. O kaynaktan gelmiş kayıtları API'den de gizlemek isterseniz adını `API_HARIC_KAYNAKLAR=["sehitlerimiz"]` satırına yazın.
+
+### Komutlar
+
+```bash
+docker compose exec app python -m app.cli aktar hepsi     # tüm kaynakları sırayla aktarır
+docker compose exec app python -m app.cli aktar egm       # tek kaynak: egm | sg | kahramanlar | sehitlerimiz
+docker compose exec app python -m app.cli aktarim-durumu  # her kaynak için sayılar ve son durum
+```
+
+Toplu aktarımla gelen kayıtlar doğrudan yayına girer. Aynı kayıt iki kez eklenmez; komutu tekrar çalıştırmak güvenlidir.
+
+### Ne kadar sürer?
+
+- `egm` ve `sg`: birkaç dakika.
+- `kahramanlar`: yaklaşık 1.850 istek x 2 saniye, yani **yaklaşık 1 saat**.
+- `sehitlerimiz`: 2000 sonrası her kaydın kendi sayfası alınır; yüzlerce, hatta binlerce istek demektir ve **saatler sürebilir**.
+
+Komut yarıda kesilirse (bağlantı koptu, Ctrl+C, sunucu yeniden başladı) **aynı komutu tekrar çalıştırın**; kaldığı yerden devam eder. Uzun işleri bağlantınız kopsa da sürsün diye arka planda çalıştırın:
+
+```bash
+docker compose exec -d app python -m app.cli aktar hepsi
+```
+
+(`-d`: arka planda çalıştırır. `docker compose exec -d` yoksa: `nohup docker compose exec -T app python -m app.cli aktar hepsi > aktarim.log 2>&1 &`.) İlerlemeyi `aktarim-durumu` ile izleyin.
+
+### 12 saatlik otomatik kontrol
+
+`sehitlerimiz` kaynağı açıkken site, 12 saatte bir sehitlerimiz.org.tr'nin "son eklenenler" listesine bakar (sunucu açıldıktan 5 dakika sonra ilk kontrol yapılır). Yeni bir kayıt bulursa onu **yayına almaz**; yönetici panelinde **onay bekleyenler** arasına düşer, siz onaylayınca yayınlanır. Elle tek seferlik çalıştırmak için:
+
+```bash
+docker compose exec app python -m app.cli sehitlerimiz-kontrol
+```
+
+İlk çalıştırmada kontrol yalnızca "şu an sitedeki en son kayıt" noktasını işaretler, geçmişi getirmez (geçmiş için yukarıdaki `aktar` komutu vardır). Bu kontrol `docker-compose.yml` içindeki `ZAMANLAYICI_AKTIF=true` ayarıyla çalışır; yerelde kapalıdır.
+
+> Uygulama Docker'da **tek** süreç olarak çalışır. `uvicorn`'a `--workers` ekleyip birden fazla süreç çalıştırırsanız her süreç kendi zamanlayıcısını başlatır ve kontrol birden fazla kez yapılır.
+
+---
+
 ## Geliştiriciler için
 
 - Testler: `.venv/Scripts/python -m pytest`

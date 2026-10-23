@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     site_url: str = "http://localhost:8000"
     kaynak_izinleri: list[str] = ["egm", "sg", "kahramanlar", "sehitlerimiz"]
     istek_araligi_sn: float = 2.0
+    zamanlayici_aktif: bool = False  # docker-compose'ta True: 12 saatlik sehitlerimiz kontrolü
     oturum_https: bool = False  # üretimde True: oturum çerezi yalnızca HTTPS ile gider
 
 

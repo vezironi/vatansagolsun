@@ -1,4 +1,4 @@
-"""Komut satırı araçları: `sifre-olustur`, `ornek-veri`, `aktar`, `aktarim-durumu`."""
+"""Komut satırı araçları: `sifre-olustur`, `ornek-veri`, `aktar`, `aktarim-durumu`, `sehitlerimiz-kontrol`."""
 import argparse
 import getpass
 import random
@@ -169,6 +169,17 @@ def aktar(argv: list[str]) -> int:
     return 0
 
 
+def sehitlerimiz_kontrol() -> int:
+    """12 saatlik kontrolün elle tek çalıştırması."""
+    ayarlar = get_settings()
+    with sessionmaker(motor_olustur(ayarlar.database_url))() as session:
+        durum = aktarim.sehitlerimiz_kontrol(session, Getirici())
+        print(f"sehitlerimiz-kontrol: durum={durum.son_durum} imlec={durum.imlec} "
+              f"eklenen={durum.eklenen or 0} birlesen={durum.birlesen or 0} hatali={durum.hatali or 0}"
+              + (f" mesaj={durum.son_mesaj}" if durum.son_mesaj else ""))
+        return 1 if durum.son_durum == "hata" else 0
+
+
 def aktarim_durumu() -> int:
     with sessionmaker(motor_olustur(get_settings().database_url))() as session:
         satirlar = list(session.scalars(select(KaynakDurumu).order_by(KaynakDurumu.kaynak_kodu)))
@@ -191,10 +202,12 @@ def main(argv: list[str] | None = None) -> int:
         return ornek_veri(argv[1:])
     if argv and argv[0] == "aktar":
         return aktar(argv[1:])
+    if argv == ["sehitlerimiz-kontrol"]:
+        return sehitlerimiz_kontrol()
     if argv == ["aktarim-durumu"]:
         return aktarim_durumu()
     print("Kullanım: python -m app.cli sifre-olustur | ornek-veri [--sil] [--eminim] | "
-          "aktar <egm|sg|kahramanlar|sehitlerimiz|hepsi> [--bastan] | aktarim-durumu", file=sys.stderr)
+          "aktar <egm|sg|kahramanlar|sehitlerimiz|hepsi> [--bastan] | aktarim-durumu | sehitlerimiz-kontrol", file=sys.stderr)
     return 2
 
 

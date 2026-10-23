@@ -20,6 +20,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://vatansagolsun:${POSTGRES_PASSWORD}@db/vatansagolsun
+      ZAMANLAYICI_AKTIF: "true"
     depends_on:
       db:
         condition: service_healthy
