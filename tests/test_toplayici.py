@@ -214,3 +214,132 @@ def test_ilk_calisma_sinir_istanbul_gece_yarisi(session, ortam):
     a = SahteAnalizci()
     tara(session, ortam, [dun, bugun], a)
     assert a.cagri == 1 and imlec(session) == bugun.yayin
+
+
+# --- resmî sayfa taraması ve birleşik çalıştırma (Task 5) ---
+
+from sqlalchemy import create_engine, select  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
+
+from app.aktarim import kayit_aktar  # noqa: E402
+from app.config import get_settings  # noqa: E402
+from app.db import Base  # noqa: E402
+from app.kaynaklar import HamKayit, KaynakHatasi, egm, sg  # noqa: E402
+
+
+def _ham(kod, kimlik, ad):
+    return HamKayit(kaynak_kodu=kod, dis_kimlik=kimlik, ad=ad, soyad="Test",
+                    tarih=date(2026, 10, 20), hassasiyet="tam")
+
+
+def _tamamla(s, kod, imlec="son"):
+    s.add(KaynakDurumu(kaynak_kodu=kod, tamamlandi=True, imlec=imlec,
+                       eklenen=0, birlesen=0, atlanan=0, hatali=0))
+    s.commit()
+
+
+def _egm_sayfalari(tuketilen):
+    def sayfalar(g, *, baslangic):
+        assert baslangic is None
+        for etiket, kayitlar in [
+            ("sehitlerimiz:1", [_ham("egm", "/a", "Ali"), _ham("egm", "/b", "Veli")]),
+            ("sehitlerimiz:2", [_ham("egm", "/c", "Can")]),
+            ("sehitlerimiz:3", [_ham("egm", "/d", "Deniz")]),
+            ("ozelharekat:1", [_ham("egm", "/e", "Efe")]),
+        ]:
+            tuketilen.append(etiket)
+            yield etiket, kayitlar
+    return sayfalar
+
+
+def test_resmi_toplu_aktarim_yokken_istek_atmaz(session, monkeypatch):
+    def patlar(g, *, baslangic):
+        raise AssertionError("istek atılmamalı")
+    monkeypatch.setattr(egm, "sayfalar", patlar)
+    d = toplayici.resmi_kaynak_tara(session, "egm", SahteGetirici())
+    assert d.kaynak_kodu == "egm_toplayici" and "aktar egm" in d.son_mesaj
+    assert session.scalar(select(Sehit.id)) is None
+
+
+def test_resmi_tarama_yeni_onay_bekliyor_bilinen_atlandi_imlec_degismez(session, monkeypatch):
+    kayit_aktar(session, _ham("egm", "/a", "Ali"))  # toplu aktarımda yayına alınmış
+    session.commit()
+    _tamamla(session, "egm", imlec="istihbarat:1")
+    tuketilen = []
+    monkeypatch.setattr(egm, "sayfalar", _egm_sayfalari(tuketilen))
+    d = toplayici.resmi_kaynak_tara(session, "egm", SahteGetirici())
+    assert tuketilen == ["sehitlerimiz:1", "sehitlerimiz:2"]  # 3. sayfa istenmez
+    assert (d.eklenen, d.atlanan, d.son_durum) == (2, 1, "basarili")
+    durumlar = {x.ad: x.durum for x in session.scalars(select(Sehit))}
+    assert durumlar == {"Ali": "yayinda", "Veli": "onay_bekliyor", "Can": "onay_bekliyor"}
+    toplu = session.get(KaynakDurumu, "egm")
+    assert toplu.imlec == "istihbarat:1" and toplu.tamamlandi and toplu.eklenen == 0
+
+
+def test_resmi_izin_yoksa(session, monkeypatch):
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["hurriyet"])
+    d = toplayici.resmi_kaynak_tara(session, "sg", SahteGetirici())
+    assert d.son_mesaj == "izin yok" and d.son_durum == "atlandi"
+
+
+def test_resmi_sg_tek_sayfa(session, monkeypatch):
+    _tamamla(session, "sg", imlec="1")
+    monkeypatch.setattr(sg, "sayfalar", lambda g, *, baslangic: iter([("1", [_ham("sg", "/x", "Sinan")])]))
+    d = toplayici.resmi_kaynak_tara(session, "sg", SahteGetirici())
+    assert d.eklenen == 1 and session.scalar(select(Sehit.durum)) == "onay_bekliyor"
+    assert session.get(KaynakDurumu, "sg").imlec == "1"
+
+
+def test_resmi_kaynak_hatasi_durum_satirina_yazilir(session, monkeypatch):
+    _tamamla(session, "sg", imlec="1")
+
+    def bozuk(g, *, baslangic):
+        raise KaynakHatasi("ağ koptu")
+        yield  # pragma: no cover
+    monkeypatch.setattr(sg, "sayfalar", bozuk)
+    d = toplayici.resmi_kaynak_tara(session, "sg", SahteGetirici())
+    assert d.son_durum == "hata" and "ağ koptu" in d.son_mesaj
+
+
+@pytest.fixture
+def fabrika():
+    motor = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(motor)
+    yield sessionmaker(motor)
+    motor.dispose()
+
+
+def test_calistir_bir_kaynak_patlarsa_digerleri_calisir(fabrika, monkeypatch, ortam):
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["egm", "sg", "hurriyet"])
+    with fabrika() as s:
+        _tamamla(s, "egm")
+        _tamamla(s, "sg")
+
+    def patlar(g, *, baslangic):
+        raise RuntimeError("beklenmedik")
+        yield  # pragma: no cover
+    monkeypatch.setattr(egm, "sayfalar", patlar)
+    monkeypatch.setattr(sg, "sayfalar", lambda g, *, baslangic: iter([("1", [_ham("sg", "/x", "Sinan")])]))
+    ortam.ogeler = [oge(1)]
+    sonuc = toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), analizci=SahteAnalizci(), simdi=SIMDI)
+    assert [d.kaynak_kodu for d in sonuc] == ["egm_toplayici", "sg_toplayici", "hurriyet"]
+    assert [d.son_durum for d in sonuc] == ["hata", "basarili", "basarili"]
+    assert "RuntimeError" in sonuc[0].son_mesaj
+    assert sonuc[1].eklenen == 1 and sonuc[2].eklenen == 1  # oturum kapandıktan sonra da okunabilir
+
+
+def test_calistir_analizci_yoksa_haber_api_anahtari_yok(fabrika, monkeypatch, ortam):
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["hurriyet"])
+    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar: None)
+    sonuc = toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), simdi=SIMDI)
+    assert [(d.kaynak_kodu, d.son_durum) for d in sonuc] == [
+        ("egm_toplayici", "atlandi"), ("sg_toplayici", "atlandi"), ("hurriyet", "hata")]
+    assert sonuc[2].son_mesaj == "API anahtarı yok"
+
+
+def test_calistir_kaynak_secimi(fabrika, monkeypatch):
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["egm", "sg"])
+    sonuc = toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), analizci=SahteAnalizci(),
+                                         simdi=SIMDI, kodlar=["sg"])
+    assert [d.kaynak_kodu for d in sonuc] == ["sg_toplayici"]

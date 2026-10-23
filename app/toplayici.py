@@ -2,15 +2,18 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from collections.abc import Callable, Sequence
+from datetime import date, datetime, timedelta, timezone
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
 from app.aktarim import kaynak_durumu, temizle, kayit_aktar
-from app.analiz import AnalizHatasi, Analizci, AnalizYapilandirilmamis, HaberAnalizi
+from app.analiz import AnalizHatasi, Analizci, AnalizYapilandirilmamis, HaberAnalizi, analizci_olustur
 from app.config import get_settings
 from app.dates import TZ
-from app.kaynaklar import HamKayit, KaynakHatasi, ayristir, haber
+from app.kaynaklar import HamKayit, KaynakHatasi, ayristir, egm, haber, sg
+from app.kaynaklar.getirici import Getirici
 from app.models import Durum, Hassasiyet, Kategori, KaynakDurumu
 from app.text import ad_duzenle, slug, soyad_duzenle
 
@@ -181,3 +184,79 @@ def haber_kaynagi_tara(
     if hatali_taslak and mesaj is None:
         mesaj = f"{hatali_taslak} taslak aktarılamadı"
     return _sonuc_yaz(s, durum, simdi, son_durum, mesaj)
+
+
+RESMI_KAYNAKLAR = ("egm", "sg")
+EGM_TARAMA_SAYFALARI = ("sehitlerimiz:1", "sehitlerimiz:2")  # en yeniler listenin başında
+
+
+def toplayici_kodu(kod: str) -> str:
+    """Kaynağın toplayıcı çalışmasının durum satırı; resmî kaynaklarda toplu aktarımdan ayrıdır."""
+    return f"{kod}_toplayici" if kod in RESMI_KAYNAKLAR else kod
+
+
+def resmi_kaynak_tara(s: Session, kod: Literal["egm", "sg"], g) -> KaynakDurumu:
+    """Resmî sayfanın en yeni kayıtlarını onay bekleyen olarak alır; toplu aktarım imlecine dokunmaz."""
+    durum = kaynak_durumu(s, toplayici_kodu(kod))
+    simdi = datetime.now(timezone.utc)
+    if kod not in get_settings().kaynak_izinleri:
+        return _sonuc_yaz(s, durum, simdi, "atlandi", "izin yok")
+    toplu = s.get(KaynakDurumu, kod)
+    if toplu is None or not toplu.tamamlandi:
+        return _sonuc_yaz(s, durum, simdi, "atlandi", f"önce 'aktar {kod}' çalıştırın")
+
+    sayfalar = egm.sayfalar(g, baslangic=None) if kod == "egm" else sg.sayfalar(g, baslangic=None)
+    hatali = 0
+    try:
+        for imlec, kayitlar in sayfalar:
+            for ham in kayitlar:
+                sonuc = kayit_aktar(s, ham, yeni_durum=Durum.onay_bekliyor)
+                alan = _SAYAC_ALANI[sonuc.durum]
+                setattr(durum, alan, (getattr(durum, alan) or 0) + 1)
+                if sonuc.durum == "hatali":
+                    hatali += 1
+                    logger.warning("%s/%s taslağı aktarılamadı: %s", kod, ham.dis_kimlik, temizle(sonuc.mesaj))
+            s.commit()
+            if kod == "egm" and imlec == EGM_TARAMA_SAYFALARI[-1]:
+                break  # üretici tembel: daha fazla sayfa istenmez
+    except KaynakHatasi as hata:
+        s.rollback()
+        return _sonuc_yaz(s, kaynak_durumu(s, toplayici_kodu(kod)), simdi, "hata", temizle(str(hata)))
+    return _sonuc_yaz(s, durum, simdi, "basarili", f"{hatali} kayıt aktarılamadı" if hatali else None)
+
+
+def toplayici_calistir(
+    session_factory: Callable[[], Session], *, g=None, analizci: Analizci | None = None,
+    simdi: datetime | None = None, kodlar: Sequence[str] | None = None,
+) -> list[KaynakDurumu]:
+    """Tek tur: egm, sg, ardından izinli haber kaynakları. `kodlar` verilirse yalnızca onlar."""
+    simdi = simdi or datetime.now(timezone.utc)
+    g = g or Getirici()
+    analizci = analizci or analizci_olustur(get_settings())
+    if kodlar is None:
+        izinler = get_settings().kaynak_izinleri
+        kodlar = [*RESMI_KAYNAKLAR, *(k for k in haber.HABER_KAYNAKLARI if k in izinler)]
+    sonuclar = []
+    for kod in kodlar:
+        satir = toplayici_kodu(kod)
+        with session_factory() as s:
+            try:
+                if kod in RESMI_KAYNAKLAR:
+                    durum = resmi_kaynak_tara(s, kod, g)
+                else:
+                    durum = haber_kaynagi_tara(s, kod, g, analizci, simdi=simdi)
+            except Exception as hata:  # noqa: BLE001 - bir kaynak diğerlerini durdurmasın
+                logger.exception("%s taraması başarısız", kod)
+                mesaj = temizle(f"{type(hata).__name__}: {hata}")
+                try:
+                    s.rollback()
+                    durum = _sonuc_yaz(s, kaynak_durumu(s, satir), simdi, "hata", mesaj)
+                except Exception:  # noqa: BLE001 - veritabanı da yanıt vermiyorsa sonuç yine döner
+                    logger.exception("%s hata durumu yazılamadı", kod)
+                    durum = KaynakDurumu(kaynak_kodu=satir, son_durum="hata", son_mesaj=mesaj, son_calisma=simdi,
+                                         eklenen=0, birlesen=0, atlanan=0, hatali=0)
+            if durum in s:  # oturum kapandıktan sonra da okunabilsin
+                s.refresh(durum)
+                s.expunge(durum)
+        sonuclar.append(durum)
+    return sonuclar

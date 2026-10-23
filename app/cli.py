@@ -1,4 +1,4 @@
-"""Komut satırı araçları: `sifre-olustur`, `ornek-veri`, `aktar`, `aktarim-durumu`, `sehitlerimiz-kontrol`."""
+"""Komut satırı araçları: `sifre-olustur`, `ornek-veri`, `aktar`, `aktarim-durumu`, `sehitlerimiz-kontrol`, `topla`."""
 import argparse
 import getpass
 import random
@@ -8,11 +8,12 @@ from datetime import date, timedelta
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import aktarim
+from app import aktarim, toplayici
 from app.admin import BCRYPT_EN_COK_BAYT, sifre_hashle
 from app.config import get_settings
 from app.dates import bugun
 from app.db import motor_olustur
+from app.kaynaklar import haber
 from app.kaynaklar.getirici import Getirici
 from app.models import Bildirim, Kaynak, KaynakDurumu, Sehit
 
@@ -199,13 +200,41 @@ def sehitlerimiz_kontrol() -> int:
 
 def aktarim_durumu() -> int:
     with sessionmaker(motor_olustur(get_settings().database_url))() as session:
-        satirlar = list(session.scalars(select(KaynakDurumu).order_by(KaynakDurumu.kaynak_kodu)))
+        tum = list(session.scalars(select(KaynakDurumu).order_by(KaynakDurumu.kaynak_kodu)))
+        satirlar = [d for d in tum if d.kaynak_kodu != toplayici.SAYAC_KODU]
+        sayac = next((d for d in tum if d.kaynak_kodu == toplayici.SAYAC_KODU), None)
         if not satirlar:
             print("Henüz aktarım yapılmadı.")
         for d in satirlar:
             print(f"{_ozet(d.kaynak_kodu, d)} tamamlandi={d.tamamlandi} son_calisma={d.son_calisma}"
                   + (f" mesaj={d.son_mesaj}" if d.son_mesaj else ""))
+        if sayac is not None:
+            gun, _, sayi = (sayac.imlec or "").partition(":")
+            print(f"Bugünkü analiz: {int(sayi) if gun == bugun().isoformat() and sayi.isdigit() else 0}")
     return 0
+
+
+def topla(argv: list[str]) -> int:
+    """Toplayıcının tek turu (zamanlayıcının 30 dakikalık işinin elle çalıştırması)."""
+    ayril = argparse.ArgumentParser(prog="python -m app.cli topla")
+    ayril.add_argument("--kaynak", choices=[*toplayici.RESMI_KAYNAKLAR, *haber.HABER_KAYNAKLARI])
+    secenekler = ayril.parse_args(argv)
+    fabrika = sessionmaker(motor_olustur(get_settings().database_url))
+    with fabrika() as session:
+        onceki = {d.kaynak_kodu: _sayilar(d) for d in session.scalars(select(KaynakDurumu))}
+    sonuclar = toplayici.toplayici_calistir(
+        fabrika, g=Getirici(), kodlar=[secenekler.kaynak] if secenekler.kaynak else None)
+    hata_var = False
+    for d in sonuclar:
+        kod = d.kaynak_kodu.removesuffix("_toplayici")
+        toplam = _sayilar(d)
+        ilk = onceki.get(d.kaynak_kodu, dict.fromkeys(SAYACLAR, 0))
+        bu = {alan: toplam[alan] - ilk[alan] for alan in SAYACLAR}
+        print(f"{kod}: {_sayi_metni(bu)} durum={d.son_durum}" + (f" mesaj={d.son_mesaj}" if d.son_mesaj else ""))
+        if d.son_durum == "hata":
+            print(f"{kod}: hata: {d.son_mesaj}", file=sys.stderr)
+            hata_var = True
+    return 1 if hata_var else 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -221,10 +250,12 @@ def main(argv: list[str] | None = None) -> int:
         return aktar(argv[1:])
     if argv == ["sehitlerimiz-kontrol"]:
         return sehitlerimiz_kontrol()
+    if argv and argv[0] == "topla":
+        return topla(argv[1:])
     if argv == ["aktarim-durumu"]:
         return aktarim_durumu()
     print("Kullanım: python -m app.cli sifre-olustur | ornek-veri [--sil] [--eminim] | "
-          "aktar <egm|sg|kahramanlar|sehitlerimiz|hepsi> [--bastan] | aktarim-durumu | sehitlerimiz-kontrol", file=sys.stderr)
+          "aktar <egm|sg|kahramanlar|sehitlerimiz|hepsi> [--bastan] | aktarim-durumu | sehitlerimiz-kontrol | topla [--kaynak KOD]", file=sys.stderr)
     return 2
 
 

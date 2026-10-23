@@ -235,3 +235,67 @@ def test_hepsi_erken_hata_sonrakileri_durdurmaz(cli_db, monkeypatch, capsys):
     assert "sehitlerimiz: eklenen=1 " in cikti.out
     assert "kahramanlar: eklenen=0 birlesen=1 " in cikti.out  # aynı sahte kişi: sehitlerimiz kaydına katıldı
     assert _sayi(cli_db) == 1
+
+
+# --- topla komutu (Task 5) ---
+
+from app import toplayici  # noqa: E402
+from app.kaynaklar import egm as egm_modulu, haber as haber_modulu, sg as sg_modulu  # noqa: E402
+
+
+@pytest.fixture
+def topla_ortam(cli_db, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["egm", "sg", "hurriyet"])
+    monkeypatch.setattr(cli, "Getirici", lambda: object())
+    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar: None)
+    monkeypatch.setattr(haber_modulu, "ogeleri_getir", lambda g, k: [])
+    with cli_db() as s:
+        for kod in ("egm", "sg"):
+            s.add(KaynakDurumu(kaynak_kodu=kod, tamamlandi=True, imlec="x",
+                               eklenen=0, birlesen=0, atlanan=0, hatali=0))
+        s.commit()
+    monkeypatch.setattr(egm_modulu, "sayfalar",
+                        lambda g, *, baslangic: iter([("sehitlerimiz:1", [_ham("egm", 1)])]))
+    monkeypatch.setattr(sg_modulu, "sayfalar", lambda g, *, baslangic: iter([("1", [_ham("sg", 2)])]))
+    return cli_db
+
+
+def test_topla_hata_yoksa_0_ve_bu_calisma_satirlari(topla_ortam, monkeypatch, capsys):
+    monkeypatch.setattr(toplayici, "analizci_olustur", lambda ayar: object())
+    assert cli.main(["topla"]) == 0
+    cikti = capsys.readouterr().out
+    assert "egm: eklenen=1 birlesen=0 atlanan=0 hatali=0 durum=basarili" in cikti
+    assert "sg: eklenen=1 " in cikti and "hurriyet: eklenen=0 " in cikti
+    assert cli.main(["topla", "--kaynak", "egm"]) == 0  # ikinci tur: aynı kayıt bu kez atlanır
+    cikti = capsys.readouterr().out
+    assert "egm: eklenen=0 birlesen=0 atlanan=1 " in cikti and "sg:" not in cikti
+
+
+def test_topla_hata_varsa_1(topla_ortam, capsys):
+    assert cli.main(["topla"]) == 1  # analizci yok: hurriyet "API anahtarı yok"
+    cikti = capsys.readouterr()
+    assert "hurriyet: " in cikti.out and "API anahtarı yok" in cikti.err
+
+
+def test_topla_beklenmeyen_istisna_1_ve_digerleri_calisir(topla_ortam, monkeypatch, capsys):
+    def patlar(g, *, baslangic):
+        raise RuntimeError("beklenmedik")
+        yield  # pragma: no cover
+    monkeypatch.setattr(egm_modulu, "sayfalar", patlar)
+    assert cli.main(["topla"]) == 1
+    cikti = capsys.readouterr()
+    assert "RuntimeError" in cikti.err and "sg: eklenen=1 " in cikti.out
+
+
+def test_aktarim_durumu_analiz_sayacini_kaynak_gibi_listelemez(cli_db, capsys):
+    with cli_db() as s:
+        s.add(KaynakDurumu(kaynak_kodu="analiz_sayaci", imlec=f"{bugun().isoformat()}:7",
+                           eklenen=0, birlesen=0, atlanan=0, hatali=0))
+        s.add(KaynakDurumu(kaynak_kodu="egm_toplayici", eklenen=2, birlesen=0, atlanan=0, hatali=0))
+        s.commit()
+    assert cli.main(["aktarim-durumu"]) == 0
+    cikti = capsys.readouterr().out
+    assert "analiz_sayaci" not in cikti and "Bugünkü analiz: 7" in cikti
+    assert "egm_toplayici: eklenen=2" in cikti
