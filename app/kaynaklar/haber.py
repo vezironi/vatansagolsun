@@ -45,6 +45,11 @@ class HaberKaynagi:
     rss: list[str]
     govde_secici: str
 
+    @property
+    def alan_adi(self) -> str:
+        """Sitenin alan adı (ilk RSS adresinden, "www." olmadan): haber bağlantıları buna ait olmalı."""
+        return (urlsplit(self.rss[0]).hostname or "").removeprefix("www.")
+
 
 @dataclass
 class Makale:
@@ -105,6 +110,13 @@ def _kimlik(url: str, guid: str) -> str:
     return "u:" + hashlib.sha1(_url_normalize(url).encode("utf-8")).hexdigest()[:16]
 
 
+def siteye_ait_mi(url: str, kaynak: HaberKaynagi) -> bool:
+    """Bağlantı http(s) ve kaynağın alan adında (ya da bir alt alan adında) mı?"""
+    p = urlsplit(url)
+    host = (p.hostname or "").lower()
+    return p.scheme in ("http", "https") and (host == kaynak.alan_adi or host.endswith("." + kaynak.alan_adi))
+
+
 def rss_ayristir(xml: str, kaynak: HaberKaynagi) -> list[HaberOgesi]:
     """RSS metnini öğelere çevirir; bozuk öğeler atlanır.
 
@@ -127,6 +139,10 @@ def rss_ayristir(xml: str, kaynak: HaberKaynagi) -> list[HaberOgesi]:
             tarih = (oge.findtext("pubDate") or "").strip()
             if not (url and baslik and tarih):
                 raise ValueError("link, başlık ya da pubDate eksik")
+            if not siteye_ait_mi(url, kaynak):
+                # Akış başka siteye yönlendiremesin: ne indirilir ne kaydedilir.
+                logger.warning("%s: başka alan adına giden öğe atlandı: %s", kaynak.kod, url[:200])
+                continue
             ozet = _html_metni(oge.findtext("description"))
             ozet = _DEVAMI.sub("", ozet)
             guid = (oge.findtext("guid") or "").strip()

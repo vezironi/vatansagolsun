@@ -76,9 +76,9 @@ def test_trt_rss_aciklama_yorumu_ve_cdata():
 
 def test_bozuk_oge_atlanir_digerleri_kalir(caplog):
     xml = """<rss><channel>
-      <item><title>Bozuk tarih</title><link>https://x.test/a-1234567</link><pubDate>dün</pubDate></item>
+      <item><title>Bozuk tarih</title><link>https://www.hurriyet.com.tr/a-1234567</link><pubDate>dün</pubDate></item>
       <item><title>Linksiz</title><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
-      <item><title>İyi</title><link>https://x.test/b-7654321</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
+      <item><title>İyi</title><link>https://www.hurriyet.com.tr/b-7654321</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
     </channel></rss>"""
     with caplog.at_level("WARNING"):
         ogeler = rss_ayristir(xml, HABER_KAYNAKLARI["hurriyet"])
@@ -194,3 +194,23 @@ def test_sabah_gercek_ornek_kimlikleri_kisa():
     xml = (Path(__file__).parent.parent / "docs/superpowers/plans/kaynaklar/haber/veri/s_son.xml").read_text(encoding="utf-8")
     ogeler = rss_ayristir(xml, HABER_KAYNAKLARI["sabah"])
     assert ogeler and all(len(o.kimlik) <= 20 for o in ogeler)
+
+
+def test_baska_alan_adina_giden_oge_atlanir(caplog):
+    xml = """<rss><channel>
+      <item><title>Kötü</title><link>https://kotu.example/haber-1234567</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
+      <item><title>Benzer ad</title><link>https://www.hurriyet.com.tr.kotu.example/x-1234568</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
+      <item><title>Sonek</title><link>https://kotuhurriyet.com.tr/x-1234569</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
+      <item><title>Şema</title><link>javascript:alert(1)//hurriyet.com.tr/x-1234570</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
+      <item><title>Alt alan</title><link>https://bigpara.hurriyet.com.tr/x-7654320</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
+      <item><title>İyi</title><link>https://www.hurriyet.com.tr/b-7654321</link><pubDate>Fri, 23 Oct 2026 07:02:00 +0300</pubDate></item>
+    </channel></rss>"""
+    with caplog.at_level("WARNING"):
+        ogeler = rss_ayristir(xml, HABER_KAYNAKLARI["hurriyet"])
+    assert [o.kimlik for o in ogeler] == ["7654320", "7654321"]
+    assert caplog.text.count("başka alan adı") == 4
+
+
+def test_kaynak_alan_adlari():
+    assert {k: v.alan_adi for k, v in HABER_KAYNAKLARI.items()} == {
+        "hurriyet": "hurriyet.com.tr", "sabah": "sabah.com.tr", "aa": "aa.com.tr", "trt": "trthaber.com"}
