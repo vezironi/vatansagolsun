@@ -1,0 +1,31 @@
+[project]
+name = "vatansagolsun"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy>=2.0",
+    "alembic",
+    "psycopg[binary]",
+    "jinja2",
+    "python-multipart",
+    "pydantic-settings",
+    "itsdangerous",
+    "bcrypt",
+    "slowapi",
+    "tzdata",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
