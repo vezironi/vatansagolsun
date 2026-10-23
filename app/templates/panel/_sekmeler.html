@@ -1,0 +1,6 @@
+<nav class="sekmeler">
+  <a href="/panel"{% if mod == "bekleyen" %} class="aktif"{% endif %}>Onay bekleyenler</a>
+  <a href="/panel/yayinda"{% if mod == "yayinda" %} class="aktif"{% endif %}>Yayındakiler</a>
+  <a href="/panel/bildirimler"{% if mod == "bildirim" %} class="aktif"{% endif %}>Bildirimler</a>
+  <a href="/panel/sehit/yeni">Yeni kayıt</a>
+</nav>

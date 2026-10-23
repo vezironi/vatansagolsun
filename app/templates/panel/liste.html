@@ -1,11 +1,7 @@
 {% extends "panel/base.html" %}
 {% block baslik %}{% if mod == "yayinda" %}Yayındakiler{% else %}Onay bekleyenler{% endif %}{% endblock %}
 {% block icerik %}
-<nav class="sekmeler">
-  <a href="/panel"{% if mod == "bekleyen" %} class="aktif"{% endif %}>Onay bekleyenler</a>
-  <a href="/panel/yayinda"{% if mod == "yayinda" %} class="aktif"{% endif %}>Yayındakiler</a>
-  <a href="/panel/sehit/yeni">Yeni kayıt</a>
-</nav>
+{% include "panel/_sekmeler.html" %}
 
 {% if mod == "bekleyen" %}
 <h1 class="serif">Onay bekleyenler</h1>

@@ -43,5 +43,13 @@
   <form method="post" action="/panel/sehit/{{ sehit.id }}/reddet"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Reddet</button></form>
   {% endif %}
 </div>
+<form method="post" action="/panel/sehit/{{ sehit.id }}/birlestir" class="kart birlestir">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Başka bir kayıtla birleştir (hedef kayıt no)
+    <input name="hedef_id" inputmode="numeric" required>
+  </label>
+  <p class="sayilar">Bu kayıt, hedef kayda katılıp silinir.</p>
+  <button type="submit" class="ikincil">Birleştir</button>
+</form>
 {% endif %}
 {% endblock %}

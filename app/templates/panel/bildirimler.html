@@ -1,0 +1,23 @@
+{% extends "panel/base.html" %}
+{% block baslik %}Bildirimler{% endblock %}
+{% block icerik %}
+{% include "panel/_sekmeler.html" %}
+<h1 class="serif">Bildirimler</h1>
+<p class="sayilar"><b>{{ bildirimler|length }}</b> açık bildirim</p>
+{% for b in bildirimler %}
+<article class="kart kayit">
+  <p>{{ b.mesaj }}</p>
+  <p class="sayilar">
+    {{ b.tarih.strftime("%d.%m.%Y %H:%M") }}
+    {% if b.iletisim %} · İletişim: {{ b.iletisim }}{% endif %}
+    {% if b.sehit_id %} · <a href="/panel/sehit/{{ b.sehit_id }}">İlgili kayıt</a>{% endif %}
+  </p>
+  <form method="post" action="/panel/bildirimler/{{ b.id }}/kapat">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit" class="ikincil">Kapat</button>
+  </form>
+</article>
+{% else %}
+<p>Açık bildirim yok.</p>
+{% endfor %}
+{% endblock %}

@@ -26,6 +26,7 @@ VARSAYILAN_SECRET = "degistir"
 SECRET_EN_AZ_UZUNLUK = 32
 KAYNAK_METIN_UZUNLUGU = 300
 YAYINDA_SAYFA_ADEDI = 50
+HEDEF_ID_EN_COK_HANE = 9
 SAYISAL_ALANLAR = {"yil": "Yıl", "dogum_yili": "Doğum yılı"}
 FORM_ALANLARI = (
     "ad", "soyad", "lakap", "tarih_hassasiyeti", "sehadet_tarihi", "yil", "gorev", "kategori",
@@ -333,6 +334,53 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
             repo.durum_degistir(s, sehit, Durum.yayinda)
             return RedirectResponse("/panel", status_code=303)
         return RedirectResponse(f"/panel/sehit/{sehit.id}", status_code=303)
+
+    @router.post("/sehit/{sehit_id:int}/birlestir")
+    def birlestir(
+        request: Request, kullanici: Yonetici, s: Oturum, sehit_id: int,
+        csrf: Annotated[str, Form()] = "",
+        hedef_id: Annotated[str, Form()] = "",
+    ):
+        csrf_dogrula(request, csrf)
+        fazla = _sehit_getir(s, sehit_id)
+        hedef_id = hedef_id.strip()
+        hedef = None
+        if hedef_id.isascii() and hedef_id.isdigit() and len(hedef_id) <= HEDEF_ID_EN_COK_HANE:
+            hedef = repo.getir(s, int(hedef_id), sadece_yayinda=False)
+        hata = None
+        if hedef is None:
+            hata = "Hedef kayıt bulunamadı; geçerli bir kayıt numarası girin."
+        elif hedef.id == fazla.id:
+            hata = "Hedef kayıt, birleştirilen kaydın kendisi olamaz."
+        if hata:
+            return _duzenle_sayfasi(request, kullanici, fazla, _form_degerleri(fazla), hata, 400)
+        repo.birlestir(s, hedef, fazla)
+        return RedirectResponse(f"/panel/sehit/{hedef.id}", status_code=303)
+
+    @router.get("/bildirimler")
+    def bildirimler(request: Request, kullanici: Yonetici, s: Oturum):
+        acik = list(s.scalars(
+            select(Bildirim).where(Bildirim.kapandi.is_(False))
+            .order_by(Bildirim.tarih.desc(), Bildirim.id.desc())
+        ))
+        return templates.TemplateResponse(
+            request, "panel/bildirimler.html",
+            {"kullanici": kullanici, "csrf": csrf_token(request), "bildirimler": acik,
+             "mod": "bildirim"},
+        )
+
+    @router.post("/bildirimler/{bildirim_id:int}/kapat")
+    def bildirim_kapat(
+        request: Request, _: Yonetici, s: Oturum, bildirim_id: int,
+        csrf: Annotated[str, Form()] = "",
+    ):
+        csrf_dogrula(request, csrf)
+        bildirim = s.get(Bildirim, bildirim_id)
+        if bildirim is None:
+            raise HTTPException(status_code=404, detail="Bildirim bulunamadı")
+        bildirim.kapandi = True
+        s.commit()
+        return RedirectResponse("/panel/bildirimler", status_code=303)
 
     def _durum_rotasi(yol: str, durum: Durum) -> None:
         @router.post(f"/sehit/{{sehit_id:int}}/{yol}", name=yol)

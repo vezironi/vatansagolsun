@@ -311,3 +311,62 @@ def test_yayindakiler_arama(panel_client, sehit_ekle):
     sehit_ekle(ad="Bekleyen", soyad="Demir", durum="onay_bekliyor")
     h = panel_client.get("/panel/yayinda", params={"q": "sahin"}).text
     assert "Şahin DEMİR" in h and "Veli" not in h and "Bekleyen" not in h
+
+
+def test_birlestir_rotasi(panel_client, csrf, sehit_ekle, session):
+    hedef = sehit_ekle(memleket=None); fazla = sehit_ekle(memleket="Van", durum="onay_bekliyor")
+    r = panel_client.post(f"/panel/sehit/{fazla.id}/birlestir",
+                          data={"csrf": csrf(panel_client), "hedef_id": hedef.id}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == f"/panel/sehit/{hedef.id}"
+    session.refresh(hedef)
+    assert hedef.memleket == "Van"
+    assert panel_client.post(f"/panel/sehit/{hedef.id}/birlestir",
+                             data={"csrf": csrf(panel_client), "hedef_id": hedef.id}).status_code == 400
+
+
+def test_birlestir_gecersiz_girdiler(panel_client, csrf, sehit_ekle):
+    s = sehit_ekle()
+    url = f"/panel/sehit/{s.id}/birlestir"
+    for hedef in ("", "abc", "١٢", "99999", "-1"):
+        r = panel_client.post(url, data={"csrf": csrf(panel_client), "hedef_id": hedef})
+        assert r.status_code == 400 and "hedef" in r.text.lower()
+    assert panel_client.post(url, data={"csrf": csrf(panel_client)}).status_code == 400
+    assert panel_client.post("/panel/sehit/99999/birlestir",
+                             data={"csrf": csrf(panel_client), "hedef_id": s.id}).status_code == 404
+    assert panel_client.post(url, data={"csrf": "x", "hedef_id": s.id}).status_code == 403
+
+
+def test_birlestir_bildirimi_hedefe_tasir(panel_client, csrf, sehit_ekle, session):
+    from app import repo
+    from app.models import Bildirim
+
+    hedef = sehit_ekle(); fazla = sehit_ekle()
+    repo.bildirim_ekle(session, mesaj="x", iletisim=None, sehit_id=fazla.id)
+    panel_client.post(f"/panel/sehit/{fazla.id}/birlestir",
+                      data={"csrf": csrf(panel_client), "hedef_id": hedef.id})
+    assert session.query(Bildirim).one().sehit_id == hedef.id
+
+
+def test_bildirimler(panel_client, csrf, client, session):
+    from app.models import Bildirim
+    client.post("/bildir", data={"mesaj": "İsim yanlış yazılmış"})
+    assert "İsim yanlış yazılmış" in panel_client.get("/panel/bildirimler").text
+    b = session.query(Bildirim).one()
+    panel_client.post(f"/panel/bildirimler/{b.id}/kapat", data={"csrf": csrf(panel_client)})
+    assert "İsim yanlış yazılmış" not in panel_client.get("/panel/bildirimler").text
+
+
+def test_bildirimler_kacis_ve_koruma(panel_client, csrf, client, session, sehit_ekle):
+    from app import repo
+    s = sehit_ekle()
+    repo.bildirim_ekle(session, mesaj="<script>alert(1)</script>", iletisim="<b>x</b>", sehit_id=s.id)
+    h = panel_client.get("/panel/bildirimler").text
+    assert "<script>alert(1)</script>" not in h and "&lt;script&gt;" in h
+    assert "<b>x</b>" not in h and f"/panel/sehit/{s.id}" in h
+    assert "/panel/bildirimler" in panel_client.get("/panel").text
+    assert panel_client.post("/panel/bildirimler/99999/kapat",
+                             data={"csrf": csrf(panel_client)}).status_code == 404
+    assert panel_client.post("/panel/bildirimler/1/kapat", data={"csrf": "x"}).status_code == 403
+    client.cookies.clear()
+    r = client.get("/panel/bildirimler", follow_redirects=False)
+    assert r.status_code == 303

@@ -138,6 +138,8 @@ def birlestir(s: Session, hedef: Sehit, fazla: Sehit) -> Sehit:
             setattr(hedef, alan, getattr(fazla, alan))
     for kaynak in list(fazla.kaynaklar):
         kaynak.sehit = hedef
+    for bildirim in s.scalars(select(Bildirim).where(Bildirim.sehit_id == fazla.id)):
+        bildirim.sehit_id = hedef.id  # silinen kayda bağlı bildirim kalmasın
     s.flush()
     s.delete(fazla)
     hedef.alanlari_yenile()
