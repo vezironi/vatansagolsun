@@ -179,3 +179,135 @@ def test_zayif_secret_baslangicta_uyarir(caplog):
     with caplog.at_level("WARNING"):
         create_app(Settings(_env_file=None, secret_key="degistir"))
     assert "SECRET_KEY" in caplog.text
+
+
+# --- Task 8: onay iş akışı ---
+from datetime import date  # noqa: E402
+
+from app.models import Kaynak  # noqa: E402
+
+
+def _form(csrf_degeri, **ek):
+    form = {"csrf": csrf_degeri, "ad": "mehmet", "soyad": "kaya", "kategori": "polis",
+            "tarih_hassasiyeti": "tam", "sehadet_tarihi": "2026-10-20", "kaynak_kodu": "haber"}
+    form.update(ek)
+    return form
+
+
+def test_bekleyenler_listesi(panel_client, sehit_ekle):
+    sehit_ekle(ad="Bekleyen", soyad="Kişi", durum="onay_bekliyor", resmi_teyit=False, isimsiz=False)
+    sehit_ekle(ad="Yayinda", soyad="Kişi")
+    h = panel_client.get("/panel").text
+    assert "Bekleyen KİŞİ" in h and "Resmî teyit yok" in h and "Yayinda KİŞİ" not in h
+
+
+def test_isimsiz_rozeti(panel_client, sehit_ekle):
+    sehit_ekle(ad="Adsiz", soyad=None, lakap="Kahraman", durum="onay_bekliyor", isimsiz=True)
+    assert "İsimsiz" in panel_client.get("/panel").text
+
+
+def test_kaynak_metni_kisaltilir_ve_kacirilir(panel_client, sehit_ekle, session):
+    s = sehit_ekle(durum="onay_bekliyor")
+    session.add_all([
+        Kaynak(sehit=s, kaynak_adi="Haber", url="https://ornek.com/x",
+               metin="<script>alert(1)</script>" + "a" * 400),
+        Kaynak(sehit=s, kaynak_adi="Kotu", url="javascript:alert(2)", metin="m"),
+    ])
+    session.commit()
+    h = panel_client.get("/panel").text
+    assert "<script>alert(1)" not in h and "&lt;script&gt;" in h
+    assert 'href="https://ornek.com/x"' in h
+    assert 'href="javascript' not in h
+    onek = len("<script>alert(1)</script>")  # ilk 300 karakterin içinde
+    assert "a" * (300 - onek) in h and "a" * (300 - onek + 1) not in h
+
+
+def test_onayla_yayina_alir(panel_client, csrf, sehit_ekle, client):
+    s = sehit_ekle(durum="onay_bekliyor", sehadet_tarihi=date(2016, 1, 1))
+    panel_client.post(f"/panel/sehit/{s.id}/onayla", data={"csrf": csrf(panel_client)})
+    assert client.get(f"/api/sehitler/{s.id}").status_code == 200
+
+
+def test_reddet_ve_kaldir(panel_client, csrf, sehit_ekle, client):
+    a = sehit_ekle(durum="onay_bekliyor")
+    b = sehit_ekle()
+    panel_client.post(f"/panel/sehit/{a.id}/reddet", data={"csrf": csrf(panel_client)})
+    panel_client.post(f"/panel/sehit/{b.id}/kaldir", data={"csrf": csrf(panel_client)})
+    assert client.get(f"/api/sehitler/{a.id}").status_code == 404
+    assert client.get(f"/api/sehitler/{b.id}").status_code == 404
+
+
+@pytest.mark.parametrize("eylem", ["onayla", "reddet", "kaldir"])
+def test_islem_yonlendirir_csrf_ve_404(panel_client, csrf, sehit_ekle, eylem):
+    s = sehit_ekle(durum="onay_bekliyor")
+    r = panel_client.post(f"/panel/sehit/{s.id}/{eylem}", data={"csrf": csrf(panel_client)},
+                          follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/panel"
+    assert panel_client.post(f"/panel/sehit/{s.id}/{eylem}", data={"csrf": "x"}).status_code == 403
+    assert panel_client.post(f"/panel/sehit/99999/{eylem}",
+                             data={"csrf": csrf(panel_client)}).status_code == 404
+
+
+def test_girissiz_panel_rotalari(client, sehit_ekle):
+    s = sehit_ekle(durum="onay_bekliyor")
+    for yol in ("/panel/yayinda", "/panel/sehit/yeni", f"/panel/sehit/{s.id}"):
+        assert client.get(yol, follow_redirects=False).status_code == 303
+    r = client.post(f"/panel/sehit/{s.id}/onayla", data={"csrf": "x"}, follow_redirects=False)
+    assert r.status_code == 303
+
+
+def test_duzenle_ve_hata(panel_client, csrf, sehit_ekle, session):
+    s = sehit_ekle(durum="onay_bekliyor")
+    form = _form(csrf(panel_client))
+    r = panel_client.post(f"/panel/sehit/{s.id}", data=form, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == f"/panel/sehit/{s.id}"
+    session.refresh(s)
+    assert (s.ad, s.soyad, s.kategori, s.gun) == ("Mehmet", "KAYA", "polis", 20)
+    form["sehadet_tarihi"] = ""
+    r = panel_client.post(f"/panel/sehit/{s.id}", data=form)
+    assert r.status_code == 400 and "zorunlu" in r.text
+
+
+def test_hatali_girdiler_400(panel_client, csrf, sehit_ekle):
+    s = sehit_ekle(durum="onay_bekliyor")
+    for ek in ({"sehadet_tarihi": "20-10-2026"}, {"yil": "abc"}, {"dogum_yili": "²"},
+               {"kategori": "yok"}, {"ad": ""}):
+        r = panel_client.post(f"/panel/sehit/{s.id}", data=_form(csrf(panel_client), **ek))
+        assert r.status_code == 400, ek
+
+
+def test_duzenle_formu_ve_404(panel_client, sehit_ekle):
+    s = sehit_ekle(durum="onay_bekliyor")
+    h = panel_client.get(f"/panel/sehit/{s.id}").text
+    assert 'name="ad"' in h and "Kaydet ve onayla" in h
+    assert panel_client.get("/panel/sehit/99999").status_code == 404
+    assert panel_client.get("/panel/sehit/yeni").status_code == 200
+
+
+def test_kaydet_ve_onayla(panel_client, csrf, sehit_ekle, client):
+    s = sehit_ekle(durum="onay_bekliyor")
+    form = _form(csrf(panel_client), islem="onayla", resmi_teyit="on")
+    r = panel_client.post(f"/panel/sehit/{s.id}", data=form, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/panel"
+    assert client.get(f"/api/sehitler/{s.id}").json()["ad"] == "Mehmet"
+
+
+def test_yeni_kayit(panel_client, csrf, session):
+    from app.models import Durum, Sehit
+
+    form = _form(csrf(panel_client), kaynak_kodu="")
+    r = panel_client.post("/panel/sehit/yeni", data=form, follow_redirects=False)
+    assert r.status_code == 303
+    s = session.query(Sehit).one()
+    assert s.durum == Durum.onay_bekliyor and s.kaynak_kodu == "panel"
+    assert r.headers["location"] == f"/panel/sehit/{s.id}"
+    assert panel_client.post("/panel/sehit/yeni",
+                             data=_form(csrf(panel_client), ad="")).status_code == 400
+
+
+def test_yayindakiler_arama(panel_client, sehit_ekle):
+    sehit_ekle(ad="Şahin", soyad="Demir")
+    sehit_ekle(ad="Veli", soyad="Kaya")
+    sehit_ekle(ad="Bekleyen", soyad="Demir", durum="onay_bekliyor")
+    h = panel_client.get("/panel/yayinda", params={"q": "sahin"}).text
+    assert "Şahin DEMİR" in h and "Veli" not in h and "Bekleyen" not in h

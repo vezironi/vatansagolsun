@@ -1,0 +1,47 @@
+{% extends "panel/base.html" %}
+{% block baslik %}{% if sehit %}Düzenle{% else %}Yeni kayıt{% endif %}{% endblock %}
+{% block icerik %}
+<h1 class="serif">{% if sehit %}{{ sehit.gorunen_ad }}{% else %}Yeni kayıt{% endif %}</h1>
+{% if hata %}<p class="hata" role="alert">{{ hata }}</p>{% endif %}
+<form method="post" action="{% if sehit %}/panel/sehit/{{ sehit.id }}{% else %}/panel/sehit/yeni{% endif %}" class="kart duzenle">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Ad <input name="ad" value="{{ f.ad }}" required></label>
+  <label>Soyad <input name="soyad" value="{{ f.soyad }}"></label>
+  <label>Lakap <input name="lakap" value="{{ f.lakap }}"></label>
+  <label>Tarih hassasiyeti
+    <select name="tarih_hassasiyeti">
+      {% for h in hassasiyetler %}<option value="{{ h.value }}"{% if f.tarih_hassasiyeti == h.value %} selected{% endif %}>{{ h.value }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Şehadet tarihi <input name="sehadet_tarihi" type="date" value="{{ f.sehadet_tarihi }}"></label>
+  <label>Yıl <input name="yil" inputmode="numeric" value="{{ f.yil }}"></label>
+  <label>Görev <input name="gorev" value="{{ f.gorev }}"></label>
+  <label>Kategori
+    <select name="kategori">
+      {% for k in kategoriler %}<option value="{{ k.value }}"{% if f.kategori == k.value %} selected{% endif %}>{{ k.value }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Kurum <input name="kurum" value="{{ f.kurum }}"></label>
+  <label>Memleket <input name="memleket" value="{{ f.memleket }}"></label>
+  <label>Baba adı <input name="baba_adi" value="{{ f.baba_adi }}"></label>
+  <label>Doğum yılı <input name="dogum_yili" inputmode="numeric" value="{{ f.dogum_yili }}"></label>
+  <label>Dönem <input name="donem" value="{{ f.donem }}"></label>
+  <label>Kaynak kodu <input name="kaynak_kodu" value="{{ f.kaynak_kodu }}"></label>
+  <label class="onay"><input type="checkbox" name="resmi_teyit"{% if f.resmi_teyit %} checked{% endif %}> Resmî teyit var</label>
+  <label class="onay"><input type="checkbox" name="isimsiz"{% if f.isimsiz %} checked{% endif %}> İsimsiz kayıt</label>
+  <div class="islemler">
+    <button type="submit">Kaydet</button>
+    {% if sehit %}<button type="submit" name="islem" value="onayla">Kaydet ve onayla</button>{% endif %}
+    <a class="dugme" href="/panel">Vazgeç</a>
+  </div>
+</form>
+{% if sehit %}
+<div class="islemler">
+  {% if sehit.durum.value == "yayinda" %}
+  <form method="post" action="/panel/sehit/{{ sehit.id }}/kaldir"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Yayından kaldır</button></form>
+  {% else %}
+  <form method="post" action="/panel/sehit/{{ sehit.id }}/reddet"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Reddet</button></form>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
