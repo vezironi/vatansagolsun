@@ -1,0 +1,9 @@
+{% extends "panel/base.html" %}
+{% block baslik %}Toplayıcı kapalı{% endblock %}
+{% block icerik %}
+{% include "panel/_sekmeler.html" %}
+<h1 class="serif">Zamanlayıcı kapalı</h1>
+<p>Toplayıcıyı buradan başlatmak için zamanlayıcının açık olması gerekir: <code>.env</code> içinde <code>ZAMANLAYICI_AKTIF=true</code> yazın ve uygulamayı yeniden başlatın.</p>
+<p>Zamanlayıcı olmadan elle çalıştırmak için: <code>python -m app.cli topla</code></p>
+<p><a href="/panel/toplayici">Toplayıcı sayfasına dön</a></p>
+{% endblock %}

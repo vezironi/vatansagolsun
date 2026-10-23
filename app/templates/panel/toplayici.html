@@ -1,0 +1,41 @@
+{% extends "panel/base.html" %}
+{% block baslik %}Toplayıcı{% endblock %}
+{% block icerik %}
+{% include "panel/_sekmeler.html" %}
+<h1 class="serif">Toplayıcı</h1>
+{% if basladi %}<p class="kart"><b>Toplayıcı başlatıldı.</b> Birkaç dakika içinde bu sayfayı yenileyin.</p>{% endif %}
+
+<p class="sayilar">
+  Bugünkü analiz: <b>{{ analiz_sayisi }} / {{ analiz_siniri }}</b>
+  · Claude API: <b>{% if api_yapilandirildi %}yapılandırıldı{% else %}anahtar yok{% endif %}</b>
+  · Zamanlayıcı: <b>{% if zamanlayici_acik %}açık{% else %}kapalı{% endif %}</b>
+  {% if sonraki_calisma %}· Sonraki çalışma: <b>{{ sonraki_calisma|istanbul_saati }}</b>{% endif %}
+</p>
+
+<table class="tablo">
+  <thead>
+    <tr><th>Kaynak</th><th>Son çalışma</th><th>Durum</th><th>Mesaj</th>
+        <th>Eklenen</th><th>Birleşen</th><th>Atlanan</th><th>Hatalı</th></tr>
+  </thead>
+  <tbody>
+  {% for ad, d in kaynaklar %}
+    <tr>
+      <td>{{ ad }}</td>
+      {% if d %}
+      <td>{% if d.son_calisma %}{{ d.son_calisma|istanbul_saati }}{% else %}-{% endif %}</td>
+      <td>{{ d.son_durum or "-" }}</td>
+      <td>{{ d.son_mesaj or "" }}</td>
+      <td>{{ d.eklenen or 0 }}</td><td>{{ d.birlesen or 0 }}</td><td>{{ d.atlanan or 0 }}</td><td>{{ d.hatali or 0 }}</td>
+      {% else %}
+      <td>-</td><td>henüz çalışmadı</td><td></td><td>0</td><td>0</td><td>0</td><td>0</td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="/panel/toplayici/simdi">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button type="submit">Şimdi çalıştır</button>
+</form>
+{% endblock %}

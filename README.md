@@ -182,6 +182,50 @@ docker compose exec app python -m app.cli sehitlerimiz-kontrol
 
 ---
 
+## 10. Yeni şehitleri otomatik toplama
+
+Site, **30 dakikada bir** (sunucu açıldıktan 2 dakika sonra ilk tur) yeni şehit haberlerini kendisi arar. Bunun için `.env` içinde `ZAMANLAYICI_AKTIF=true` olmalıdır (`docker-compose.yml` bunu zaten açar). Her tur şunlara bakar:
+
+- Resmî sayfalar: Emniyet (`egm`) ve Sahil Güvenlik (`sg`) sitelerinin en yeni kayıtları.
+- Haber siteleri: **Hürriyet** ve **Sabah**. Bu sitelerin haber akışındaki, şehitlik içeren haberler yapay zekâ (Claude) ile okunur; haberde geçen şehitlerin adı, görevi, tarihi çıkarılır. Her haber yalnızca bir kez okunur.
+- AA ve TRT de desteklenir ama **varsayılan kapalıdır**. Açmak için `.env` içindeki `KAYNAK_IZINLERI` listesine `"aa"` ve/veya `"trt"` ekleyip `docker compose up -d` çalıştırın.
+
+**Toplayıcı hiçbir kaydı kendi başına yayına almaz.** Bulduğu her yeni kayıt panelde **onay bekleyenler** arasına düşer; siz bakıp onaylayınca yayınlanır.
+
+### Claude API anahtarı
+
+Haber okuma için bir Claude API anahtarı gerekir (resmî sayfa taraması anahtarsız da çalışır):
+
+1. https://console.anthropic.com adresinde hesap açın, faturalandırma bilgisi ekleyin.
+2. **API Keys** bölümünden yeni bir anahtar oluşturun ve kopyalayın (yalnızca bir kez gösterilir).
+3. `.env` dosyasındaki satıra yapıştırın: `ANTHROPIC_API_KEY=sk-ant-...`
+4. `docker compose up -d` ile yeniden başlatın.
+
+Anahtarı kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "yapılandırıldı" ya da "anahtar yok" yazar. Anahtar yoksa haber siteleri atlanır ("API anahtarı yok" durumu), resmî sayfalar taranmaya devam eder.
+
+**Tahmini maliyet:** günde birkaç düzine haber okunur. Küçük ve ucuz model (Haiku 5.5) kullanıldığı için aylık maliyet birkaç doların altında kalır. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır.
+
+### Panelde izleme
+
+Panelde **Toplayıcı** sekmesi her kaynağın son çalışma zamanını, durumunu ve kaç kayıt eklediğini gösterir; bugün kaç haberin okunduğunu ve anahtarın tanımlı olup olmadığını da yazar. **Şimdi çalıştır** düğmesi turu beklemeden başlatır. Toplayıcıda hata varsa ana panelin üstünde kısa bir uyarı çıkar. Zamanlayıcı kapalıysa elle çalıştırın:
+
+```bash
+docker compose exec app python -m app.cli topla
+```
+
+### Rozetler
+
+- **Resmî teyit yok**: kayıt yalnızca haberden çıkarıldı; haberde resmî bir kurum (bakanlık, Emniyet vb.) açıklaması geçmiyor. Onaylamadan önce kaynağı kontrol edin.
+- **İsimsiz**: haber şehit olduğunu söylüyor ama isimleri henüz açıklanmamış. Kayıt tek bir "İsimsiz" taslağı olarak gelir; isimler açıklanınca düzenleyip adı yazabilir ya da gerçek kayıtla birleştirebilirsiniz.
+
+### Bilmeniz gerekenler
+
+- Emniyet ve Sahil Güvenlik sayfaları, o kaynağın **toplu aktarımı yapılmadan taranmaz** (aksi halde yüzlerce eski kayıt onay bekleyene düşerdi). Önce bölüm 9'daki `aktar egm` ve `aktar sg` komutlarını çalıştırın; o zamana kadar durum "önce aktar çalıştırın" yazar.
+- Sunucu bir süre kapalı kalırsa toplayıcı, açıldığında **en fazla 3 gün** geriye giderek kaçırılan haberleri telafi eder.
+- X (Twitter) hesapları kaynak olarak **kullanılmaz**: X, otomatik okumaya izin vermiyor ve ücretli API gerektiriyor; ayrıca doğrulanmamış paylaşımlar bu site için güvenilir değil.
+
+---
+
 ## Geliştiriciler için
 
 - Testler: `.venv/Scripts/python -m pytest`

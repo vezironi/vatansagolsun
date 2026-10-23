@@ -15,14 +15,18 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import repo
-from app.dates import TZ
+from app.analiz import analizci_olustur
+from app.dates import TZ, bugun
 from app.db import get_session
-from app.models import Bildirim, Durum, Hassasiyet, Kategori, Sehit
+from app.kaynaklar import haber
+from app.models import Bildirim, Durum, Hassasiyet, Kategori, KaynakDurumu, Sehit
+from app.toplayici import RESMI_KAYNAKLAR, SAYAC_KODU, toplayici_kodu
 from app.schemas import SehitVeri
 
 GIRIS_ADRESI = "/panel/giris"
 BCRYPT_EN_COK_BAYT = 72
 GIRIS_SINIRI = "10/minute"
+TOPLAYICI_ISI = "toplayici"
 VARSAYILAN_SECRET = "degistir"
 SECRET_EN_AZ_UZUNLUK = 32
 KAYNAK_METIN_UZUNLUGU = 300
@@ -221,6 +225,19 @@ def _sehit_getir(s: Session, sehit_id: int) -> Sehit:
     return sehit
 
 
+def _toplayici_satir_kodlari() -> list[tuple[str, str]]:
+    """(kaynak adı, KaynakDurumu satırı) çiftleri: önce resmî kaynaklar, sonra haber siteleri."""
+    return [(k, toplayici_kodu(k)) for k in (*RESMI_KAYNAKLAR, *haber.HABER_KAYNAKLARI)]
+
+
+def _toplayici_hatasi_var_mi(s: Session) -> bool:
+    kodlar = [satir for _, satir in _toplayici_satir_kodlari()]
+    return s.scalar(
+        select(func.count()).select_from(KaynakDurumu)
+        .where(KaynakDurumu.kaynak_kodu.in_(kodlar), KaynakDurumu.son_durum == "hata")
+    ) > 0
+
+
 def _liste_sayfasi(request: Request, kullanici: str, **baglam):
     return templates.TemplateResponse(
         request, "panel/liste.html",
@@ -295,6 +312,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         return _liste_sayfasi(
             request, kullanici, mod="bekleyen", kayitlar=bekleyenler,
             bekleyen_sayisi=len(bekleyenler), yeni_bildirim=yeni_bildirim, q="",
+            toplayici_hatasi=_toplayici_hatasi_var_mi(s),
         )
 
     @router.get("/yayinda")
@@ -367,6 +385,43 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
             return _duzenle_sayfasi(request, kullanici, fazla, _form_degerleri(fazla), hata, 400)
         repo.birlestir(s, hedef, fazla)
         return RedirectResponse(f"/panel/sehit/{hedef.id}", status_code=303)
+
+    @router.get("/toplayici")
+    def toplayici_durumu(request: Request, kullanici: Yonetici, s: Oturum, basladi: int = 0):
+        satirlar = {d.kaynak_kodu: d for d in s.scalars(select(KaynakDurumu))}
+        ayarlar = request.app.state.settings
+        sayac = satirlar.get(SAYAC_KODU)
+        gun, _, sayi = ((sayac.imlec if sayac else None) or "").partition(":")
+        zamanlayici = request.app.state.zamanlayici
+        is_ = zamanlayici.get_job(TOPLAYICI_ISI) if zamanlayici is not None else None
+        return templates.TemplateResponse(
+            request, "panel/toplayici.html",
+            {
+                "kullanici": kullanici, "csrf": csrf_token(request), "mod": "toplayici",
+                "kaynaklar": [(ad, satirlar.get(satir)) for ad, satir in _toplayici_satir_kodlari()],
+                "analiz_sayisi": int(sayi) if gun == bugun().isoformat() and sayi.isdigit() else 0,
+                "analiz_siniri": ayarlar.gunluk_analiz_siniri,
+                # Anahtarın kendisi şablona hiç verilmez; yalnızca var/yok bilgisi.
+                "api_yapilandirildi": analizci_olustur(ayarlar) is not None,
+                "zamanlayici_acik": zamanlayici is not None,
+                "sonraki_calisma": getattr(is_, "next_run_time", None),
+                "basladi": bool(basladi),
+            },
+        )
+
+    @router.post("/toplayici/simdi")
+    def toplayici_simdi(request: Request, kullanici: Yonetici, csrf: Annotated[str, Form()] = ""):
+        csrf_dogrula(request, csrf)
+        zamanlayici = request.app.state.zamanlayici
+        is_ = zamanlayici.get_job(TOPLAYICI_ISI) if zamanlayici is not None else None
+        if is_ is None:
+            return templates.TemplateResponse(
+                request, "panel/toplayici_kapali.html",
+                {"kullanici": kullanici, "csrf": csrf_token(request), "mod": "toplayici"},
+                status_code=409,
+            )
+        is_.modify(next_run_time=datetime.now(zamanlayici.timezone))
+        return RedirectResponse("/panel/toplayici?basladi=1", status_code=303)
 
     @router.get("/bildirimler")
     def bildirimler(request: Request, kullanici: Yonetici, s: Oturum):

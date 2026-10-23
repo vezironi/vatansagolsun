@@ -2,6 +2,9 @@
 {% block baslik %}{% if mod == "yayinda" %}Yayındakiler{% else %}Onay bekleyenler{% endif %}{% endblock %}
 {% block icerik %}
 {% include "panel/_sekmeler.html" %}
+{% if toplayici_hatasi %}
+<p class="kart uyari-kutu"><b>Toplayıcıda hata var.</b> <a href="/panel/toplayici">Ayrıntılar</a></p>
+{% endif %}
 
 {% if mod == "bekleyen" %}
 <h1 class="serif">Onay bekleyenler</h1>

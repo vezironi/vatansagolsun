@@ -17,7 +17,7 @@ def test_zamanlayici_acikken_12_saatlik_is_kurar(app, monkeypatch):
     z = zamanlayici_kur(app.state.session_factory)
     try:
         assert z is not None and not z.running  # başlatma lifespan'ın işi
-        (is_,) = z.get_jobs()
+        is_ = z.get_job("sehitlerimiz_kontrol")
         assert is_.trigger.interval.total_seconds() == 12 * 3600
         assert is_.max_instances == 1 and is_.coalesce is True
         assert str(z.timezone) == "Europe/Istanbul"
@@ -106,3 +106,38 @@ def test_create_app_kendi_ayarlarini_zamanlayiciya_verir(monkeypatch):
 def test_testlerde_zamanlayici_genel_ayari_kapali():
     from app.config import get_settings
     assert get_settings().zamanlayici_aktif is False
+
+
+# --- Task 6: 30 dakikalık toplayıcı işi ---
+
+def test_zamanlayici_acikken_iki_is_kurar(app):
+    from app.config import Settings
+    from app.zamanlayici import zamanlayici_kur
+    z = zamanlayici_kur(app.state.session_factory, Settings(_env_file=None, zamanlayici_aktif=True))
+    isler = {i.id: i for i in z.get_jobs()}
+    assert set(isler) == {"sehitlerimiz_kontrol", "toplayici"}
+    t = isler["toplayici"]
+    assert t.trigger.interval.total_seconds() == 30 * 60
+    assert t.max_instances == 1 and t.coalesce is True
+    from datetime import datetime, timedelta
+    fark = t.trigger.start_date - datetime.now(z.timezone)
+    assert timedelta(minutes=1) < fark <= timedelta(minutes=2)
+
+
+def test_toplayici_isi_istisna_firlatmaz(monkeypatch, caplog):
+    from app import zamanlayici
+
+    def patla(*a, **k):
+        raise RuntimeError("çöktü")
+
+    monkeypatch.setattr(zamanlayici.toplayici, "toplayici_calistir", patla)
+    zamanlayici.toplayici_isi(lambda: None)  # fırlatmamalı
+    assert "çöktü" in caplog.text or "toplayıcı" in caplog.text
+
+
+def test_toplayici_isi_calistiriciyi_cagirir(monkeypatch):
+    from app import zamanlayici
+    cagri = []
+    monkeypatch.setattr(zamanlayici.toplayici, "toplayici_calistir", lambda f: cagri.append(f))
+    zamanlayici.toplayici_isi("fabrika")
+    assert cagri == ["fabrika"]

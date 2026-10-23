@@ -31,7 +31,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.zamanlayici = zamanlayici
         if zamanlayici is not None:
             zamanlayici.start()
-            logger.info("sehitlerimiz zamanlayıcısı başladı (12 saatte bir)")
+            logger.info("sehitlerimiz zamanlayıcısı başladı (sehitlerimiz 12 saatte bir, toplayıcı 30 dakikada bir)")
         try:
             yield
         finally:

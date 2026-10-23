@@ -433,3 +433,103 @@ def test_kaydet_ve_onayla_da_isaretler(panel_client, csrf, sehit_ekle, session):
     panel_client.post(f"/panel/sehit/{s.id}", data=_form(csrf(panel_client), islem="onayla"), follow_redirects=False)
     session.refresh(s)
     assert s.elle_duzenlendi is True
+
+
+# --- Task 6: toplayıcı durum sayfası ---
+
+def _toplayici_satirlari(session):
+    from datetime import datetime, timezone
+    from app.models import KaynakDurumu
+    session.add_all([
+        KaynakDurumu(kaynak_kodu="egm_toplayici", son_durum="basarili", eklenen=3, birlesen=1, atlanan=2, hatali=0,
+                     son_calisma=datetime(2026, 10, 23, 9, 0, tzinfo=timezone.utc)),
+        KaynakDurumu(kaynak_kodu="hurriyet", son_durum="hata", son_mesaj="API anahtarı yok",
+                     eklenen=0, birlesen=0, atlanan=0, hatali=0,
+                     son_calisma=datetime(2026, 10, 23, 9, 0, tzinfo=timezone.utc)),
+    ])
+    session.commit()
+
+
+def test_toplayici_sayfasi_girissiz_yonlendirir(client):
+    r = client.get("/panel/toplayici", follow_redirects=False)
+    assert r.status_code == 303
+    r = client.post("/panel/toplayici/simdi", data={"csrf": "x"}, follow_redirects=False)
+    assert r.status_code == 303
+
+
+def test_toplayici_sayfasi_satirlari_gosterir(panel_client, session):
+    _toplayici_satirlari(session)
+    r = panel_client.get("/panel/toplayici")
+    assert r.status_code == 200
+    assert "egm" in r.text and "hurriyet" in r.text
+    assert "API anahtarı yok" in r.text
+    assert "12:00" in r.text  # 09:00 UTC = 12:00 İstanbul
+    assert "Bugünkü analiz" in r.text
+
+
+def test_toplayici_sayfasi_anahtari_asla_gostermez(panel_client, app):
+    app.state.settings.anthropic_api_key = "sk-ant-gizli-deger-123"
+    r = panel_client.get("/panel/toplayici")
+    assert "yapılandırıldı" in r.text
+    assert "sk-ant" not in r.text and "gizli-deger" not in r.text
+    app.state.settings.anthropic_api_key = ""
+    import os
+    for ad in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        os.environ.pop(ad, None)
+    assert "anahtar yok" in panel_client.get("/panel/toplayici").text
+
+
+def test_toplayici_sayaci_gosterilir(panel_client, session, app):
+    from app.dates import bugun
+    from app.models import KaynakDurumu
+    session.add(KaynakDurumu(kaynak_kodu="analiz_sayaci", imlec=f"{bugun().isoformat()}:7"))
+    session.commit()
+    assert f"7 / {app.state.settings.gunluk_analiz_siniri}" in panel_client.get("/panel/toplayici").text
+
+
+def test_simdi_calistir_zamanlayicisiz_409(panel_client, csrf):
+    r = panel_client.post("/panel/toplayici/simdi", data={"csrf": csrf(panel_client)})
+    assert r.status_code == 409
+    assert "ZAMANLAYICI_AKTIF" in r.text and "python -m app.cli topla" in r.text
+
+
+def test_simdi_calistir_csrf_yoksa_403(panel_client):
+    assert panel_client.post("/panel/toplayici/simdi", data={"csrf": "yanlis"}).status_code == 403
+
+
+def test_simdi_calistir_isi_tetikler(panel_client, csrf, app):
+    class Is:
+        next_run_time = None
+
+        def modify(self, **k):
+            self.k = k
+
+    class Z:
+        timezone = __import__("zoneinfo").ZoneInfo("Europe/Istanbul")
+        is_ = Is()
+
+        def get_job(self, id):
+            assert id == "toplayici"
+            return self.is_
+
+    app.state.zamanlayici = Z()
+    r = panel_client.post("/panel/toplayici/simdi", data={"csrf": csrf(panel_client)}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("/panel/toplayici")
+    assert Z.is_.k["next_run_time"].tzinfo is not None
+    assert "Toplayıcı başlatıldı" in panel_client.get(r.headers["location"]).text
+    assert "Toplayıcı başlatıldı" not in panel_client.get("/panel/toplayici").text
+
+
+def test_ana_panel_toplayici_hatasi_uyarir(panel_client, session):
+    assert "Toplayıcıda hata var" not in panel_client.get("/panel").text
+    from app.models import KaynakDurumu
+    session.add(KaynakDurumu(kaynak_kodu="sabah", son_durum="hata", son_mesaj="x"))
+    session.commit()
+    assert "Toplayıcıda hata var" in panel_client.get("/panel").text
+
+
+def test_ana_panel_alakasiz_hatada_uyarmaz(panel_client, session):
+    from app.models import KaynakDurumu
+    session.add(KaynakDurumu(kaynak_kodu="kahramanlar", son_durum="hata", son_mesaj="x"))
+    session.commit()
+    assert "Toplayıcıda hata var" not in panel_client.get("/panel").text
