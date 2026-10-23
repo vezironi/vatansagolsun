@@ -467,15 +467,14 @@ def test_toplayici_sayfasi_satirlari_gosterir(panel_client, session):
     assert "Bugünkü analiz" in r.text
 
 
-def test_toplayici_sayfasi_anahtari_asla_gostermez(panel_client, app):
-    app.state.settings.anthropic_api_key = "sk-ant-gizli-deger-123"
+def test_toplayici_sayfasi_anahtari_asla_gostermez(panel_client, app, monkeypatch):
+    monkeypatch.setattr(app.state.settings, "anthropic_api_key", "sk-ant-gizli-deger-123")
     r = panel_client.get("/panel/toplayici")
     assert "yapılandırıldı" in r.text
     assert "sk-ant" not in r.text and "gizli-deger" not in r.text
-    app.state.settings.anthropic_api_key = ""
-    import os
+    monkeypatch.setattr(app.state.settings, "anthropic_api_key", "")
     for ad in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
-        os.environ.pop(ad, None)
+        monkeypatch.delenv(ad, raising=False)
     assert "anahtar yok" in panel_client.get("/panel/toplayici").text
 
 
@@ -533,3 +532,56 @@ def test_ana_panel_alakasiz_hatada_uyarmaz(panel_client, session):
     session.add(KaynakDurumu(kaynak_kodu="kahramanlar", son_durum="hata", son_mesaj="x"))
     session.commit()
     assert "Toplayıcıda hata var" not in panel_client.get("/panel").text
+
+
+def _kilit_tut(session):
+    from datetime import datetime, timezone
+    from app.models import KaynakDurumu
+    from app.toplayici import KILIT_KODU
+    session.add(KaynakDurumu(kaynak_kodu=KILIT_KODU, imlec=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                             eklenen=0, birlesen=0, atlanan=0, hatali=0))
+    session.commit()
+
+
+def test_simdi_calistir_zaten_calisiyorsa_tetiklemez(panel_client, csrf, app, session):
+    class Is:
+        next_run_time = None
+        k = None
+
+        def modify(self, **k):
+            self.k = k
+
+    class Z:
+        timezone = __import__("zoneinfo").ZoneInfo("Europe/Istanbul")
+        is_ = Is()
+
+        def get_job(self, id):
+            return self.is_
+
+    app.state.zamanlayici = Z()
+    _kilit_tut(session)
+    r = panel_client.post("/panel/toplayici/simdi", data={"csrf": csrf(panel_client)}, follow_redirects=False)
+    assert r.status_code == 303 and Z.is_.k is None
+    sayfa = panel_client.get(r.headers["location"]).text
+    assert "Toplayıcı zaten çalışıyor; bittiğinde tekrar deneyin" in sayfa and "Toplayıcı başlatıldı" not in sayfa
+    assert "toplayici_kilidi" not in sayfa
+
+
+def test_toplayici_sayaclari_toplam_olarak_etiketlenir(panel_client):
+    sayfa = panel_client.get("/panel/toplayici").text
+    for ad in ("Eklenen", "Birleşen", "Atlanan", "Hatalı"):
+        assert f"{ad} (toplam)" in sayfa
+
+
+def test_izni_kaldirilmis_kaynagin_eski_hatasi_uyarmaz(panel_client, session, app, monkeypatch):
+    from app.models import KaynakDurumu
+    session.add_all([KaynakDurumu(kaynak_kodu="aa", son_durum="hata", son_mesaj="eski aa hatası"),
+                     KaynakDurumu(kaynak_kodu="egm_toplayici", son_durum="hata", son_mesaj="eski egm hatası")])
+    session.commit()
+    monkeypatch.setattr(app.state.settings, "kaynak_izinleri", ["sg", "hurriyet"])
+    assert "Toplayıcıda hata var" not in panel_client.get("/panel").text
+    sayfa = panel_client.get("/panel/toplayici").text
+    assert "eski aa hatası" not in sayfa and "eski egm hatası" not in sayfa and "hurriyet" in sayfa
+    monkeypatch.setattr(app.state.settings, "kaynak_izinleri", ["egm"])  # egm izinliyse egm_toplayici sayılır
+    assert "Toplayıcıda hata var" in panel_client.get("/panel").text
+    assert "eski egm hatası" in panel_client.get("/panel/toplayici").text

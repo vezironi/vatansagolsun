@@ -1,11 +1,14 @@
 """Haber kaynağı taraması: RSS -> anahtar sözcük süzgeci -> Claude analizi -> onay bekleyen taslaklar."""
 import json
 import logging
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
+from sqlalchemy import or_, text, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.aktarim import kaynak_durumu, temizle, kayit_aktar
@@ -25,6 +28,7 @@ _SAYAC_ALANI = {"yeni": "eklenen", "birlesti": "birlesen", "atlandi": "atlanan",
 
 
 TAKILI_DENEME = 3
+EN_COK_KISI = 20  # tek haberden en fazla bu kadar taslak (istem enjeksiyonuna karşı tavan)
 
 
 @dataclass
@@ -151,7 +155,11 @@ def _isimsiz_taslagi(kod: str, kaynak, oge, makale, analiz: HaberAnalizi) -> Ham
 
 
 def _taslaklar(kod, kaynak, oge, makale, analiz: HaberAnalizi) -> list[HamKayit]:
-    taslaklar = [_kisi_taslagi(kod, kaynak, oge, makale, analiz, k) for k in analiz.kisiler]
+    kisiler = analiz.kisiler
+    if len(kisiler) > EN_COK_KISI:
+        logger.warning("%s/%s: analiz %d kişi döndürdü; ilk %d alındı", kod, oge.kimlik, len(kisiler), EN_COK_KISI)
+        kisiler = kisiler[:EN_COK_KISI]
+    taslaklar = [_kisi_taslagi(kod, kaynak, oge, makale, analiz, k) for k in kisiler]
     if analiz.isimsiz_sayisi > 0:
         taslaklar.append(_isimsiz_taslagi(kod, kaynak, oge, makale, analiz))
     return taslaklar
@@ -282,11 +290,101 @@ def resmi_kaynak_tara(s: Session, kod: Literal["egm", "sg"], g) -> KaynakDurumu:
     return _sonuc_yaz(s, durum, simdi, "basarili", f"{hatali} kayıt aktarılamadı" if hatali else None)
 
 
+KILIT_KODU = "toplayici_kilidi"  # SQLite/geliştirme: kilit satırı (imlec = alınma anı, UTC ISO)
+KILIT_ANAHTARI = 7_301_190_323  # PostgreSQL advisory lock anahtarı (sabit)
+KILIT_BAYAT_DAKIKA = 20  # çökmüş turun SQLite kilidi bu süreden sonra geçersiz sayılır
+ZATEN_CALISIYOR = "toplayıcı zaten çalışıyor"
+
+
+def _kilit_simdi() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _kilit_metni(an: datetime) -> str:
+    return an.astimezone(timezone.utc).isoformat(timespec="seconds")
+
+
+def _postgresql_mi(bag) -> bool:
+    return bag.dialect.name == "postgresql"
+
+
+def toplayici_calisiyor_mu(s: Session) -> bool:
+    """Şu an bir toplayıcı turu (zamanlanmış ya da elle) kilidi tutuyor mu?"""
+    if _postgresql_mi(s.get_bind()):
+        alindi = bool(s.scalar(text("SELECT pg_try_advisory_lock(:k)"), {"k": KILIT_ANAHTARI}))
+        if alindi:
+            s.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": KILIT_ANAHTARI})
+        return not alindi
+    satir = s.get(KaynakDurumu, KILIT_KODU)
+    esik = _kilit_metni(_kilit_simdi() - timedelta(minutes=KILIT_BAYAT_DAKIKA))
+    return bool(satir is not None and satir.imlec and satir.imlec >= esik)
+
+
+def _satir_kilidi_al(s: Session) -> bool:
+    try:
+        kaynak_durumu(s, KILIT_KODU)
+        s.commit()
+    except IntegrityError:  # başka süreç aynı anda satırı oluşturdu
+        s.rollback()
+    simdi = _kilit_simdi()
+    esik = _kilit_metni(simdi - timedelta(minutes=KILIT_BAYAT_DAKIKA))
+    sonuc = s.execute(
+        update(KaynakDurumu)
+        .where(KaynakDurumu.kaynak_kodu == KILIT_KODU,
+               or_(KaynakDurumu.imlec.is_(None), KaynakDurumu.imlec < esik))
+        .values(imlec=_kilit_metni(simdi), son_calisma=simdi)
+    )
+    s.commit()
+    return sonuc.rowcount == 1
+
+
+@contextmanager
+def _toplayici_kilidi(session_factory: Callable[[], Session]) -> Iterator[bool]:
+    """Elle `topla` ile zamanlanmış tur çakışmasın. PostgreSQL: oturum düzeyinde advisory lock
+    (bağlantı kopunca kendiliğinden düşer). SQLite: zaman damgalı kilit satırı."""
+    with session_factory() as s:
+        motor = s.get_bind()
+    if _postgresql_mi(motor):
+        with motor.connect() as bag:  # kilit bu bağlantıya bağlı: tur boyunca açık kalır
+            alindi = bool(bag.scalar(text("SELECT pg_try_advisory_lock(:k)"), {"k": KILIT_ANAHTARI}))
+            bag.commit()
+            try:
+                yield alindi
+            finally:
+                if alindi:
+                    bag.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": KILIT_ANAHTARI})
+                    bag.commit()
+        return
+    with session_factory() as s:
+        alindi = _satir_kilidi_al(s)
+    try:
+        yield alindi
+    finally:
+        if alindi:
+            try:
+                with session_factory() as s:
+                    s.execute(update(KaynakDurumu).where(KaynakDurumu.kaynak_kodu == KILIT_KODU).values(imlec=None))
+                    s.commit()
+            except Exception:  # noqa: BLE001 - bırakılamazsa 20 dakika sonra bayatlar
+                logger.exception("toplayıcı kilidi bırakılamadı")
+
+
 def toplayici_calistir(
     session_factory: Callable[[], Session], *, g=None, analizci: Analizci | None = None,
     simdi: datetime | None = None, kodlar: Sequence[str] | None = None,
 ) -> list[KaynakDurumu]:
-    """Tek tur: egm, sg, ardından izinli haber kaynakları. `kodlar` verilirse yalnızca onlar."""
+    """Tek tur: egm, sg, ardından izinli haber kaynakları. `kodlar` verilirse yalnızca onlar.
+
+    Başka bir tur kilidi tutuyorsa hiçbir iş yapmadan boş liste döner.
+    """
+    with _toplayici_kilidi(session_factory) as alindi:
+        if not alindi:
+            logger.warning(ZATEN_CALISIYOR)
+            return []
+        return _tur(session_factory, g=g, analizci=analizci, simdi=simdi, kodlar=kodlar)
+
+
+def _tur(session_factory, *, g, analizci, simdi, kodlar) -> list[KaynakDurumu]:
     simdi = simdi or datetime.now(timezone.utc)
     g = g or Getirici()
     analizci = analizci or analizci_olustur(get_settings())

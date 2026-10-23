@@ -209,7 +209,7 @@ def sehitlerimiz_kontrol() -> int:
 def aktarim_durumu() -> int:
     with sessionmaker(motor_olustur(get_settings().database_url))() as session:
         tum = list(session.scalars(select(KaynakDurumu).order_by(KaynakDurumu.kaynak_kodu)))
-        satirlar = [d for d in tum if d.kaynak_kodu != toplayici.SAYAC_KODU]
+        satirlar = [d for d in tum if d.kaynak_kodu not in (toplayici.SAYAC_KODU, toplayici.KILIT_KODU)]
         sayac = next((d for d in tum if d.kaynak_kodu == toplayici.SAYAC_KODU), None)
         if not satirlar:
             print("Henüz aktarım yapılmadı.")
@@ -232,6 +232,9 @@ def topla(argv: list[str]) -> int:
         onceki = {d.kaynak_kodu: _sayilar(d) for d in session.scalars(select(KaynakDurumu))}
     sonuclar = toplayici.toplayici_calistir(
         fabrika, g=Getirici(), kodlar=[secenekler.kaynak] if secenekler.kaynak else None)
+    if not sonuclar:  # başka bir tur (zamanlayıcı ya da başka bir `topla`) sürüyor
+        print(toplayici.ZATEN_CALISIYOR)
+        return 0
     hata_var = False
     for d in sonuclar:
         kod = d.kaynak_kodu.removesuffix("_toplayici")

@@ -519,3 +519,91 @@ def test_calistir_kaynak_secimi(fabrika, monkeypatch):
     sonuc = toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), analizci=SahteAnalizci(),
                                          simdi=SIMDI, kodlar=["sg"])
     assert [d.kaynak_kodu for d in sonuc] == ["sg_toplayici"]
+
+
+# --- eşzamanlılık kilidi (M1) ---
+
+def _kilit_kur(fabrika, an):
+    from datetime import timezone
+    with fabrika() as s:
+        s.add(KaynakDurumu(kaynak_kodu=toplayici.KILIT_KODU,
+                           imlec=an.astimezone(timezone.utc).isoformat(timespec="seconds"),
+                           eklenen=0, birlesen=0, atlanan=0, hatali=0))
+        s.commit()
+
+
+def test_kilit_tutuluyorsa_is_yapmadan_doner(fabrika, monkeypatch, ortam, caplog):
+    from datetime import timezone
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["hurriyet"])
+    _kilit_kur(fabrika, datetime.now(timezone.utc))
+    ortam.ogeler = [oge(1)]
+    a = SahteAnalizci()
+    with caplog.at_level("WARNING"):
+        sonuc = toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), analizci=a, simdi=SIMDI)
+    assert sonuc == [] and a.cagri == 0 and toplayici.ZATEN_CALISIYOR in caplog.text
+    with fabrika() as s:
+        assert s.get(KaynakDurumu, "hurriyet") is None and toplayici.toplayici_calisiyor_mu(s)
+
+
+def test_bayat_kilit_alinir_calisirken_tutulur_sonra_birakilir(fabrika, monkeypatch):
+    from datetime import timezone
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["hurriyet"])
+    _kilit_kur(fabrika, datetime.now(timezone.utc) - timedelta(minutes=21))  # çökmüş tur kalıntısı
+    calisirken = []
+
+    def getir(g, k):
+        with fabrika() as s:
+            calisirken.append(toplayici.toplayici_calisiyor_mu(s))
+        return []
+    monkeypatch.setattr(haber, "ogeleri_getir", getir)
+    sonuc = toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), analizci=SahteAnalizci(), simdi=SIMDI)
+    assert [d.kaynak_kodu for d in sonuc] == ["egm_toplayici", "sg_toplayici", "hurriyet"]
+    assert calisirken == [True]
+    with fabrika() as s:
+        assert not toplayici.toplayici_calisiyor_mu(s) and s.get(KaynakDurumu, toplayici.KILIT_KODU).imlec is None
+
+
+def test_kilit_hata_olsa_da_birakilir(fabrika, monkeypatch):
+    monkeypatch.setattr(get_settings(), "kaynak_izinleri", ["hurriyet"])
+
+    def patlar(*a, **k):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(toplayici, "resmi_kaynak_tara", patlar)
+    with pytest.raises(KeyboardInterrupt):
+        toplayici.toplayici_calistir(fabrika, g=SahteGetirici(), analizci=SahteAnalizci(), simdi=SIMDI)
+    with fabrika() as s:
+        assert not toplayici.toplayici_calisiyor_mu(s)
+
+
+# --- istem enjeksiyonu sınırı (M5) ---
+
+def test_kisi_sayisi_20_ile_sinirlanir(session, ortam, caplog):
+    kisiler = [Kisi(ad=f"ad{i}", soyad=f"soyad{i}", kategori="asker") for i in range(25)]
+    with caplog.at_level("WARNING"):
+        d = tara(session, ortam, [oge(1)], SahteAnalizci(analiz(kisiler=kisiler)))
+    assert d.eklenen == 20 and session.query(Sehit).count() == 20
+    assert "25 kişi" in caplog.text and "20" in caplog.text
+
+
+def test_calisiyor_mu_postgresqlde_advisory_lock_dener():
+    from types import SimpleNamespace
+
+    class Sahte:
+        def __init__(self, alinir):
+            self.alinir, self.sorgular = alinir, []
+
+        def get_bind(self):
+            return SimpleNamespace(dialect=SimpleNamespace(name="postgresql"))
+
+        def scalar(self, sorgu, p):
+            self.sorgular.append((str(sorgu), p))
+            return self.alinir
+
+        def execute(self, sorgu, p):
+            self.sorgular.append((str(sorgu), p))
+
+    tutuluyor = Sahte(False)
+    assert toplayici.toplayici_calisiyor_mu(tutuluyor) is True and len(tutuluyor.sorgular) == 1
+    bos = Sahte(True)  # alınabildi: hemen bırakılır
+    assert toplayici.toplayici_calisiyor_mu(bos) is False
+    assert [q for q, _ in bos.sorgular] == ["SELECT pg_try_advisory_lock(:k)", "SELECT pg_advisory_unlock(:k)"]

@@ -4,6 +4,7 @@
 {% include "panel/_sekmeler.html" %}
 <h1 class="serif">Toplayıcı</h1>
 {% if basladi %}<p class="kart"><b>Toplayıcı başlatıldı.</b> Birkaç dakika içinde bu sayfayı yenileyin.</p>{% endif %}
+{% if calisiyor %}<p class="kart"><b>Toplayıcı zaten çalışıyor; bittiğinde tekrar deneyin.</b></p>{% endif %}
 
 <p class="sayilar">
   Bugünkü analiz: <b>{{ analiz_sayisi }} / {{ analiz_siniri }}</b>
@@ -15,7 +16,7 @@
 <table class="tablo">
   <thead>
     <tr><th>Kaynak</th><th>Son çalışma</th><th>Durum</th><th>Mesaj</th>
-        <th>Eklenen</th><th>Birleşen</th><th>Atlanan</th><th>Hatalı</th></tr>
+        <th>Eklenen (toplam)</th><th>Birleşen (toplam)</th><th>Atlanan (toplam)</th><th>Hatalı (toplam)</th></tr>
   </thead>
   <tbody>
   {% for ad, d in kaynaklar %}

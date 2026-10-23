@@ -15,12 +15,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import repo
-from app.analiz import analizci_olustur
+from app.analiz import analiz_yapilandirildi_mi
 from app.dates import TZ, bugun
 from app.db import get_session
 from app.kaynaklar import haber
 from app.models import Bildirim, Durum, Hassasiyet, Kategori, KaynakDurumu, Sehit
-from app.toplayici import RESMI_KAYNAKLAR, SAYAC_KODU, toplayici_kodu
+from app.toplayici import RESMI_KAYNAKLAR, SAYAC_KODU, toplayici_calisiyor_mu, toplayici_kodu
 from app.schemas import SehitVeri
 
 GIRIS_ADRESI = "/panel/giris"
@@ -225,13 +225,16 @@ def _sehit_getir(s: Session, sehit_id: int) -> Sehit:
     return sehit
 
 
-def _toplayici_satir_kodlari() -> list[tuple[str, str]]:
-    """(kaynak adı, KaynakDurumu satırı) çiftleri: önce resmî kaynaklar, sonra haber siteleri."""
-    return [(k, toplayici_kodu(k)) for k in (*RESMI_KAYNAKLAR, *haber.HABER_KAYNAKLARI)]
+def _toplayici_satir_kodlari(izinler: list[str]) -> list[tuple[str, str]]:
+    """(kaynak adı, KaynakDurumu satırı) çiftleri: önce resmî kaynaklar, sonra haber siteleri.
+
+    Yalnızca şu an izinli kaynaklar: kapatılmış bir kaynağın eski hatası uyarı üretmez.
+    """
+    return [(k, toplayici_kodu(k)) for k in (*RESMI_KAYNAKLAR, *haber.HABER_KAYNAKLARI) if k in izinler]
 
 
-def _toplayici_hatasi_var_mi(s: Session) -> bool:
-    kodlar = [satir for _, satir in _toplayici_satir_kodlari()]
+def _toplayici_hatasi_var_mi(s: Session, izinler: list[str]) -> bool:
+    kodlar = [satir for _, satir in _toplayici_satir_kodlari(izinler)]
     return s.scalar(
         select(func.count()).select_from(KaynakDurumu)
         .where(KaynakDurumu.kaynak_kodu.in_(kodlar), KaynakDurumu.son_durum == "hata")
@@ -312,7 +315,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         return _liste_sayfasi(
             request, kullanici, mod="bekleyen", kayitlar=bekleyenler,
             bekleyen_sayisi=len(bekleyenler), yeni_bildirim=yeni_bildirim, q="",
-            toplayici_hatasi=_toplayici_hatasi_var_mi(s),
+            toplayici_hatasi=_toplayici_hatasi_var_mi(s, request.app.state.settings.kaynak_izinleri),
         )
 
     @router.get("/yayinda")
@@ -387,7 +390,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         return RedirectResponse(f"/panel/sehit/{hedef.id}", status_code=303)
 
     @router.get("/toplayici")
-    def toplayici_durumu(request: Request, kullanici: Yonetici, s: Oturum, basladi: int = 0):
+    def toplayici_durumu(request: Request, kullanici: Yonetici, s: Oturum, basladi: int = 0, calisiyor: int = 0):
         satirlar = {d.kaynak_kodu: d for d in s.scalars(select(KaynakDurumu))}
         ayarlar = request.app.state.settings
         sayac = satirlar.get(SAYAC_KODU)
@@ -398,19 +401,21 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
             request, "panel/toplayici.html",
             {
                 "kullanici": kullanici, "csrf": csrf_token(request), "mod": "toplayici",
-                "kaynaklar": [(ad, satirlar.get(satir)) for ad, satir in _toplayici_satir_kodlari()],
+                "kaynaklar": [(ad, satirlar.get(satir))
+                              for ad, satir in _toplayici_satir_kodlari(ayarlar.kaynak_izinleri)],
                 "analiz_sayisi": int(sayi) if gun == bugun().isoformat() and sayi.isdigit() else 0,
                 "analiz_siniri": ayarlar.gunluk_analiz_siniri,
                 # Anahtarın kendisi şablona hiç verilmez; yalnızca var/yok bilgisi.
-                "api_yapilandirildi": analizci_olustur(ayarlar) is not None,
+                "api_yapilandirildi": analiz_yapilandirildi_mi(ayarlar),
                 "zamanlayici_acik": zamanlayici is not None,
                 "sonraki_calisma": getattr(is_, "next_run_time", None),
                 "basladi": bool(basladi),
+                "calisiyor": bool(calisiyor),
             },
         )
 
     @router.post("/toplayici/simdi")
-    def toplayici_simdi(request: Request, kullanici: Yonetici, csrf: Annotated[str, Form()] = ""):
+    def toplayici_simdi(request: Request, kullanici: Yonetici, s: Oturum, csrf: Annotated[str, Form()] = ""):
         csrf_dogrula(request, csrf)
         zamanlayici = request.app.state.zamanlayici
         is_ = zamanlayici.get_job(TOPLAYICI_ISI) if zamanlayici is not None else None
@@ -420,6 +425,8 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
                 {"kullanici": kullanici, "csrf": csrf_token(request), "mod": "toplayici"},
                 status_code=409,
             )
+        if toplayici_calisiyor_mu(s):  # şimdi tetiklemek, max_instances=1 yüzünden boşa düşerdi
+            return RedirectResponse("/panel/toplayici?calisiyor=1", status_code=303)
         is_.modify(next_run_time=datetime.now(zamanlayici.timezone))
         return RedirectResponse("/panel/toplayici?basladi=1", status_code=303)
 

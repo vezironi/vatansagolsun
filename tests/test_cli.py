@@ -313,3 +313,16 @@ def test_aktarim_durumu_haber_imlecini_ozetler(cli_db, capsys):
     cikti = capsys.readouterr().out
     assert "hurriyet: " in cikti and "imlec=son_yayin=2026-10-23T07:00:00+00:00 islenen=30" in cikti
     assert '"islenen"' not in cikti  # kimlik kümesi dökülmez
+
+
+def test_topla_kilit_tutuluyorsa_mesaj_ve_0(topla_ortam, capsys):
+    from datetime import datetime, timezone
+
+    with topla_ortam() as s:
+        s.add(KaynakDurumu(kaynak_kodu=toplayici.KILIT_KODU, imlec=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                           eklenen=0, birlesen=0, atlanan=0, hatali=0))
+        s.commit()
+    assert cli.main(["topla"]) == 0
+    assert "toplayıcı zaten çalışıyor" in capsys.readouterr().out
+    assert cli.main(["aktarim-durumu"]) == 0
+    assert "toplayici_kilidi" not in capsys.readouterr().out
