@@ -342,3 +342,10 @@ def test_elle_duzenlenmis_diger_kategorisi_ezilmez(session, sehit_ekle):
     r = aktarim.kayit_aktar(session, ham(kategori="polis"))
     session.refresh(s)
     assert r.durum == "birlesti" and s.kategori == "diger"
+
+
+def test_harfsiz_ad_hatali(session):
+    for ad in ("​", "-", "12"):
+        r = aktarim.kayit_aktar(session, ham(ad=ad, dk="x" + ad))
+        assert r.durum == "hatali" and r.sehit_id is None
+    assert session.query(Sehit).count() == 0

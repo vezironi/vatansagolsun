@@ -43,3 +43,16 @@ def test_sayfalar():
     assert [i for i, _ in out] == ["1"] and len(out[0][1]) == 3
     assert g.cagrilar == [("sg", "https://www.sg.gov.tr/sehitlerimiz")]
     assert list(sg.sayfalar(SahteGetirici(), baslangic="1")) == []
+
+
+def test_adsiz_kart_atlanir_ve_gunluge_yazilir(caplog):
+    import logging
+    html = (
+        '<div class="manager-vertical-card"><span class="manager-name">​</span></div>'
+        '<div class="manager-vertical-card"><span class="manager-name">Şehit Uzman Çavuş</span></div>'
+        '<div class="manager-vertical-card"><span class="manager-name">Ali VELİ​</span></div>'
+    )
+    with caplog.at_level(logging.WARNING, logger="app.kaynaklar.sg"):
+        k = sg.ayristir(html)
+    assert [(x.ad, x.soyad) for x in k] == [("Ali", "VELİ")]
+    assert "Şehit Uzman Çavuş" in caplog.text

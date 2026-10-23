@@ -15,6 +15,19 @@ _SAYISAL = re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})")
 _ISO = re.compile(r"(\d{4})-(\d{1,2})-(\d{1,2})")
 _YAZILI = re.compile(r"(\d{1,2}) ([a-z]+) (\d{4})")
 _YIL = re.compile(r"\d{4}")
+_GORUNMEZ = re.compile("[\u200b\u200c\u200d\u2060\ufeff]")
+
+
+def metin_temizle(s: str | None) -> str:
+    """Görünmez karakterleri atar, NBSP'yi boşluğa çevirir, boşlukları sadeleştirir."""
+    s = _GORUNMEZ.sub("", str(s or "")).replace("\xa0", " ")
+    return " ".join(s.split())
+
+
+def alan_temizle(deger) -> str | None:
+    """metin_temizle; boş ve "-" değerler None olur."""
+    metin = metin_temizle(deger)
+    return None if metin in ("", "-") else metin
 
 
 def _tam(yil: int, ay: int, gun: int):
@@ -25,9 +38,9 @@ def _tam(yil: int, ay: int, gun: int):
 
 
 def tarih_coz(metin: str | None) -> tuple[date | None, Hassasiyet, int | None]:
-    if not metin:
+    m = katla(metin_temizle(metin))
+    if not m:
         return _YOK
-    m = katla(metin)
     if (g := _SAYISAL.fullmatch(m)):
         return _tam(int(g[3]), int(g[2]), int(g[1]))
     if (g := _ISO.fullmatch(m)):
@@ -40,9 +53,15 @@ def tarih_coz(metin: str | None) -> tuple[date | None, Hassasiyet, int | None]:
     return _YOK
 
 
-# Önek (katlanmış, boşlukla ayrılmış sözcükler) -> (kanonik görev | None, özgüllük).
-# None görev: atılır. Özgüllük: kurum/silah kısaltması 1, rütbe/unvan 2.
+# Unvan/rütbe önekleri: yazılış -> görevdeki karşılığı (None: atılır, ör. "Şehit", "ULŞ.").
+# Baştaki öneklerin hepsi sırayla açılıp birleştirilir: "P. ASB. KD. BÇVŞ." -> "Piyade Astsubay
+# Kıdemli Başçavuş". Eşleştirme katlanmış sözcüklerle, en uzun önek önce yapılır.
 RUTBE_ONEKLERI: dict[str, str | None] = {
+    # onur unvanları
+    "Şehit": None,
+    "Şehidimiz": None,
+    "ULŞ.": None,
+    # tam sözcükler
     "Polis Memuru": "Polis Memuru",
     "Kıdemli Başpolis Memuru": "Kıdemli Başpolis Memuru",
     "Başpolis Memuru": "Başpolis Memuru",
@@ -51,6 +70,9 @@ RUTBE_ONEKLERI: dict[str, str | None] = {
     "Başkomiser": "Başkomiser",
     "Emniyet Amiri": "Emniyet Amiri",
     "Emniyet Müdürü": "Emniyet Müdürü",
+    "Emniyet Müdür Yardımcısı": "Emniyet Müdür Yardımcısı",
+    **{f"{n}. Sınıf Emniyet Müdürü": f"{n}. Sınıf Emniyet Müdürü" for n in range(1, 5)},
+    **{f"{n}. Sınıf": f"{n}. Sınıf Emniyet Müdürü" for n in range(1, 5)},
     "Bekçi": "Bekçi",
     "Uzman Çavuş": "Uzman Çavuş",
     "Uzman Onbaşı": "Uzman Onbaşı",
@@ -63,49 +85,123 @@ RUTBE_ONEKLERI: dict[str, str | None] = {
     "Onbaşı": "Onbaşı",
     "Çavuş": "Çavuş",
     "Sözleşmeli Er": "Sözleşmeli Er",
-    "UZM. ÇVŞ.": "Uzman Çavuş",
-    "ULŞ.": None,
+    "Piyade": "Piyade",
+    "Jandarma": "Jandarma",
+    # kısaltmalar (TSK yazımı)
     "P.": "Piyade",
     "J.": "Jandarma",
+    "HV.": "Hava",
+    "DZ.": "Deniz",
+    "SVN.": "Savunma",
+    "PLT.": "Pilot",
+    "BKM.": "Bakım",
+    "İST.": "İstihkam",
+    "İSTH.": "İstihbarat",
+    "İKM.": "İkmal",
     "KOM.": "Komando",
+    "MHN.": "Muhabere",
+    "TOP.": "Topçu",
+    "TNK.": "Tank",
+    "ASB.": "Astsubay",
     "ASTSB.": "Astsubay",
+    "KD.": "Kıdemli",
+    "BÇVŞ.": "Başçavuş",
     "ÜÇVŞ.": "Üstçavuş",
-    "ÜTĞM.": "Üsteğmen",
+    "ÇVŞ.": "Çavuş",
+    "UZM.": "Uzman",
+    "ONB.": "Onbaşı",
+    "SÖZ.": "Sözleşmeli",
     "TĞM.": "Teğmen",
+    "ÜTĞM.": "Üsteğmen",
     "YZB.": "Yüzbaşı",
+    "BNB.": "Binbaşı",
+    "YB.": "Yarbay",
+    "YRB.": "Yarbay",
+    "ALB.": "Albay",
+    "TUĞG.": "Tuğgeneral",
+    "TÜMG.": "Tümgeneral",
+    "KORG.": "Korgeneral",
+    "ORG.": "Orgeneral",
+    "PROF.": "Prof.",
+    "DR.": "Dr.",
 }
-_KURUM_KISALTMALARI = {"Piyade", "Jandarma", "Komando"}
 
 _ONEKLER = sorted(
-    ((katla(k).split(), v) for k, v in RUTBE_ONEKLERI.items()),
+    ((tuple(katla(k).split()), v) for k, v in RUTBE_ONEKLERI.items()),
     key=lambda x: -len(x[0]),
 )
+_AYIRICILAR = {"ve", "-", "–", ",", "/", "&"}
 
 
-def isim_ayir(ham: str, *, soyadli: bool) -> tuple[str, str | None, str | None]:
-    sozcukler = ham.split()
-    katli = [katla(s) for s in sozcukler]
-    i = 0
-    if katli and katli[0] == "sehit" and len(sozcukler) > 1:
-        i = 1
-    gorev: str | None = None
-    ozgul = -1
-    while i < len(sozcukler) - 1:
+def _normalle(ham: str) -> str:
+    s = metin_temizle(ham)
+    s = re.sub(r"(\d+)\.\s*(?=\S)", r"\1. ", s)  # "4.sınıf" -> "4. sınıf"
+    return re.sub(r"\.(?=[^\W\d_])", ". ", s)  # "UZM.ÇVŞ." -> "UZM. ÇVŞ."
+
+
+def _onekleri_tuket(katli: list[str], i: int) -> tuple[int, list[str]]:
+    """i'den başlayan ardışık önekleri tüketir: (ilk önek olmayan sözcük, görev parçaları)."""
+    parcalar: list[str] = []
+    while i < len(katli):
         for onek, deger in _ONEKLER:
             n = len(onek)
-            if i + n < len(sozcukler) and katli[i:i + n] == onek:
+            if tuple(katli[i:i + n]) == onek:
                 if deger is not None:
-                    o = 1 if deger in _KURUM_KISALTMALARI else 2
-                    if o >= ozgul:
-                        gorev, ozgul = deger, o
+                    parcalar.append(deger)
                 i += n
                 break
         else:
             break
+    return i, parcalar
+
+
+def isim_ayir(ham: str, *, soyadli: bool) -> tuple[str, str | None, str | None]:
+    """Baştaki unvan/rütbeleri görev olarak ayırır; kalan ad (ve soyadlıysa son sözcük soyad).
+
+    Yalnızca önekten oluşan metinde ad boş döner: ("", None, görev).
+    """
+    sozcukler = _normalle(ham).split()
+    i, parcalar = _onekleri_tuket([katla(s) for s in sozcukler], 0)
+    gorev = " ".join(parcalar) or None
     kalan = sozcukler[i:]
+    if not kalan:
+        return "", None, gorev
     if soyadli and len(kalan) >= 2:
         return ad_duzenle(" ".join(kalan[:-1])), soyad_duzenle(kalan[-1]), gorev
     return ad_duzenle(" ".join(kalan)), None, gorev
+
+
+def kisileri_ayir(baslik: str) -> list[str]:
+    """Birden çok kişinin yazıldığı başlığı kişi kişi böler.
+
+    Adın ardından gelen yeni bir unvan/rütbe dizisi (arkasında en az bir ad sözcüğüyle) ya da
+    tek başına duran "ve", "-", "–", ",", "/", "&" yeni kişiye geçer.
+    """
+    sozcukler = _normalle(baslik).split()
+    katli = [katla(s) for s in sozcukler]
+    kisiler: list[list[str]] = []
+    mevcut: list[str] = []
+    adli = False  # mevcut kişide önek dışında sözcük var mı
+    i = 0
+    while i < len(sozcukler):
+        if katli[i] in _AYIRICILAR:
+            if mevcut:
+                kisiler.append(mevcut)
+            mevcut, adli, i = [], False, i + 1
+            continue
+        son, _ = _onekleri_tuket(katli, i)
+        if son > i and (not adli or (son < len(sozcukler) and katli[son] not in _AYIRICILAR)):
+            if adli:
+                kisiler.append(mevcut)
+                mevcut, adli = [], False
+            mevcut.extend(sozcukler[i:son])
+            i = son
+            continue
+        mevcut.append(sozcukler[i])  # ad sözcüğü (sondaki "ER", "BEKÇİ" gibi soyadlar dahil)
+        adli, i = True, i + 1
+    if mevcut:
+        kisiler.append(mevcut)
+    return [" ".join(k) for k in kisiler]
 
 
 def kategori_bul(*ipuclari: str | None) -> Kategori:

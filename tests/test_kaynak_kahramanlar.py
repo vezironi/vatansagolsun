@@ -78,8 +78,13 @@ def test_fixture_kayitlari_cevrilir():
     kayitlar = [kh.kayit_cevir(k) for k in veri]
     assert all(kayitlar) and len({h.dis_kimlik for h in kayitlar}) == len(veri)
     koroglu = next(h for h in kayitlar if h.soyad == "KÖROĞLU")
-    assert (koroglu.ad, koroglu.gorev, koroglu.kategori, koroglu.yil, koroglu.lakap) == ("Ahmet", "Uzman Çavuş", K.asker, 2024, None)
+    # "P. UZM. ÇVŞ." baştaki tüm kısaltmalar sırayla açılır (P11 kararı)
+    assert (koroglu.ad, koroglu.gorev, koroglu.kategori, koroglu.yil, koroglu.lakap) == ("Ahmet", "Piyade Uzman Çavuş", K.asker, 2024, None)
     assert (koroglu.baba_adi, koroglu.dogum_yili, koroglu.memleket) == ("Ömer", 1994, "Giresun Çanakçı")
+    omer = next(h for h in kayitlar if h.soyad == "HALİSDEMİR")
+    assert (omer.ad, omer.gorev) == ("Ömer", "Piyade Astsubay Kıdemli Başçavuş")
+    alper = next(h for h in kayitlar if h.soyad == "KOCA")
+    assert (alper.ad, alper.gorev) == ("Alper", "Piyade Çavuş")
     sivil = next(h for h in kayitlar if h.soyad == "GÜRSOY")
     assert (sivil.kategori, sivil.memleket) == (K.diger, "Kırşehir")
 
@@ -116,3 +121,23 @@ def test_sayfalar_gecersiz_imlec_ve_bozuk_yanit():
             return {"hata": 1}
     with pytest.raises(KaynakHatasi):
         list(kh.sayfalar(G(), baslangic=None))
+
+
+def test_bos_data_has_more_olsa_da_durur():
+    cagrilar = []
+
+    class G:
+        def json(self, kod, url, params=None):
+            cagrilar.append(params["page"])
+            if params["page"] > 3:
+                raise AssertionError("boş sayfadan sonra istek atılmamalı")
+            return {"data": [_k()] if params["page"] == 1 else [], "has_more": True}
+    assert [i for i, _ in kh.sayfalar(G(), baslangic=None)] == ["1"]
+    assert cagrilar == [1, 2]
+
+
+def test_dogum_yili_yalniz_dort_ascii_rakam():
+    assert kh.kayit_cevir(_k(dogum_yili="1885")).dogum_yili == 1885
+    assert kh.kayit_cevir(_k(dogum_yili="١٨٨٥")).dogum_yili is None  # Arapça-Hint rakamları
+    assert kh.kayit_cevir(_k(dogum_yili="18²")).dogum_yili is None  # üst simge: isdigit() True idi
+    assert kh.kayit_cevir(_k(dogum_yili="85")).dogum_yili is None

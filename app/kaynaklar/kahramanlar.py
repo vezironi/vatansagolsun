@@ -6,7 +6,7 @@ import re
 from collections.abc import Iterator
 
 from app.kaynaklar import HamKayit, KaynakHatasi
-from app.kaynaklar.ayristir import isim_ayir, kategori_bul, soyadli_mi, tarih_coz
+from app.kaynaklar.ayristir import alan_temizle, isim_ayir, kategori_bul, soyadli_mi, tarih_coz
 from app.models import Hassasiyet
 from app.text import ad_duzenle, katla
 
@@ -19,23 +19,18 @@ KAYNAK_ADI = "kahramanlar.org.tr"
 KAYNAK_URL = "https://kahramanlar.org.tr/"
 
 _PARANTEZ_YIL = re.compile(r"\((\d{4})\)")
+_DOGUM_YILI = re.compile(r"[0-9]{4}")
 _GENEL_MEMLEKET = {"turkiye", "msb"}
 
 
-def _temiz(deger) -> str | None:
-    """Boşlukları sadeleştirir; boş ve "-" değerler None olur."""
-    metin = " ".join(str(deger or "").split())
-    return None if metin in ("", "-") else metin
-
-
 def kayit_cevir(k: dict) -> HamKayit | None:
-    ham_ad = _temiz(k.get("ad"))
+    ham_ad = alan_temizle(k.get("ad"))
     if ham_ad is None:
         return None
-    rutbe = _temiz(k.get("rutbe"))
-    harp = _temiz(k.get("harp"))
+    rutbe = alan_temizle(k.get("rutbe"))
+    harp = alan_temizle(k.get("harp"))
 
-    tarih, hassasiyet, yil = tarih_coz(_temiz(k.get("sehadet_tarihi")))
+    tarih, hassasiyet, yil = tarih_coz(alan_temizle(k.get("sehadet_tarihi")))
     if yil is None and harp and (eslesme := _PARANTEZ_YIL.search(harp)):
         yil, hassasiyet = int(eslesme[1]), Hassasiyet.yil
 
@@ -43,10 +38,10 @@ def kayit_cevir(k: dict) -> HamKayit | None:
     ad, soyad, gorev = isim_ayir(ham_ad, soyadli=soyadli)
     if not ad:
         return None
-    lakap = _temiz(k.get("lakap"))
-    memleket = _temiz(k.get("memleketi"))
-    baba = _temiz(k.get("baba_adi"))
-    dogum = _temiz(k.get("dogum_yili"))
+    lakap = alan_temizle(k.get("lakap"))
+    memleket = alan_temizle(k.get("memleketi"))
+    baba = alan_temizle(k.get("baba_adi"))
+    dogum = alan_temizle(k.get("dogum_yili"))
     return HamKayit(
         kaynak_kodu=KAYNAK_KODU,
         dis_kimlik="kh:" + hashlib.sha1(json.dumps(k, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:20],
@@ -57,7 +52,7 @@ def kayit_cevir(k: dict) -> HamKayit | None:
         kategori=kategori_bul(rutbe, harp),
         memleket=None if memleket is None or katla(memleket) in _GENEL_MEMLEKET else ad_duzenle(memleket),
         baba_adi=ad_duzenle(baba) if baba else None,
-        dogum_yili=int(dogum) if dogum and dogum.isdigit() else None,
+        dogum_yili=int(dogum) if dogum and _DOGUM_YILI.fullmatch(dogum) else None,
         donem=harp,
         kaynak_adi=KAYNAK_ADI, kaynak_url=KAYNAK_URL,
     )
@@ -83,6 +78,8 @@ def sayfalar(g, *, baslangic: str | None) -> Iterator[tuple[str, list[HamKayit]]
                 continue
             if ham is not None:
                 kayitlar.append(ham)
+        if not yanit["data"]:  # has_more doğru olsa da boş sayfa listenin sonudur
+            return
         yield str(sayfa), kayitlar
         if not yanit.get("has_more"):
             return

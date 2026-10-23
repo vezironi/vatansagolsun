@@ -34,7 +34,8 @@ def test_isim_ayir_ek_durumlar():
     assert isim_ayir("Komiser Yardımcısı Ece AY", soyadli=True) == ("Ece", "AY", "Komiser Yardımcısı")
     assert isim_ayir("Sözleşmeli Er Veli KAYA", soyadli=True) == ("Veli", "KAYA", "Sözleşmeli Er")
     assert isim_ayir("MUSTAFA", soyadli=False) == ("Mustafa", None, None)
-    assert isim_ayir("Er", soyadli=True) == ("Er", None, None)
+    # Yalnızca önekten oluşan metin: ad boş (eskiden "en az bir sözcük ad kalır" koruması vardı).
+    assert isim_ayir("Er", soyadli=True) == ("", None, "Er")
 
 def test_kategori_bul():
     assert kategori_bul("Polis", "POLİS ŞEHİDİ") == K.polis
@@ -48,3 +49,47 @@ def test_soyadli_mi():
     assert soyadli_mi(1915, None) is False
     assert soyadli_mi(None, "BİRİNCİ DÜNYA SAVAŞI (1914-1918) ÇANAKKALE CEPHESİ") is False
     assert soyadli_mi(None, "TERÖRLE MÜCADELE") is True
+
+
+# --- son inceleme: I2/I3/I4 ---
+
+from app.kaynaklar.ayristir import kisileri_ayir, metin_temizle  # noqa: E402
+
+
+def test_metin_temizle():
+    assert metin_temizle("​") == ""
+    assert metin_temizle(" Hasan ​ÖZTÜRK﻿ ⁠‌‍ ") == "Hasan ÖZTÜRK"
+    assert metin_temizle(None) == ""
+    assert tarih_coz("​08.10.2026 ") == (date(2026, 10, 8), H.tam, 2026)
+
+
+@pytest.mark.parametrize("ham,beklenen", [
+    ("P. ASB. KD. BÇVŞ. ÖMER HALİSDEMİR", ("Ömer", "HALİSDEMİR", "Piyade Astsubay Kıdemli Başçavuş")),
+    ("J. UZM. ÇVŞ. AHMET KAYA", ("Ahmet", "KAYA", "Jandarma Uzman Çavuş")),
+    ("HV. PLT. BNB. İBRAHİM BOLAT", ("İbrahim", "BOLAT", "Hava Pilot Binbaşı")),
+    ("P. SÖZ. ER İLKER AĞÇAY", ("İlker", "AĞÇAY", "Piyade Sözleşmeli Er")),
+    ("ULŞ. UZM.ÇVŞ. ABDURRAHMAN HİLAL", ("Abdurrahman", "HİLAL", "Uzman Çavuş")),
+    ("Şehidimiz Polis Memuru Hamdullah KIRTAY", ("Hamdullah", "KIRTAY", "Polis Memuru")),
+    ("Şehidimiz 4.sınıf Emniyet Müdürü Tufan ŞAHİN", ("Tufan", "ŞAHİN", "4. Sınıf Emniyet Müdürü")),
+    ("Şehit 2. Sınıf Ali VELİ", ("Ali", "VELİ", "2. Sınıf Emniyet Müdürü")),
+    ("Şehit Emniyet Müdür Yardımcısı Can AY", ("Can", "AY", "Emniyet Müdür Yardımcısı")),
+    ("Şehit Polis Memuru", ("", None, "Polis Memuru")),
+    ("Şehit", ("", None, None)),
+    ("​", ("", None, None)),
+])
+def test_isim_ayir_rutbe_birlestirme(ham, beklenen):
+    assert isim_ayir(ham, soyadli=True) == beklenen
+
+
+def test_kisileri_ayir():
+    assert kisileri_ayir("Şehit Polis Memuru Vedat KAYA Şehit Polis Memuru Sedat YABALAK") == [
+        "Şehit Polis Memuru Vedat KAYA", "Şehit Polis Memuru Sedat YABALAK"]
+    assert kisileri_ayir("Şehidimiz Polis Memuru Hamdullah KIRTAY") == ["Şehidimiz Polis Memuru Hamdullah KIRTAY"]
+    assert kisileri_ayir("Şehidimiz 4.sınıf Emniyet Müdürü Tufan ŞAHİN") == [
+        "Şehidimiz 4. sınıf Emniyet Müdürü Tufan ŞAHİN"]
+    assert kisileri_ayir("Polis Memuru Ali KAYA ve Veli DEMİR - Can AY") == [
+        "Polis Memuru Ali KAYA", "Veli DEMİR", "Can AY"]
+    # sondaki rütbe sözcüğü soyaddır ("ER", "BEKÇİ"), yeni kişi değil
+    assert kisileri_ayir("Şehit Polis Memuru Ahmet ER") == ["Şehit Polis Memuru Ahmet ER"]
+    assert kisileri_ayir("Şehit Polis Memuru") == ["Şehit Polis Memuru"]
+    assert kisileri_ayir("​") == []

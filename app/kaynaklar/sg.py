@@ -1,13 +1,16 @@
 """Sahil Güvenlik Komutanlığı şehitleri okuyucusu."""
+import logging
 from collections.abc import Iterator
 from urllib.parse import urlsplit
 
 from selectolax.parser import HTMLParser
 
 from app.kaynaklar import HamKayit
-from app.kaynaklar.ayristir import isim_ayir, tarih_coz
+from app.kaynaklar.ayristir import isim_ayir, metin_temizle, tarih_coz
 from app.models import Kategori
 from app.text import slug
+
+logger = logging.getLogger(__name__)
 
 KOK = "https://www.sg.gov.tr"
 KAYNAK_KODU = "sg"
@@ -18,12 +21,13 @@ def ayristir(html: str) -> list[HamKayit]:
     kayitlar = []
     for kart in HTMLParser(html).css("div.manager-vertical-card"):
         ad_dugumu = kart.css_first(".manager-name")
-        ham = " ".join(ad_dugumu.text().split()) if ad_dugumu else ""
-        ad, soyad, gorev = isim_ayir(ham, soyadli=True) if ham else ("", None, None)
-        if not ad:
+        ham = metin_temizle(ad_dugumu.text()) if ad_dugumu else ""
+        ad, soyad, gorev = isim_ayir(ham, soyadli=True)
+        if not any(c.isalpha() for c in ad):
+            logger.warning("sg: adsız kart atlandı: %r", ham)
             continue
         tarih_dugumu = kart.css_first(".manager-sm-card-body p")
-        tarih, hassasiyet, yil = tarih_coz(tarih_dugumu.text().strip() if tarih_dugumu else None)
+        tarih, hassasiyet, yil = tarih_coz(tarih_dugumu.text() if tarih_dugumu else None)
         baglanti = kart.css_first("a[href]")
         yol = urlsplit(baglanti.attributes.get("href") or "").path if baglanti else ""
         kayitlar.append(HamKayit(

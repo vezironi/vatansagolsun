@@ -223,8 +223,8 @@ def _kaynak_kaydi(sehit: Sehit, ham: HamKayit) -> Kaynak:
 
 def kayit_aktar(s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda) -> Sonuc:
     """Tek kaydı savepoint içinde işler; asla fırlatmaz. Commit çağırana aittir."""
-    if not ham.ad or not ham.ad.strip():
-        return Sonuc("hatali", None, "Ad boş.")
+    if not any(c.isalpha() for c in ham.ad or ""):
+        return Sonuc("hatali", None, f"Ad boş ya da harf içermiyor: {ham.ad!r}")
     try:
         with s.begin_nested():
             var = s.scalar(
