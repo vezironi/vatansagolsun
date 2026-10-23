@@ -77,3 +77,32 @@ def test_kontrol_hata_durumu_yazar_ve_imlec_ilerlemez(session, monkeypatch):
     d = aktarim.sehitlerimiz_kontrol(session, object())
     assert d.son_durum == "hata" and "ağ yok" in d.son_mesaj
     assert d.imlec == "50"
+
+
+# --- son inceleme: M3 ---
+
+def test_zamanlayici_verilen_ayarlari_kullanir(app):
+    from app.config import Settings
+    from app.zamanlayici import zamanlayici_kur
+    ayar = Settings(_env_file=None, zamanlayici_aktif=True)
+    z = zamanlayici_kur(app.state.session_factory, ayar)  # genel ayar kapalı (autouse fikstür)
+    assert z is not None and not z.running
+    assert zamanlayici_kur(app.state.session_factory, Settings(_env_file=None, zamanlayici_aktif=False)) is None
+
+
+def test_create_app_kendi_ayarlarini_zamanlayiciya_verir(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app import main
+    from app.config import Settings
+    alinan = []
+    monkeypatch.setattr(main, "zamanlayici_kur", lambda fabrika, ayar=None: alinan.append(ayar))
+    ayar = Settings(_env_file=None, database_url="sqlite://", zamanlayici_aktif=True)
+    with TestClient(main.create_app(ayar)):
+        pass
+    assert alinan == [ayar]
+
+
+def test_testlerde_zamanlayici_genel_ayari_kapali():
+    from app.config import get_settings
+    assert get_settings().zamanlayici_aktif is False

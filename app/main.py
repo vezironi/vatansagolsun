@@ -27,7 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        zamanlayici = zamanlayici_kur(app.state.session_factory)
+        zamanlayici = zamanlayici_kur(app.state.session_factory, app.state.settings)
         app.state.zamanlayici = zamanlayici
         if zamanlayici is not None:
             zamanlayici.start()

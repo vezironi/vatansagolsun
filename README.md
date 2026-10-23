@@ -164,7 +164,7 @@ Komut yarıda kesilirse (bağlantı koptu, Ctrl+C, sunucu yeniden başladı) **a
 docker compose exec -d app python -m app.cli aktar hepsi
 ```
 
-(`-d`: arka planda çalıştırır. `docker compose exec -d` yoksa: `nohup docker compose exec -T app python -m app.cli aktar hepsi > aktarim.log 2>&1 &`.) İlerlemeyi `aktarim-durumu` ile izleyin.
+(`-d`: arka planda çalıştırır.) İlerlemeyi `aktarim-durumu` ile izleyin.
 
 ### 12 saatlik otomatik kontrol
 
@@ -173,6 +173,8 @@ docker compose exec -d app python -m app.cli aktar hepsi
 ```bash
 docker compose exec app python -m app.cli sehitlerimiz-kontrol
 ```
+
+> Toplu aktarım (`aktar sehitlerimiz` ya da `aktar hepsi`) sürerken `sehitlerimiz-kontrol`'ü elle çalıştırmayın: ikisi aynı siteye aynı anda istek atar ve aynı kayıtları farklı durumlarla (toplu aktarım yayında, kontrol onay bekliyor) almaya çalışır. Aktarım bitince çalıştırın.
 
 İlk çalıştırmada kontrol yalnızca "şu an sitedeki en son kayıt" noktasını işaretler, geçmişi getirmez (geçmiş için yukarıdaki `aktar` komutu vardır). Bu kontrol `docker-compose.yml` içindeki `ZAMANLAYICI_AKTIF=true` ayarıyla çalışır; yerelde kapalıdır.
 

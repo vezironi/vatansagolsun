@@ -6,7 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app import aktarim
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.kaynaklar.getirici import Getirici
 
 logger = logging.getLogger(__name__)
@@ -24,9 +24,12 @@ def kontrol_isi(session_factory) -> None:
         logger.exception("sehitlerimiz zamanlanmış kontrolü çöktü")
 
 
-def zamanlayici_kur(session_factory) -> BackgroundScheduler | None:
-    """Ayar kapalıysa None; açıksa işi tanımlanmış (henüz başlamamış) zamanlayıcı."""
-    if not get_settings().zamanlayici_aktif:
+def zamanlayici_kur(session_factory, settings: Settings | None = None) -> BackgroundScheduler | None:
+    """Ayar kapalıysa None; açıksa işi tanımlanmış (henüz başlamamış) zamanlayıcı.
+
+    `settings`: uygulamanın ayarları (create_app'e verilen); verilmezse get_settings().
+    """
+    if not (settings or get_settings()).zamanlayici_aktif:
         return None
     zamanlayici = BackgroundScheduler(timezone=ZAMAN_DILIMI)
     ilk = datetime.now(zamanlayici.timezone) + timedelta(minutes=ILK_CALISMA_DAKIKA)

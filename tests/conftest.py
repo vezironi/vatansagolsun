@@ -12,6 +12,14 @@ from app.main import create_app
 from app.models import Sehit
 
 
+@pytest.fixture(autouse=True)
+def zamanlayici_kapali(monkeypatch):
+    """Zamanlayıcı testlerde asla başlamaz (.env'de ZAMANLAYICI_AKTIF=true olsa da)."""
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "zamanlayici_aktif", False)
+
+
 @pytest.fixture
 def session():
     motor = create_engine(
