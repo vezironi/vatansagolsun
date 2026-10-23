@@ -11,6 +11,9 @@ from app.config import get_settings
 from app.kaynaklar import KaynakHatasi, KaynakIzniYok
 
 YENIDEN_DENEME_BEKLEMELERI = (30, 60, 120)
+MAKS_YONLENDIRME = 5
+YONLENDIRME_KODLARI = {301, 302, 303, 307, 308}
+URUN_ADI = "vatansagolsun-aktarim"
 
 
 class Getirici:
@@ -30,7 +33,7 @@ class Getirici:
         self._saat = saat
         self._ua = f"Mozilla/5.0 (compatible; vatansagolsun-aktarim/1.0; +{ayarlar.site_url})"
         self._istemci = httpx.Client(
-            transport=transport, timeout=30.0, headers={"User-Agent": self._ua}, follow_redirects=True
+            transport=transport, timeout=30.0, headers={"User-Agent": self._ua}, follow_redirects=False
         )
         self._son_istek: dict[str, float] = {}
         self._robotlar: dict[str, urllib.robotparser.RobotFileParser | None] = {}
@@ -39,7 +42,11 @@ class Getirici:
         return self._yap(kaynak_kodu, "GET", url, params=params).text
 
     def json(self, kaynak_kodu: str, url: str, *, params: dict | None = None) -> Any:
-        return self._yap(kaynak_kodu, "GET", url, params=params).json()
+        yanit = self._yap(kaynak_kodu, "GET", url, params=params)
+        try:
+            return yanit.json()
+        except ValueError as hata:
+            raise KaynakHatasi(f"{url} geçerli JSON döndürmedi: {hata}") from hata
 
     def post_json(self, kaynak_kodu: str, url: str, govde: dict, *, referer: str) -> str:
         return self._yap(kaynak_kodu, "POST", url, json=govde, headers={"Referer": referer}).text
@@ -47,11 +54,25 @@ class Getirici:
     def _yap(self, kaynak_kodu: str, yontem: str, url: str, **kw: Any) -> httpx.Response:
         if kaynak_kodu not in self._izinler:
             raise KaynakIzniYok(f"{kaynak_kodu!r} kaynağı izin listesinde yok; istek atılmadı")
-        self._robots_denetle(url)
-        yanit = self._istek(yontem, url, **kw)
-        if yanit.status_code >= 400:
-            raise KaynakHatasi(f"{url} HTTP {yanit.status_code} döndü")
-        return yanit
+        sunucu = urlsplit(url).netloc
+        for _ in range(MAKS_YONLENDIRME + 1):
+            self._robots_denetle(url)
+            yanit = self._istek(yontem, url, **kw)
+            if yanit.status_code not in YONLENDIRME_KODLARI:
+                if yanit.status_code >= 400:
+                    raise KaynakHatasi(f"{url} HTTP {yanit.status_code} döndü")
+                return yanit
+            konum = yanit.headers.get("location")
+            if not konum:
+                raise KaynakHatasi(f"{url} Location olmadan yönlendirdi")
+            url = str(httpx.URL(url).join(konum))
+            if urlsplit(url).netloc != sunucu:
+                raise KaynakHatasi(f"başka sunucuya yönlendirme reddedildi: {url}")
+            if yanit.status_code == 303:
+                yontem, kw = "GET", {}
+            else:
+                kw = {k: v for k, v in kw.items() if k != "params"}
+        raise KaynakHatasi(f"{MAKS_YONLENDIRME} yönlendirmeden fazlası: {url}")
 
     def _robots_denetle(self, url: str) -> None:
         parca = urlsplit(url)
@@ -65,7 +86,7 @@ class Getirici:
                 robot.parse(yanit.text.splitlines())
                 self._robotlar[kok] = robot
         robot = self._robotlar[kok]
-        if robot is not None and not robot.can_fetch(self._ua, url):
+        if robot is not None and not robot.can_fetch(URUN_ADI, url):
             raise KaynakHatasi(f"robots.txt {url} adresini yasaklıyor")
 
     def _istek(self, yontem: str, url: str, **kw: Any) -> httpx.Response:

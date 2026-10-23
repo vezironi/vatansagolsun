@@ -49,3 +49,55 @@ def test_ua_ve_post_json():
     assert g.post_json("egm", "https://x.test/p", {"page": 2}, referer="https://x.test/s") == "<div></div>"
     assert "vatansagolsun-aktarim/1.0" in gorulen["ua"] and gorulen["ct"].startswith("application/json")
     assert gorulen["ref"] == "https://x.test/s" and b'"page"' in gorulen["govde"]
+
+
+def _robots(metin):
+    return httpx.Response(200, text=metin)
+
+def test_yonlendirme_yasakli_yola_istek_atilmaz():
+    istenen = []
+    def h(r):
+        istenen.append(r.url.path)
+        if r.url.path == "/robots.txt":
+            return _robots("User-agent: *\nDisallow: /ara\n")
+        return httpx.Response(302, headers={"location": "/ara/x"})
+    g, _ = _getirici(h)
+    with pytest.raises(KaynakHatasi):
+        g.metin("egm", "https://x.test/a")
+    assert "/ara/x" not in istenen
+
+def test_baska_sunucuya_yonlendirme_reddedilir():
+    istenen = []
+    def h(r):
+        istenen.append(str(r.url))
+        if r.url.path == "/robots.txt":
+            return httpx.Response(404)
+        return httpx.Response(301, headers={"location": "https://baska.test/a"})
+    g, _ = _getirici(h)
+    with pytest.raises(KaynakHatasi):
+        g.metin("egm", "https://x.test/a")
+    assert not any("baska.test" in u for u in istenen)
+
+def test_ayni_sunucu_yonlendirmesi_izlenir():
+    def h(r):
+        if r.url.path == "/robots.txt":
+            return httpx.Response(404)
+        if r.url.path == "/a":
+            return httpx.Response(301, headers={"location": "/b"})
+        return httpx.Response(200, text="son")
+    g, _ = _getirici(h)
+    assert g.metin("egm", "https://x.test/a") == "son"
+
+def test_urun_adi_robots_blogu_gecerli():
+    def h(r):
+        if r.url.path == "/robots.txt":
+            return _robots("User-agent: vatansagolsun-aktarim\nDisallow: /\n")
+        return httpx.Response(200, text="ok")
+    g, _ = _getirici(h)
+    with pytest.raises(KaynakHatasi):
+        g.metin("egm", "https://x.test/a")
+
+def test_json_gecersiz_govde_kaynak_hatasi():
+    g, _ = _getirici(lambda r: httpx.Response(404 if r.url.path == "/robots.txt" else 200, text="<html>"))
+    with pytest.raises(KaynakHatasi):
+        g.json("egm", "https://x.test/a")
