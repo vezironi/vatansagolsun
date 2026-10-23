@@ -83,7 +83,7 @@ class Sehit(Base):
         self.ad = ad_duzenle(self.ad)
         self.soyad = soyad_duzenle(self.soyad) if self.soyad and self.soyad.strip() else None
         self.lakap = ad_duzenle(self.lakap) if self.lakap and self.lakap.strip() else None
-        self.slug = slug(self.gorunen_ad) or "sehit"
+        self.slug = slug(self.gorunen_ad)[:300].strip("-") or "sehit"
         parcalar = [self.ad, self.soyad, self.lakap, self.memleket, self.gorev, self.kurum]
         self.arama_metni = katla(" ".join(p for p in parcalar if p))
 

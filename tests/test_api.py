@@ -47,3 +47,11 @@ def test_istek_siniri_429(session):
     c = TestClient(a)
     kodlar = [c.get("/api/istatistik").status_code for _ in range(3)]
     assert kodlar == [200, 200, 429]
+
+
+def test_cok_buyuk_id_ve_sayfa_422(client):
+    assert client.get("/api/sehitler/99999999999999999999").status_code == 422
+    assert client.get("/api/sehitler/2147483648").status_code == 422
+    assert client.get("/api/sehitler", params={"sayfa": "99999999999999999999"}).status_code == 422
+    assert client.get("/api/sehitler", params={"sayfa": 1_000_001}).status_code == 422
+    assert client.get("/api/sehitler/2147483647").status_code == 404

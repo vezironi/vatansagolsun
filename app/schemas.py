@@ -8,22 +8,22 @@ from app.models import Hassasiyet, Kategori
 
 
 class SehitVeri(BaseModel):
-    ad: str
-    soyad: str | None = None
-    lakap: str | None = None
+    ad: str = Field(max_length=200)
+    soyad: str | None = Field(default=None, max_length=200)
+    lakap: str | None = Field(default=None, max_length=200)
     tarih_hassasiyeti: Hassasiyet = Hassasiyet.tam
     sehadet_tarihi: date | None = None
     yil: int | None = None
-    gorev: str | None = None
+    gorev: str | None = Field(default=None, max_length=200)
     kategori: Kategori = Kategori.diger
-    kurum: str | None = None
-    memleket: str | None = None
-    baba_adi: str | None = None
+    kurum: str | None = Field(default=None, max_length=200)
+    memleket: str | None = Field(default=None, max_length=200)
+    baba_adi: str | None = Field(default=None, max_length=200)
     dogum_yili: int | None = None
-    donem: str | None = None
+    donem: str | None = Field(default=None, max_length=100)
     resmi_teyit: bool = False
     isimsiz: bool = False
-    kaynak_kodu: str
+    kaynak_kodu: str = Field(max_length=50)
 
     @model_validator(mode="after")
     def _tarih_tutarli_mi(self) -> Self:

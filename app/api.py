@@ -3,7 +3,7 @@ import calendar
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from slowapi import Limiter
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,8 @@ from app.schemas import (
 )
 
 Oturum = Annotated[Session, Depends(get_session)]
+INT4_EN_COK = 2_147_483_647  # PostgreSQL int4: daha büyük bağlı değer 500 verir
+SAYFA_EN_COK = 1_000_000
 
 
 def api_router_olustur(limiter: Limiter, sinir: str) -> APIRouter:
@@ -33,7 +35,7 @@ def api_router_olustur(limiter: Limiter, sinir: str) -> APIRouter:
         s: Oturum,
         yil: Annotated[str | None, Query(pattern=r"^(\d{1,4}|2000-oncesi)$")] = None,
         q: str | None = None,
-        sayfa: Annotated[int, Query(ge=1)] = 1,
+        sayfa: Annotated[int, Query(ge=1, le=SAYFA_EN_COK)] = 1,
         adet: Annotated[int, Query(ge=1, le=100)] = 25,
     ):
         yil_filtre = yil if yil in (None, "2000-oncesi") else int(yil)
@@ -47,7 +49,9 @@ def api_router_olustur(limiter: Limiter, sinir: str) -> APIRouter:
 
     @router.get("/sehitler/{sehit_id}", response_model=SehitDetay)
     @limiter.limit(sinir)
-    def sehit_detay(request: Request, sehit_id: int, s: Oturum):
+    def sehit_detay(
+        request: Request, sehit_id: Annotated[int, Path(ge=1, le=INT4_EN_COK)], s: Oturum
+    ):
         sehit = repo.getir(s, sehit_id, api=True)
         if sehit is None:
             raise HTTPException(status_code=404, detail="Kayıt bulunamadı.")
