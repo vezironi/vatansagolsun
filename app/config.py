@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     api_haric_kaynaklar: list[str] = []
     istek_siniri: str = "60/minute"
     site_url: str = "http://localhost:8000"
+    oturum_https: bool = False  # üretimde True: oturum çerezi yalnızca HTTPS ile gider
 
 
 @lru_cache

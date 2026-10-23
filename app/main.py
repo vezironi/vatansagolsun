@@ -42,8 +42,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.add_exception_handler(GirisGerekli, giris_gerekli_isleyici)
 
-    # Görev 10: üretimde https_only=True (TestClient http://testserver kullanır).
-    app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, same_site="lax")
+    # Üretimde OTURUM_HTTPS=true (testler http://testserver kullanır, varsayılan False).
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.secret_key,
+        same_site="lax",
+        https_only=settings.oturum_https,
+    )
 
     static_dizini = PAKET_DIZINI / "static"
     if static_dizini.is_dir():

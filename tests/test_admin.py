@@ -109,7 +109,10 @@ def test_cli_sifre_olustur(monkeypatch, capsys):
     assert cli.main(["sifre-olustur"]) == 0
     cikti = capsys.readouterr().out
     satir = next(s for s in cikti.splitlines() if s.startswith("ADMIN_SIFRE_HASH="))
-    assert sifre_dogru("gizli-sifre", satir.split("=", 1)[1])
+    deger = satir.split("=", 1)[1]
+    # .env/compose için tek tırnak içinde basılır ('$' değişken sayılmasın)
+    assert deger.startswith("'") and deger.endswith("'")
+    assert sifre_dogru("gizli-sifre", deger[1:-1])
 
 
 def test_cli_sifre_uyusmazligi(monkeypatch, capsys):
