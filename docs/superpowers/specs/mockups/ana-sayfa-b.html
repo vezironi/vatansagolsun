@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vatansagolsun — tema önizleme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --bg2: #14171c;
+    --line: #262a31;
+    --text: #e9e6df;
+    --muted: #8f8b82;
+    --red: #e30a17;
+    --red-soft: #f0606b;
+    --gold: #c9a45c;
+    --blue: #7aa7d9;
+    --green: #8cc49a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font-family: Inter, system-ui, sans-serif; font-size: 15px; padding-bottom: 80px; }
+  a { color: inherit; text-decoration: none; }
+  .serif { font-family: "Cormorant Garamond", Georgia, serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  /* demo ribbon */
+  .demo { background: #2a1d10; color: #e8c58a; font-size: 12px; text-align: center; padding: 6px 12px; }
+
+  /* header */
+  header { border-bottom: 1px solid var(--line); }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+  .logo { font-family: "Cormorant Garamond", serif; font-size: 26px; letter-spacing: 3px; font-weight: 600; }
+  .logo b { color: var(--red); font-weight: 600; }
+  nav { display: flex; gap: 22px; font-size: 13px; color: var(--muted); }
+  nav a:hover { color: var(--text); }
+
+  /* stats */
+  .hero { padding: 44px 0 28px; text-align: center; }
+  .hero .flagline { width: 64px; height: 3px; background: var(--red); margin: 0 auto 22px; }
+  .stats { display: flex; justify-content: center; gap: 72px; flex-wrap: wrap; }
+  .stat .num { font-family: "Cormorant Garamond", serif; font-size: 76px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-top: 8px; }
+  .hero .quote { margin-top: 26px; color: var(--muted); font-style: italic; font-family: "Cormorant Garamond", serif; font-size: 19px; }
+
+  /* year selector */
+  .years { display: flex; gap: 4px; overflow-x: auto; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+  .years button { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; padding: 6px 10px; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; }
+  .years button:hover { color: var(--text); }
+  .years button.on { color: var(--text); border-bottom-color: var(--red); }
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 14px 0 4px; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .countline { font-size: 13px; color: var(--muted); padding: 6px 0 14px; }
+  .countline b { color: var(--text); font-weight: 500; }
+
+  /* wall */
+  .wall { font-family: "Cormorant Garamond", serif; font-size: 19px; line-height: 2.05; text-align: justify; padding-bottom: 40px; }
+  .wall a { display: inline-block; margin-right: 18px; white-space: nowrap; cursor: pointer; transition: color .15s; }
+  .wall a:hover { color: #fff; text-decoration: underline; text-decoration-color: var(--red); text-underline-offset: 4px; }
+  .r-asker { color: #d8d4cb; }
+  .r-polis { color: var(--blue); }
+  .r-ogretmen { color: var(--gold); }
+  .r-jandarma { color: var(--green); }
+  .r-diger { color: var(--red-soft); }
+
+  /* table */
+  .tools { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 0; flex-wrap: wrap; }
+  .search { background: var(--bg2); border: 1px solid var(--line); color: var(--text); padding: 9px 12px; border-radius: 4px; font: inherit; font-size: 14px; width: 280px; max-width: 100%; }
+  .search:focus { outline: none; border-color: #444b55; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; padding: 10px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 11px 10px; border-bottom: 1px solid #1c1f25; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--bg2); }
+  td.name { font-family: "Cormorant Garamond", serif; font-size: 18px; font-weight: 600; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid currentColor; opacity: .9; }
+  .pager { display: flex; gap: 6px; justify-content: center; padding: 22px 0 40px; }
+  .pager button { background: var(--bg2); border: 1px solid var(--line); color: var(--muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px; }
+  .pager button.on { color: var(--text); border-color: var(--red); }
+
+  /* today */
+  .today { margin: 32px 0 0; border: 1px solid #3a2328; background: linear-gradient(180deg, #1a1114, #13100f); border-radius: 6px; padding: 26px 28px; }
+  .today .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .today h2 { margin: 0; font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 30px; }
+  .today .sub { color: var(--muted); font-size: 13px; }
+  .today-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .tcard { background: rgba(255,255,255,.02); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; cursor: pointer; }
+  .tcard:hover { border-color: #4a3036; }
+  .tcard .n { font-family: "Cormorant Garamond", serif; font-size: 21px; font-weight: 600; }
+  .tcard .m { color: var(--muted); font-size: 12.5px; margin-top: 4px; line-height: 1.5; }
+  .tcard .y { float: right; color: var(--red-soft); font-size: 12px; font-weight: 600; }
+
+  /* footer */
+  footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; padding: 30px 0 40px; }
+  footer .cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 40px; }
+  footer code { background: var(--bg2); border: 1px solid var(--line); padding: 2px 6px; border-radius: 3px; font-size: 12px; color: var(--text); }
+  footer p { line-height: 1.7; margin: 0 0 8px; }
+
+  /* modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--line); border-top: 3px solid var(--red); border-radius: 6px; max-width: 460px; width: 100%; padding: 28px 30px; position: relative; }
+  .modal h3 { font-family: "Cormorant Garamond", serif; font-size: 32px; margin: 0 0 4px; font-weight: 600; }
+  .modal .role { color: var(--muted); margin-bottom: 18px; }
+  .modal dl { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; margin: 0; font-size: 14px; }
+  .modal dt { color: var(--muted); }
+  .modal dd { margin: 0; }
+  .modal .src { margin-top: 18px; font-size: 12px; color: var(--muted); }
+  .modal .x { position: absolute; top: 12px; right: 14px; background: none; border: 0; color: var(--muted); font-size: 22px; cursor: pointer; }
+  .modal .rip { margin-top: 18px; text-align: center; font-family: "Cormorant Garamond", serif; font-style: italic; color: var(--muted); font-size: 17px; }
+
+  /* switcher */
+  .switch { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: #1c2027; border: 1px solid #343a44; border-radius: 40px; padding: 6px; display: flex; gap: 4px; z-index: 60; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .switch span { font-size: 11px; color: var(--muted); padding: 8px 10px 8px 14px; text-transform: uppercase; letter-spacing: 1px; align-self: center; }
+  .switch button { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
+  .switch button.on { background: var(--red); color: #fff; }
+
+  .view { display: none; }
+  .view.on { display: block; }
+
+  @media (max-width: 700px) {
+    nav { display: none; }
+    .stats { gap: 36px; }
+    .stat .num { font-size: 56px; }
+    footer .cols { grid-template-columns: 1fr; }
+    .switch span { display: none; }
+    th.h-m, td.h-m { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="demo">Önizleme — isimler ve sayılar örnek veridir, gerçek kayıt değildir.</div>
+
+<header>
+  <div class="wrap">
+    <div class="logo">VATAN<b>SAĞOLSUN</b></div>
+    <nav><a href="#">Ara</a><a href="#">Yıl Dönümleri</a><a href="#">Hakkında</a><a href="#">API</a></nav>
+  </div>
+</header>
+
+<!-- ===== B ===== -->
+<section class="view on" id="view-b">
+<div class="wrap" id="today-wrap">
+  <div class="today">
+    <div class="head">
+      <h2 id="today-title"></h2>
+      <div class="sub">2000 yılından bu yana bu tarihte şehit düşenler</div>
+    </div>
+    <div class="today-grid" id="today-grid"></div>
+  </div>
+</div>
+
+  <div class="wrap">
+    <div class="hero" id="hero-b">
+      <div class="flagline"></div>
+      <div class="stats">
+        <div class="stat"><div class="num" data-count="total">0</div><div class="lbl">Toplam Şehit</div></div>
+        <div class="stat"><div class="num" data-count="year">0</div><div class="lbl">2026 Yılında</div></div>
+      </div>
+    </div>
+    <div class="years" data-years="b"></div>
+    <div class="tools">
+      <input class="search" id="search-b" placeholder="İsim, il veya görev ara…">
+      <div class="countline" data-countline="b" style="padding:0"></div>
+    </div>
+    <table>
+      <thead><tr><th>Ad Soyad</th><th>Şehadet Tarihi</th><th>Görev</th><th class="h-m">Memleket</th><th class="h-m">Kurum</th></tr></thead>
+      <tbody id="tbody-b"></tbody>
+    </table>
+    <div class="pager" id="pager-b"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap cols">
+    <div>
+      <p><b style="color:var(--text)">vatansagolsun</b> — Türk askerleri, polisleri, öğretmenleri ve görev başında hayatını kaybeden tüm şehitlerimiz için dijital bir anıt.</p>
+      <p>Geçmiş kayıtlar kamuya açık resmî kaynaklardan derlenmiştir. Yeni kayıtlar MSB açıklamaları ve haber kaynaklarından toplanır, yayından önce elle doğrulanır.</p>
+      <p>Hatalı ya da eksik bir kayıt mı gördünüz? <a href="#" style="color:var(--text);text-decoration:underline">Bize bildirin</a>.</p>
+    </div>
+    <div>
+      <p style="color:var(--text)">Açık API</p>
+      <p><code>GET /api/istatistik</code></p>
+      <p><code>GET /api/sehitler?yil=2026&amp;sayfa=1</code></p>
+      <p><code>GET /api/bugun</code></p>
+    </div>
+  </div>
+</footer>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <button class="x" onclick="closeModal()">×</button>
+    <h3 id="m-name"></h3>
+    <div class="role" id="m-role"></div>
+    <dl id="m-dl"></dl>
+    <div class="src">Kaynak: MSB basın açıklaması (örnek)</div>
+    <div class="rip">Mekânı cennet olsun.</div>
+  </div>
+</div>
+
+<div class="switch">
+  <span>"Bugün" kutusu</span>
+  <button data-v="ust" onclick="setPos('ust')">Sayacın üstünde</button>
+  <button data-v="alt" onclick="setPos('alt')">Sayacın altında</button>
+</div>
+
+<script>
+// ---------- örnek veri üretimi (tohumlu, her açılışta aynı) ----------
+let seed = 20261023;
+function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+function pick(a) { return a[Math.floor(rnd() * a.length)]; }
+
+const ad = ["Ahmet","Mehmet","Mustafa","Ali","Hasan","Hüseyin","İbrahim","Yusuf","Murat","Emre","Burak","Osman","Serkan","Kemal","Ramazan","Onur","Erkan","Volkan","Cem","Tolga","Furkan","Enes","Fatih","Ömer","Abdullah","Halil","Recep","Uğur","Selim","Kadir","Gökhan","Bayram","Muhammed","Eren","Oğuz","Sinan","Barış","Caner","Yasin","Ercan"];
+const adK = ["Ayşe","Fatma","Zeynep","Elif","Merve","Şeyma","Aybüke","Esra"];
+const soyad = ["Yılmaz","Kaya","Demir","Şahin","Çelik","Yıldız","Yıldırım","Öztürk","Aydın","Özdemir","Arslan","Doğan","Kılıç","Aslan","Çetin","Kara","Koç","Kurt","Özkan","Şimşek","Polat","Korkmaz","Erdoğan","Güneş","Tekin","Aksoy","Bulut","Keskin","Ünal","Avcı","Uçar","Kaplan","Taş","Ateş","Bozkurt","Tunç","Gül","Duman","Sarı","Ekinci"];
+const il = ["Sivas","Van","Konya","Trabzon","Hakkari","Diyarbakır","Erzurum","Kayseri","Ordu","Samsun","Malatya","Ankara","İstanbul","İzmir","Bursa","Adana","Şırnak","Tokat","Yozgat","Çorum","Rize","Giresun","Kars","Ağrı","Muş","Bitlis","Kahramanmaraş","Elazığ","Bingöl","Mardin"];
+const roles = [
+  { k:"asker", w:62, list:[["Piyade Er","TSK"],["Piyade Uzman Çavuş","TSK"],["Piyade Astsubay","TSK"],["Piyade Teğmen","TSK"],["Komando Uzman Çavuş","TSK"],["Pilot Yüzbaşı","TSK"]] },
+  { k:"jandarma", w:16, list:[["Jandarma Er","Jandarma"],["Jandarma Uzman Çavuş","Jandarma"],["Jandarma Astsubay","Jandarma"]] },
+  { k:"polis", w:13, list:[["Polis Memuru","Emniyet"],["Özel Harekât Polisi","Emniyet"],["Komiser Yardımcısı","Emniyet"]] },
+  { k:"ogretmen", w:4, list:[["Öğretmen","MEB"],["Sözleşmeli Öğretmen","MEB"]] },
+  { k:"diger", w:5, list:[["Köy Korucusu","Köy Korucusu"],["Sivil","Sivil"],["İmam","Diyanet"]] },
+];
+const roleLabel = { asker:"Asker", jandarma:"Jandarma", polis:"Polis", ogretmen:"Öğretmen", diger:"Korucu / Sivil / Diğer" };
+function pickRole() {
+  let x = rnd() * 100;
+  for (const r of roles) { if ((x -= r.w) < 0) return r; }
+  return roles[0];
+}
+
+const perYear = {2026:37,2025:52,2024:64,2023:58,2022:71,2021:84,2020:79,2019:96,2018:128,2017:174,2016:220,2015:196,2014:42,2013:28,2012:180,2011:164,2010:72,2009:38,2008:91,2007:118,2006:86,2005:64,2004:38,2003:22,2002:12,2001:18,2000:21};
+const people = [];
+const TODAY = { d: 23, m: 10 };
+for (const [y, n] of Object.entries(perYear)) {
+  const maxMonth = (+y === 2026) ? 10 : 12;
+  for (let i = 0; i < n; i++) {
+    const r = pickRole();
+    const [gorev, kurum] = pick(r.list);
+    const female = r.k === "ogretmen" ? rnd() < .5 : rnd() < .03;
+    let m = 1 + Math.floor(rnd() * maxMonth), d = 1 + Math.floor(rnd() * 28);
+    if (+y === 2026 && m === 10 && d > 22) d = 22;
+    people.push({ ad: female ? pick(adK) : pick(ad), soyad: pick(soyad), y: +y, m, d, gorev, kurum, rol: r.k, il: pick(il), baba: pick(ad) });
+  }
+}
+// bugünün yıl dönümü için birkaç kayıt garanti et
+[2011, 2011, 2016, 2016, 2007, 2019].forEach(y => {
+  const r = pickRole(); const [gorev, kurum] = pick(r.list);
+  people.push({ ad: pick(ad), soyad: pick(soyad), y, m: TODAY.m, d: TODAY.d, gorev, kurum, rol: r.k, il: pick(il), baba: pick(ad) });
+});
+people.sort((a, b) => (b.y - a.y) || (b.m - a.m) || (b.d - a.d));
+
+const TOTAL = 115886;
+const YEAR = perYear[2026];
+const pad = n => String(n).padStart(2, "0");
+const fmtDate = p => `${pad(p.d)}.${pad(p.m)}.${p.y}`;
+const fmtNum = n => n.toLocaleString("tr-TR");
+const short = p => `${p.ad} ${p.soyad[0]}.`;
+const full = p => `${p.ad} ${p.soyad.toLocaleUpperCase("tr-TR")}`;
+
+// ---------- ortak parçalar ----------
+const yearList = ["Tümü", ...Object.keys(perYear).map(Number).sort((a,b) => b-a), "2000 öncesi"];
+const state = { a: 2026, b: 2026, c: 2026, page: 1, q: "" };
+
+function filtered(y) {
+  if (y === "Tümü") return people;
+  if (y === "2000 öncesi") return [];
+  return people.filter(p => p.y === y);
+}
+
+function renderYears(v) {
+  const el = document.querySelector(`[data-years="${v}"]`);
+  el.innerHTML = yearList.map(y => `<button class="${y === state[v] ? "on" : ""}" data-y="${y}">${y}</button>`).join("");
+  el.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const y = isNaN(+b.dataset.y) ? b.dataset.y : +b.dataset.y;
+    state[v] = y; state.page = 1;
+    renderYears(v); renderBody(v);
+  });
+}
+
+function countText(y, n) {
+  if (y === "2000 öncesi") return `<b>113.073</b> kayıt — Kırım Savaşı'ndan (1856) 2000'e. Önizlemede gösterilmiyor.`;
+  if (y === "Tümü") return `Önizlemede <b>${fmtNum(n)}</b> örnek kayıt (gerçekte ${fmtNum(TOTAL)})`;
+  return `<b>${y}</b> yılında <b>${fmtNum(n)}</b> şehit`;
+}
+
+function renderWall(v) {
+  const list = filtered(state[v]);
+  document.querySelector(`[data-countline="${v}"]`).innerHTML = countText(state[v], list.length);
+  const wall = document.querySelector(`[data-wall="${v}"]`);
+  wall.innerHTML = list.map(p => `<a class="r-${p.rol}" data-i="${people.indexOf(p)}" title="${fmtDate(p)} · ${p.gorev}">${short(p)}</a>`).join("");
+  wall.querySelectorAll("a").forEach(a => a.onclick = () => openModal(people[+a.dataset.i]));
+}
+
+function renderTable() {
+  const q = state.q.toLocaleLowerCase("tr-TR");
+  let list = filtered(state.b);
+  if (q) list = list.filter(p => `${p.ad} ${p.soyad} ${p.il} ${p.gorev}`.toLocaleLowerCase("tr-TR").includes(q));
+  document.querySelector('[data-countline="b"]').innerHTML = countText(state.b, list.length);
+  const per = 25, pages = Math.max(1, Math.ceil(list.length / per));
+  state.page = Math.min(state.page, pages);
+  const slice = list.slice((state.page - 1) * per, state.page * per);
+  const tb = document.getElementById("tbody-b");
+  tb.innerHTML = slice.map(p => `<tr data-i="${people.indexOf(p)}">
+      <td class="name">${full(p)}</td><td>${fmtDate(p)}</td>
+      <td><span class="tag r-${p.rol}">${p.gorev}</span></td>
+      <td class="h-m">${p.il}</td><td class="h-m">${p.kurum}</td></tr>`).join("")
+    || `<tr><td colspan="5" style="color:var(--muted);padding:30px 10px">Kayıt yok.</td></tr>`;
+  tb.querySelectorAll("tr[data-i]").forEach(tr => tr.onclick = () => openModal(people[+tr.dataset.i]));
+  const pg = document.getElementById("pager-b");
+  const nums = [];
+  for (let i = 1; i <= pages; i++) if (i <= 3 || i > pages - 2 || Math.abs(i - state.page) <= 1) nums.push(i); else if (nums[nums.length-1] !== "…") nums.push("…");
+  pg.innerHTML = pages > 1 ? nums.map(n => n === "…" ? `<button disabled>…</button>` : `<button class="${n === state.page ? "on" : ""}" data-p="${n}">${n}</button>`).join("") : "";
+  pg.querySelectorAll("button[data-p]").forEach(b => b.onclick = () => { state.page = +b.dataset.p; renderTable(); });
+}
+
+function renderBody(v) { v === "b" ? renderTable() : renderWall(v); }
+
+function renderLegend() {
+  document.querySelectorAll(".legend").forEach(el => {
+    el.innerHTML = Object.entries(roleLabel).map(([k, l]) => `<span><i style="background:currentColor" class="r-${k}"></i>${l}</span>`).join("");
+  });
+}
+
+function renderToday() {
+  const months = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  document.getElementById("today-title").textContent = `Bugün, ${TODAY.d} ${months[TODAY.m - 1]}`;
+  const list = people.filter(p => p.m === TODAY.m && p.d === TODAY.d && p.y >= 2000);
+  const g = document.getElementById("today-grid");
+  g.innerHTML = list.map(p => `<div class="tcard" data-i="${people.indexOf(p)}">
+      <span class="y">${2026 - p.y}. yıl dönümü</span>
+      <div class="n">${full(p)}</div>
+      <div class="m">${fmtDate(p)} · ${p.gorev}<br>${p.il}</div></div>`).join("");
+  g.querySelectorAll(".tcard").forEach(c => c.onclick = () => openModal(people[+c.dataset.i]));
+}
+
+function animateCounts() {
+  document.querySelectorAll("[data-count]").forEach(el => {
+    const target = el.dataset.count === "total" ? TOTAL : YEAR;
+    const t0 = performance.now(), dur = 1400;
+    const tick = t => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmtNum(Math.round(target * e));
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+function openModal(p) {
+  document.getElementById("m-name").textContent = full(p);
+  document.getElementById("m-role").textContent = p.gorev;
+  document.getElementById("m-dl").innerHTML = [
+    ["Şehadet Tarihi", fmtDate(p)], ["Memleket", p.il], ["Baba Adı", p.baba], ["Kurum", p.kurum],
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  document.getElementById("modal").classList.add("show");
+}
+function closeModal() { document.getElementById("modal").classList.remove("show"); }
+document.getElementById("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function setView(v) {
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id === "view-" + v));
+  document.querySelectorAll(".switch button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  window.scrollTo(0, 0);
+  animateCounts();
+}
+
+document.getElementById("search-b").oninput = e => { state.q = e.target.value; state.page = 1; renderTable(); };
+
+function setPos(v) {
+  const box = document.querySelector("#view-b .today"), hero = document.getElementById("hero-b");
+  if (v === "ust") document.getElementById("today-wrap").appendChild(box);
+  else hero.parentNode.insertBefore(box, hero.nextSibling);
+  hero.style.paddingBottom = v === "alt" ? "8px" : "";
+  box.style.margin = v === "alt" ? "0 0 28px" : "32px 0 0";
+  document.querySelectorAll(".switch button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  window.scrollTo(0, 0);
+  animateCounts();
+}
+
+renderYears("b"); renderTable();
+renderToday();
+setPos("ust");
+</script>
+</body>
+</html>
