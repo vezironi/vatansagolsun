@@ -201,13 +201,15 @@ Haber okuma için bir Claude API anahtarı gerekir (resmî sayfa taraması anaht
 3. `.env` dosyasındaki satıra yapıştırın: `ANTHROPIC_API_KEY=sk-ant-...`
 4. `docker compose up -d` ile yeniden başlatın.
 
-Anahtarı kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "yapılandırıldı" ya da "anahtar yok" yazar. Anahtar yoksa haber siteleri atlanır ("API anahtarı yok" durumu), resmî sayfalar taranmaya devam eder.
+Anahtarı kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "yapılandırıldı" ya da "anahtar yok" yazar. Anahtar yoksa haber siteleri atlanır ("API anahtarı yok" durumu), resmî sayfalar taranmaya devam eder. Bu yüzden anahtar eklenene kadar panelin üstünde "Toplayıcıda hata var" uyarısı görünür; bu beklenen bir durumdur, anahtarı ekleyince kaybolur.
 
-**Tahmini maliyet:** günde birkaç düzine haber okunur. Küçük ve ucuz model (Haiku 5.5) kullanıldığı için aylık maliyet birkaç doların altında kalır. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır.
+**Tahmini maliyet:** günde birkaç düzine haber okunur. Küçük ve ucuz model (Haiku 5.5) kullanıldığı için olağan bir ayda maliyet birkaç doların altında kalır. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır.
+
+**Üst sınır:** yoğun bir dönemde her gün 200 sınırına ulaşılır ve haberler uzunsa, aylık maliyet **onlarca dolara** çıkabilir. Daha düşük bir tavan için `.env` dosyasında `GUNLUK_ANALIZ_SINIRI` değerini küçültün (örneğin `GUNLUK_ANALIZ_SINIRI=50`) ve `docker compose up -d` ile yeniden başlatın. Sınır dolunca o günün kalan haberleri ertesi güne kalır (3 güne kadar telafi edilir). Ayrıca console.anthropic.com'da aylık harcama limiti koymanızı öneririz.
 
 ### Panelde izleme
 
-Panelde **Toplayıcı** sekmesi her kaynağın son çalışma zamanını, durumunu ve kaç kayıt eklediğini gösterir; bugün kaç haberin okunduğunu ve anahtarın tanımlı olup olmadığını da yazar. **Şimdi çalıştır** düğmesi turu beklemeden başlatır. Toplayıcıda hata varsa ana panelin üstünde kısa bir uyarı çıkar. Zamanlayıcı kapalıysa elle çalıştırın:
+Panelde **Toplayıcı** sekmesi her kaynağın son çalışma zamanını, durumunu ve kaç kayıt eklediğini gösterir; bugün kaç haberin okunduğunu ve anahtarın tanımlı olup olmadığını da yazar. **Şimdi çalıştır** düğmesi turu beklemeden başlatır (bir tur zaten sürüyorsa "Toplayıcı zaten çalışıyor; bittiğinde tekrar deneyin" yazar). Eklenen/Birleşen/Atlanan/Hatalı sütunları ilk çalışmadan bu yana **toplam** sayılardır. Toplayıcıda hata varsa ana panelin üstünde kısa bir uyarı çıkar. Zamanlayıcı kapalıysa elle çalıştırın:
 
 ```bash
 docker compose exec app python -m app.cli topla
