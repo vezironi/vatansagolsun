@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Şehitlerimiz — Türkiye&#039;nin Şehitleri: 115.886 İsimlik Şehit Arşivi</title>
+<meta name="description" content="Çanakkale&#039;den bugüne tüm şehitler tek arşivde: 115.886 şehidimizin isim isim kaydı. İl, dönem ve isme göre şehitler listesi; resmî kaynaklardan derlenen dijital anıt.">
+<meta name="keywords" content="şehitler, şehitlerimiz, şehit arşivi, türkiye şehitleri, çanakkale şehitleri, kurtuluş savaşı şehitleri, şehitler listesi, şehit isimleri">
+<meta name="robots" content="index,follow, max-image-preview:large">
+<link rel="canonical" href="https://sehitlerimiz.org.tr/">
+<meta name="theme-color" content="#030406">
+<meta property="og:site_name" content="Şehitlerimiz — Türkiye Şehit Arşivi">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Şehitlerimiz — Türkiye&#039;nin Şehitleri: 115.886 İsimlik Şehit Arşivi">
+<meta property="og:description" content="Çanakkale&#039;den bugüne tüm şehitler tek arşivde: 115.886 şehidimizin isim isim kaydı. İl, dönem ve isme göre şehitler listesi; resmî kaynaklardan derlenen dijital anıt.">
+<meta property="og:url" content="https://sehitlerimiz.org.tr/">
+<meta property="og:image" content="https://sehitlerimiz.org.tr/medya/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="tr_TR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="32x32" href="/medya/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/medya/favicon-192.png">
+<link rel="apple-touch-icon" href="/medya/apple-touch-icon.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","@id":"https://sehitlerimiz.org.tr/#site","name":"Şehitlerimiz","alternateName":"Türkiye Şehit Arşivi","url":"https://sehitlerimiz.org.tr/","inLanguage":"tr","description":"Resmî kurumların kamuya açık kayıtlarından derlenen 115.886 kişilik Türkiye şehit arşivi ve dijital anıtı.","publisher":{"@id":"https://sehitlerimiz.org.tr/#org"},"potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://sehitlerimiz.org.tr/ara?q={search_term_string}"},"query-input":"required name=search_term_string"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","@id":"https://sehitlerimiz.org.tr/#org","name":"Şehitlerimiz — Türkiye Şehit Arşivi","alternateName":"sehitlerimiz.org.tr","url":"https://sehitlerimiz.org.tr/","logo":"https://sehitlerimiz.org.tr/medya/favicon-512.png","description":"Resmî kurumların kamuya açık kayıtlarından derlenen, Türkiye şehitlerinin isim isim arşivini yayımlayan bağımsız anma projesi."}</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Olusturmayi engellemez: once print, yuklenince all. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"></noscript>
+
+<link rel="stylesheet" href="/medya/arsiv.css?v=6">
+<link rel="stylesheet" href="/medya/anit.css?v=30">
+</head>
+<body class="anit-kilit">
+
+<noscript>
+<!-- JS kapalıyken anıt katmanları gizlenir; sayfanın altındaki SSR arşiv
+     bölümü (.icerik) böylece doğrudan görünür — tam ekran örtüyle örtmek
+     yerine içerik kendisi sunulur. -->
+<style>
+  #gl-canvas, .fixed-bg, #loading-indicator, #loader-screen,
+  .hud-layer { display: none !important; }
+  .anit-spacer { height: 0 !important; }
+  /* Kaydırma kilidini JS açar; JS yokken kilit hiç kurulmamalı. */
+  body.anit-kilit { overflow: auto !important; }
+</style>
+<div style="background:#0A0D14;color:#CBD5E1;padding:14px clamp(16px,4vw,40px);font-family:system-ui,sans-serif;font-size:14px;border-bottom:1px solid rgba(255,255,255,.1)">
+  İnteraktif anıt JavaScript ile çalışır; aşağıda arşivin tamamına metin olarak ulaşabilirsiniz.
+</div>
+</noscript>
+
+<!-- 1. VİDEO ARKAPLAN -->
+<div class="fixed-bg">
+  <video class="fixed-video" id="main-bg-video" autoplay muted loop playsinline preload="auto">
+    <source src="medya/hero.mp4" type="video/mp4">
+  </video>
+  <div class="bg-overlay"></div>
+</div>
+
+<!-- 2. WEBGL GPU CANVAS -->
+<canvas id="gl-canvas"></canvas>
+
+<!-- 3. YÜKLENİYOR GÖSTERGESİ -->
+<div id="loading-indicator">
+  <div class="spinner"></div>
+  <div class="loading-txt">115.886 Şehidimizin Işığı Yükleniyor…</div>
+</div>
+
+<!-- 4. AÇILIŞ İNTROSU -->
+<div id="loader-screen" aria-hidden="true" data-total="115886">
+  <!-- Kapanis perdesi: duz kirmizi yerine derin bir degrade + vinyet. -->
+  <i class="intro-flag"></i>
+  <div class="intro">
+    <i class="intro-rule"></i>
+    <div class="intro-stage">
+      <!-- Isimler JS ile tek tek buraya yazilir; kaynak listesi data-names'te. -->
+      <div class="intro-name" id="intro-name"></div>
+      <div class="intro-counter" id="intro-counter">
+        <div class="intro-count" id="intro-count">0</div>
+        <div class="intro-count-sub">isim &middot; her biri bir hayat</div>
+      </div>
+      <div class="intro-final">Şehitlerimiz</div>
+    </div>
+    <div class="intro-meta">
+      <b>115.886</b> Şehidimizin Aziz Hatırasına
+    </div>
+  </div>
+  <script type="application/json" id="intro-names-data">["Mehmetoğlu Mehmet","İsmailoğlu Ali","Salihoğlu Mustafa","Salimoğlu Osman","Esatoğlu Hikmet","Saitoğlu Hakkı","İsaoğlu Mustafa","Osmanoğlu Ali","Mehmetoğlu Süleyman","Mehmetoğlu Dede","Halil İbrahim","Mehmetoğlu Muharrem","Abdullahoğlu Mehmet","İbrahimoğlu Ömer","Osmanoğlu Recep","Mehmetoğlu Mustafa","Alioğlu Hüseyin","Osmanoğlu Süleyman","Hacı Ahmetoğlu Ethem","İsmailoğlu Behlül","Ahmetoğlu İbrahim","Mehmetoğlu İsmail","Haliloğlu Ali","Mehmetoğlu Mahmut","Mehmetoğlu Mahmut","Süleymanoğlu Arif","İbrahimoğlu İsmail","İsmailoğlu Mehmet","Osmanoğlu İsmail","Mehmet Alioğlu Mehmet","Ahmetoğlu Abdurrahman","İsmailoğlu Cemal","Nurullahoğlu Mehmet","Ahmet Rasim Efendi","Hacı Şirvanoğlu Eyüp","Yusufoğlu Mustafa","Mustafaoğlu Yunus","Süleymanoğlu Mustafa","Eseoğlu Mehmet","Hasanoğlu Abdullah","Mustafaoğlu Kamil","Recepoğlu Kamil","Mehmet Efendi","Hasanoğlu Emin","Alioğlu Mehmet","Süleymanoğlu Bekir","Zülfikaroğlu Ömer","Abdullahoğlu Mehmet","Osmanoğlu Mustafa","Hacı İsmailoğlu Mehmet"]</script>
+  <button class="intro-skip" id="btn-skip-intro" tabindex="-1">İntroyu Geç ✕</button>
+</div>
+
+
+<!-- 5. HUD ARAYÜZ KATMANI -->
+<div class="hud-layer">
+  <!-- Üst Bar -->
+  <header class="hud-header">
+    <div class="brand-group">
+      <div class="brand-emblem">
+        <img src="medya/ayyildiz.png" alt="Ay yıldız" width="24" height="24">
+      </div>
+      <div class="brand-title">ŞEHİTLERİMİZ
+        <span class="brand-sub">Türkiye Şehit Arşivi</span>
+        <span class="brand-sub brand-say">115.886 Şehit</span>
+      </div>
+    </div>
+
+    <!-- Arama -->
+    <div class="hud-search-bar" style="position:relative">
+      <div id="search-note"></div>
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="search-input" class="hud-input" placeholder="Şehit adı ara…" aria-label="Şehit adı ara" autocomplete="off">
+      </div>
+
+    </div>
+
+    <button id="btn-add-martyr" class="hud-btn add-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Veri Ekle</span>
+    </button>
+
+  </header>
+
+  <!-- Alt İpucu -->
+  <div class="hud-hint">
+    Fare ile sürükleyip gezinebilir, tekerlek ile yakınlaşabilir, noktalara tıklayabilirsiniz. Arşiv metni için sağ alttaki ok.
+  </div>
+
+  <!-- Sol Kontroller: Görünüm Modları -->
+  <div class="hud-controls-left">
+    <div class="hud-mode-pill">
+      <button class="mode-opt active" data-mode="cosmic">Küre</button>
+      <button class="mode-opt" data-mode="monument">Anıt Duvarı</button>
+      <button class="mode-opt" data-mode="text">Düz Metin</button>
+    </div>
+    <nav class="hud-links" aria-label="Arşiv sayfaları">
+      <a href="/arsiv">Arşiv</a>
+      <a href="/hakkinda">Hakkında</a>
+    </nav>
+  </div>
+
+  <!-- Sağ Kontroller: Zoom & Bilgi -->
+  <div class="hud-controls-right">
+    <button class="ctrl-btn" id="btn-zoom-in" title="Yakınlaş">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="ctrl-btn" id="btn-zoom-out" title="Uzaklaş">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/></svg>
+    </button>
+    <button class="ctrl-btn" id="btn-reset-view" title="Görünümü Sıfırla">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="ctrl-btn ctrl-btn-inis" id="btn-goto-content" title="Arşiv metnine in" aria-label="Arşiv metnine in">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M6 12l6 6 6-6"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- 5.1 'BU NOKTALARA BORÇLUSUN' KATMANI -->
+<div class="quote-layer" id="quote-layer">
+  <div class="quote-container" id="quote-container" title="Anıtı açmak için tıklayın">
+    <span class="quote-text">Bu noktalara borçlusun<span class="quote-dot"></span></span>
+  </div>
+  <button class="quote-reopen-btn" id="btn-reopen-monument">Anıta yakınlaş</button>
+</div>
+
+<!-- 6. HOVER TOOLTIP -->
+<div id="hover-tooltip">
+  <div class="tt-name" id="tt-name">-</div>
+  <div class="tt-meta" id="tt-meta">-</div>
+  <div class="tt-cat" id="tt-cat">-</div>
+</div>
+
+<!-- 7. ŞEHİT DETAY MODALI -->
+<div class="modal-overlay" id="martyr-modal" role="dialog" aria-modal="true" aria-labelledby="m-name">
+  <div class="modal-card">
+    <div class="modal-header">
+      <button class="modal-close" id="btn-close-modal">✕</button>
+      <div class="modal-eyebrow">Aziz Şehidimiz</div>
+      <div class="modal-name" id="m-name">-</div>
+      <div class="modal-rank" id="m-rank">-</div>
+    </div>
+
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <div class="detail-lbl">Memleket</div>
+          <div class="detail-val" id="m-province">-</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-lbl">Baba Adı</div>
+          <div class="detail-val" id="m-father">-</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-lbl">Şehadet Tarihi</div>
+          <div class="detail-val" id="m-death-date">-</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-lbl">Şehadet Yeri</div>
+          <div class="detail-val" id="m-death-place">-</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-lbl">Kurum / Birlik</div>
+          <div class="detail-val" id="m-institution">-</div>
+        </div>
+        <div class="detail-item">
+                    <div class="detail-lbl" id="m-category-lbl">Dönem / Cephe</div>
+          <div class="detail-val" id="m-category">-</div>
+        </div>
+      </div>
+
+      <div class="modal-bio" id="m-bio" style="display:none;"></div>
+    </div>
+
+    <div class="modal-footer">
+      <a href="#" target="_blank" rel="noopener noreferrer" class="source-link" id="m-source-link">
+        <span id="m-source">-</span> <span class="ok-isareti" aria-hidden="true">↗</span>
+      </a>
+      <button class="share-btn" id="btn-copy-link">Bağlantıyı Kopyala</button>
+    </div>
+  </div>
+</div>
+
+<!-- 7.4 DÜZ METİN GÖRÜNÜMÜ -->
+<div class="text-view" id="text-view">
+  <div class="tv-inner">
+    <div class="tv-head">
+      <div class="tv-title">Şeref Defteri</div>
+      <div class="tv-sub" id="tv-sub">115.886 isim · alfabetik</div>
+    </div>
+    <!-- Yıl şeridi yatayda kayar ama kaydırma çubuğu gizli olduğu için
+         fare kullanıcısında hiçbir tutamağı yoktu. Şerit artık oklarla,
+         tekerlekle ve sürükleyerek geziliyor; oklar yalnız taşma varsa çıkar. -->
+    <div class="tv-index-wrap" id="tv-index-wrap">
+      <button type="button" class="tv-index-ok sol" id="tv-index-sol" data-yon="-1" aria-label="Yılları sola kaydır">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <nav class="tv-index" id="tv-index"></nav>
+      <button type="button" class="tv-index-ok sag" id="tv-index-sag" data-yon="1" aria-label="Yılları sağa kaydır">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <div id="tv-body"><div class="tv-status">Hazırlanıyor…</div></div>
+  </div>
+</div>
+
+<!-- 7.5 VERİ EKLE MODALI -->
+<div class="modal-overlay" id="add-modal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="width:min(480px,100%)">
+    <div class="modal-header">
+      <button class="modal-close" id="btn-close-add" aria-label="Kapat">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="modal-eyebrow">Katkı</div>
+      <div class="modal-name" style="font-size:26px">Veri Ekle</div>
+      <div class="modal-rank">Eklenecek şehidimizin adını soyadını ve en az bir tane kaynak gönderin.</div>
+    </div>
+
+    <form class="modal-body" id="add-form" autocomplete="off" novalidate>
+      <div class="form-row">
+        <label class="form-lbl" for="add-name">Şehit Adı</label>
+        <input class="form-field" id="add-name" name="name" type="text"
+               maxlength="120" required placeholder="Ad ve soyad">
+      </div>
+
+      <div class="form-row">
+        <label class="form-lbl" for="add-source">Kaynak</label>
+        <textarea class="form-field" id="add-source" name="source"
+                  maxlength="500" required placeholder="Bağlantı, kurum adı ya da belge"></textarea>
+        <div class="form-hint">Bildirim, doğrulanmak üzere arşiv sorumlusuna iletilir.</div>
+      </div>
+
+      <input class="hp-field" type="text" name="website" tabindex="-1" aria-hidden="true" autocomplete="off">
+    </form>
+
+    <div class="modal-footer">
+      <div class="form-note" id="add-note"></div>
+      <button class="form-send" id="btn-send-add" type="submit" form="add-form">Gönder</button>
+    </div>
+  </div>
+</div>
+<!-- 8. RESMÎ KAYNAKLAR MODALI -->
+<div class="modal-overlay" id="sources-modal" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <button class="modal-close" id="btn-close-sources">✕</button>
+      <div class="modal-eyebrow">Doğrulanmış Kayıtlar</div>
+      <div class="modal-name" style="font-size:24px;">Resmî Veri Kaynakları</div>
+      <div class="modal-rank">Arşivlenen 115.886 kayıt kamuya açık resmî kaynaklardan derlenmiştir.</div>
+    </div>
+    <div class="modal-body">
+      <div class="sources-list">
+                  <a href="https://www.msb.gov.tr/SehitBilgiKapisi/SehitListesi" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>Millî Savunma Bakanlığı — Şehit Bilgi Kapısı</b>
+              <span>Harp/muharebe arşivi; il bazlı sayfalanır. Kayıtlarda soyadı sütunu yoktur.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+                  <a href="https://www.egm.gov.tr/sehitlerimiz" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>Emniyet Genel Müdürlüğü — Şehitlerimiz</b>
+              <span>Polis şehitleri. Kurumun ana şehit listesi.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+                  <a href="https://www.egm.gov.tr/ozelharekat/sehitlerimiz" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>EGM Özel Harekât — Şehitlerimiz</b>
+              <span>Özel Harekât Başkanlığı ayrı liste.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+                  <a href="https://www.egm.gov.tr/istihbarat/istihbarat-sehitlerimiz" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>EGM İstihbarat Başkanlığı — Şehitlerimiz</b>
+              <span>İstihbarat Başkanlığı arşivi.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+                  <a href="https://www.egm.gov.tr/havacilik/sehitlerimiz" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>EGM Havacılık Dairesi — Şehitlerimiz</b>
+              <span>Havacılık personeli arşivi.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+                  <a href="https://www.sg.gov.tr/sehitlerimiz" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>Sahil Güvenlik Komutanlığı — Şehitlerimiz</b>
+              <span>Sahil Güvenlik personeli.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+                  <a href="https://www.jandarma.gov.tr/havacilik/sehitlerimiz" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>Jandarma Havacılık Komutanlığı — Şehitlerimiz</b>
+              <span>Havacılık Komutanlığı sayfası.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+                  <a href="https://kahramanlar.org.tr/api.php" target="_blank" rel="noopener noreferrer" class="source-item">
+            <div>
+              <b>Kahramanlar internet sayfası</b>
+              <span>Açık JSON API. MSB arşiviyle büyük ölçüde örtüşür; rütbe bilgisi ve yakın döneme ait kayıtlar ekler.</span>
+            </div>
+            <div style="color:var(--flag); font-size:16px;">↗</div>
+          </a>
+              </div>
+    </div>
+  </div>
+</div>
+
+<div class="anit-spacer" aria-hidden="true"></div>
+
+<main class="icerik" id="arsiv">
+  <div class="icerik-ic">
+    <a class="yukari" href="#">▲ Anıta Dön</a>
+    <p class="kicker">Türkiye Şehit Arşivi</p>
+    <h1>Türkiye'nin Şehitleri: 115.886 İsim Tek Arşivde</h1>
+    <p class="lead">
+      <strong>sehitlerimiz.org.tr</strong>, Çanakkale'den bugüne tüm şehitler için tutulmuş resmî
+      kayıtları tek çatı altında toplar. Arşivde bugün <strong>115.886 şehidimizin</strong>
+      adı, baba adı, rütbesi, memleketi ve şehadet dönemi kayıtlıdır; kayıtlar Kırım Savaşı'ndan
+      (1853-1856) günümüze (2026) uzanır ve en eski kayıt 1856 tarihlidir.
+      Yukarıdaki anıtta her ışık noktası bir
+      şehidimizdir — aşağıdaki şehitler listesi ise aynı arşivin okunabilir hâlidir.
+    </p>
+    <p>
+      Kayıtların tamamı Millî Savunma Bakanlığı Şehit Bilgi Kapısı, Emniyet Genel Müdürlüğü ve
+      diğer kamu kurumlarının açık kaynaklarından derlenir; aynı kişinin farklı kaynaklardaki
+      kayıtları tekilleştirilir ve her şehit sayfasında kaydın kaynağı ayrıca gösterilir.
+      Şehitlerimizin en büyük bölümü Birinci Dünya Savaşı'nın Çanakkale, Şark, Irak, Filistin ve
+      Galiçya cepheleri ile Kurtuluş Savaşı dönemine aittir.
+    </p>
+    <form class="inline-search" action="/ara" method="get">
+      <input type="search" name="q" placeholder="Şehit adı ara…" aria-label="Şehit adı">
+      <button type="submit">Ara</button>
+    </form>
+
+    <h2 id="son-sehitler">Son Şehitlerimiz</h2>
+    <p>Arşivdeki, şehadet tarihi bilinen en yeni kayıtlar:</p>
+    <ol class="name-list">
+            <li><a href="/sehit/mustafa-aslan-116814">Mustafa Aslan</a>
+          <span class="li-meta">14.10.2026</span></li>
+            <li><a href="/sehit/yusuf-gunes-116813">Yusuf Güneş</a>
+          <span class="li-meta">11.10.2026</span></li>
+            <li><a href="/sehit/ahmet-turkoglu-114753">Ahmet Türkoğlu</a>
+          <span class="li-meta">07.10.2026</span></li>
+            <li><a href="/sehit/coskun-sevim-111220">Coşkun Sevim</a>
+          <span class="li-meta">23.09.2026</span></li>
+            <li><a href="/sehit/batuhan-sariyalcinkaya-111221">Batuhan Sarıyalçınkaya</a>
+          <span class="li-meta">18.09.2026</span></li>
+            <li><a href="/sehit/ziyar-koparan-110178">Ziyar Koparan</a>
+          <span class="li-meta">11.09.2026</span></li>
+            <li><a href="/sehit/mehmet-ali-topatan-104235">Mehmet Ali Topatan</a>
+          <span class="li-meta">05.09.2026</span></li>
+            <li><a href="/sehit/melih-kaygusuz-104236">Melih Kaygusuz</a>
+          <span class="li-meta">03.09.2026</span></li>
+            <li><a href="/sehit/veli-bilgin-110765">Veli Bilgin</a>
+          <span class="li-meta">21.07.2026</span></li>
+            <li><a href="/sehit/mehmet-demirbas-104048">Mehmet Demirbaş</a>
+          <span class="li-meta">11.07.2026</span></li>
+            <li><a href="/sehit/abdurrahman-hilal-110661">Abdurrahman Hilal</a>
+          <span class="li-meta">30.06.2026</span></li>
+            <li><a href="/sehit/kenan-sahin-101289">Kenan Şahin</a>
+          <span class="li-meta">24.06.2026</span></li>
+          </ol>
+
+        <h2 id="son-eklenenler">Arşive Son Eklenenler</h2>
+    <p>Arşive en son eklenen ya da güncellenen kayıtlar (şehadet tarihi ya da memleketiyle):</p>
+    <ol class="name-list"><li><a href="/sehit/ismail-enver-pasa-116826">İsmail Enver Paşa</a> <span class="li-meta">04.08.1922</span></li><li><a href="/sehit/nejdet-bayar-116825">Nejdet Bayar</a> <span class="li-meta">20.04.2006</span></li><li><a href="/sehit/okan-guney-116824">Okan Güney</a> <span class="li-meta">1967</span></li><li><a href="/sehit/abdullah-akkaya-116823">Abdullah Akkaya</a> <span class="li-meta">1997</span></li><li><a href="/sehit/aydinoglu-ekrem-116822">Aydınoğlu Ekrem</a> <span class="li-meta">30.08.1922</span></li><li><a href="/sehit/yusuf-cavus-116821">Yusuf Çavuş</a> <span class="li-meta">05.02.1920</span></li><li><a href="/sehit/yusuf-cavus-116820">Yusuf Çavuş</a> <span class="li-meta">1896</span></li><li><a href="/sehit/mirbaddin-babat-116819">Mirbaddin Babat</a></li><li><a href="/sehit/ali-kars-116818">Ali Kars</a> <span class="li-meta">17.06.1993</span></li><li><a href="/sehit/halil-ulec-116817">Halil Üleç</a> <span class="li-meta">10.07.1995</span></li><li><a href="/sehit/sebahattin-sabanci-116816">Sebahattin Sabancı</a> <span class="li-meta">16.10.1997</span></li><li><a href="/sehit/kadir-kizar-116815">Kadir Kızar</a> <span class="li-meta">31.08.1999</span></li></ol>    
+    <h2 id="konular">Konulara ve Kurumlara Göre Şehitler</h2>
+    <p>Tek başlıkta toplanan konu sayfaları ve kurumlara göre şehit listeleri:</p>
+    <ul class="cephe-list">
+            <li><a href="/donem/terorle-mucadele-sehitleri">Terörle Mücadele Şehitleri</a>
+          <span class="li-meta">6.217</span></li>
+            <li><a href="/donem/kibris-baris-harekati-sehitleri">Kıbrıs Barış Harekâtı Şehitleri</a>
+          <span class="li-meta">505</span></li>
+            <li><a href="/donem/pence-kilit-harekati-sehitleri">Pençe-Kilit Harekâtı Şehitleri</a>
+          <span class="li-meta">142</span></li>
+                  <li><a href="/kurum/turk-silahli-kuvvetleri">Türk Silahlı Kuvvetleri Şehitleri</a>
+          <span class="li-meta">105.325</span></li>
+            <li><a href="/kurum/jandarma-genel-komutanligi">Jandarma Şehitleri</a>
+          <span class="li-meta">7.071</span></li>
+            <li><a href="/kurum/emniyet-genel-mudurlugu">Emniyet Genel Müdürlüğü Şehitleri</a>
+          <span class="li-meta">2.042</span></li>
+            <li><a href="/kurum/koy-korucusu">Köy Korucusu Şehitleri</a>
+          <span class="li-meta">211</span></li>
+            <li><a href="/kurum/milli-egitim-bakanligi">Şehit Öğretmenler</a>
+          <span class="li-meta">195</span></li>
+            <li><a href="/kurum/disisleri-bakanligi">Dışişleri Bakanlığı Şehitleri</a>
+          <span class="li-meta">40</span></li>
+            <li><a href="/kurum/sahil-guvenlik-komutanligi">Sahil Güvenlik Komutanlığı Şehitleri</a>
+          <span class="li-meta">17</span></li>
+            <li><a href="/kurum/sivil">Sivil Şehitleri</a>
+          <span class="li-meta">10</span></li>
+          </ul>
+
+    <h2 id="donemler">Dönemlere ve Cephelere Göre Şehitler</h2>
+    <p>
+      Çanakkale şehitlerinden Kurtuluş Savaşı şehitlerine, arşivdeki her harp ve cephe ayrı bir
+      isim listesi olarak düzenlenmiştir. Dönemlerin tam dökümü ve sayıları
+      <a href="/arsiv">arşiv dizinindedir</a>.
+    </p>
+    <ul class="cephe-list">
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918-canakkale-cephesi">Çanakkale Cephesi</a>
+          <span class="li-meta">46.599</span></li>
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918-sark-cephesi">Şark Cephesi</a>
+          <span class="li-meta">12.909</span></li>
+            <li><a href="/donem/kurtulus-savasi-1919-1922-bati-cephesi">Batı Cephesi</a>
+          <span class="li-meta">11.619</span></li>
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918-irak-cephesi">Irak Cephesi</a>
+          <span class="li-meta">7.485</span></li>
+            <li><a href="/donem/terorle-mucadele">Terörle Mücadele</a>
+          <span class="li-meta">5.871</span></li>
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918">Birinci Dünya Savaşı (1914-1918)</a>
+          <span class="li-meta">5.314</span></li>
+            <li><a href="/donem/diger">Diğer</a>
+          <span class="li-meta">3.831</span></li>
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918-filistin-cephesi">Filistin Cephesi</a>
+          <span class="li-meta">3.817</span></li>
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918-galicya-cephesi">Galiçya Cephesi</a>
+          <span class="li-meta">3.353</span></li>
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918-romanya-cephesi">Romanya Cephesi</a>
+          <span class="li-meta">2.305</span></li>
+            <li><a href="/donem/muharebe-disi-diger-sehitler-1853-1928">Muharebe Dışı Diğer Şehitler (1853-1928)</a>
+          <span class="li-meta">2.233</span></li>
+            <li><a href="/donem/polis-sehidi">Polis Şehidi</a>
+          <span class="li-meta">1.929</span></li>
+            <li><a href="/donem/kurtulus-savasi-1919-1922">Kurtuluş Savaşı (1919-1922)</a>
+          <span class="li-meta">1.850</span></li>
+            <li><a href="/donem/balkan-savaslari-1912-1913">Balkan Savaşları (1912-1913)</a>
+          <span class="li-meta">1.025</span></li>
+            <li><a href="/donem/osmanli-rus-savasi-1877-1878-93-harbi">Osmanlı-Rus Savaşı (1877-1878/93 Harbi)</a>
+          <span class="li-meta">840</span></li>
+            <li><a href="/donem/birinci-dunya-savasi-1914-1918-hicaz-cephesi">Hicaz Cephesi</a>
+          <span class="li-meta">746</span></li>
+          </ul>
+
+    <h2 id="iller">Memleketine Göre Şehitler</h2>
+    <p>Her ilin sayfasında o memleketin şehitleri alfabetik olarak listelenir:</p>
+    <ul class="prov-grid">
+            <li><a href="/il/">-</a>
+          <span class="li-meta">1</span></li>
+            <li><a href="/il/adana">Adana</a>
+          <span class="li-meta">1.531</span></li>
+            <li><a href="/il/adiyaman">Adıyaman</a>
+          <span class="li-meta">189</span></li>
+            <li><a href="/il/afyonkarahisar">Afyonkarahisar</a>
+          <span class="li-meta">3.248</span></li>
+            <li><a href="/il/agri">Ağrı</a>
+          <span class="li-meta">67</span></li>
+            <li><a href="/il/aksaray">Aksaray</a>
+          <span class="li-meta">660</span></li>
+            <li><a href="/il/amasya">Amasya</a>
+          <span class="li-meta">966</span></li>
+            <li><a href="/il/ankara">Ankara</a>
+          <span class="li-meta">4.089</span></li>
+            <li><a href="/il/antalya">Antalya</a>
+          <span class="li-meta">1.969</span></li>
+            <li><a href="/il/ardahan">Ardahan</a>
+          <span class="li-meta">114</span></li>
+            <li><a href="/il/artvin">Artvin</a>
+          <span class="li-meta">219</span></li>
+            <li><a href="/il/aydin">Aydın</a>
+          <span class="li-meta">2.520</span></li>
+            <li><a href="/il/balikesir">Balıkesir</a>
+          <span class="li-meta">4.122</span></li>
+            <li><a href="/il/bartin">Bartın</a>
+          <span class="li-meta">782</span></li>
+            <li><a href="/il/batman">Batman</a>
+          <span class="li-meta">19</span></li>
+            <li><a href="/il/bayburt">Bayburt</a>
+          <span class="li-meta">272</span></li>
+            <li><a href="/il/bilecik">Bilecik</a>
+          <span class="li-meta">1.495</span></li>
+            <li><a href="/il/bingol">Bingöl</a>
+          <span class="li-meta">122</span></li>
+            <li><a href="/il/bitlis">Bitlis</a>
+          <span class="li-meta">334</span></li>
+            <li><a href="/il/bolu">Bolu</a>
+          <span class="li-meta">2.127</span></li>
+            <li><a href="/il/burdur">Burdur</a>
+          <span class="li-meta">1.015</span></li>
+            <li><a href="/il/bursa">Bursa</a>
+          <span class="li-meta">5.107</span></li>
+            <li><a href="/il/canakkale">Çanakkale</a>
+          <span class="li-meta">2.182</span></li>
+            <li><a href="/il/cankiri">Çankırı</a>
+          <span class="li-meta">1.753</span></li>
+            <li><a href="/il/corum">Çorum</a>
+          <span class="li-meta">3.238</span></li>
+            <li><a href="/il/denizli">Denizli</a>
+          <span class="li-meta">3.305</span></li>
+            <li><a href="/il/diyarbakir">Diyarbakır</a>
+          <span class="li-meta">558</span></li>
+            <li><a href="/il/duzce">Düzce</a>
+          <span class="li-meta">904</span></li>
+            <li><a href="/il/edirne">Edirne</a>
+          <span class="li-meta">1.209</span></li>
+            <li><a href="/il/elazig">Elazığ</a>
+          <span class="li-meta">723</span></li>
+            <li><a href="/il/erzincan">Erzincan</a>
+          <span class="li-meta">839</span></li>
+            <li><a href="/il/erzurum">Erzurum</a>
+          <span class="li-meta">1.026</span></li>
+            <li><a href="/il/eskisehir">Eskişehir</a>
+          <span class="li-meta">1.653</span></li>
+            <li><a href="/il/gaziantep">Gaziantep</a>
+          <span class="li-meta">1.016</span></li>
+            <li><a href="/il/giresun">Giresun</a>
+          <span class="li-meta">1.185</span></li>
+            <li><a href="/il/gumushane">Gümüşhane</a>
+          <span class="li-meta">370</span></li>
+            <li><a href="/il/hakkari">Hakkâri</a>
+          <span class="li-meta">54</span></li>
+            <li><a href="/il/hatay">Hatay</a>
+          <span class="li-meta">684</span></li>
+            <li><a href="/il/igdir">Iğdır</a>
+          <span class="li-meta">18</span></li>
+            <li><a href="/il/isparta">Isparta</a>
+          <span class="li-meta">1.460</span></li>
+            <li><a href="/il/istanbul">İstanbul</a>
+          <span class="li-meta">3.174</span></li>
+            <li><a href="/il/izmir">İzmir</a>
+          <span class="li-meta">2.711</span></li>
+            <li><a href="/il/kahramanmaras">Kahramanmaraş</a>
+          <span class="li-meta">975</span></li>
+            <li><a href="/il/karabuk">Karabük</a>
+          <span class="li-meta">821</span></li>
+            <li><a href="/il/karaman">Karaman</a>
+          <span class="li-meta">625</span></li>
+            <li><a href="/il/kars">Kars</a>
+          <span class="li-meta">77</span></li>
+            <li><a href="/il/kastamonu">Kastamonu</a>
+          <span class="li-meta">4.799</span></li>
+            <li><a href="/il/kayseri">Kayseri</a>
+          <span class="li-meta">2.159</span></li>
+            <li><a href="/il/kirikkale">Kırıkkale</a>
+          <span class="li-meta">696</span></li>
+            <li><a href="/il/kirklareli">Kırklareli</a>
+          <span class="li-meta">687</span></li>
+            <li><a href="/il/kirsehir">Kırşehir</a>
+          <span class="li-meta">1.078</span></li>
+            <li><a href="/il/kilis">Kilis</a>
+          <span class="li-meta">386</span></li>
+            <li><a href="/il/kocaeli">Kocaeli</a>
+          <span class="li-meta">1.327</span></li>
+            <li><a href="/il/konya">Konya</a>
+          <span class="li-meta">4.801</span></li>
+            <li><a href="/il/kudus">Kudüs</a>
+          <span class="li-meta">334</span></li>
+            <li><a href="/il/kutahya">Kütahya</a>
+          <span class="li-meta">2.413</span></li>
+            <li><a href="/il/malatya">Malatya</a>
+          <span class="li-meta">748</span></li>
+            <li><a href="/il/manisa">Manisa</a>
+          <span class="li-meta">3.066</span></li>
+            <li><a href="/il/mardin">Mardin</a>
+          <span class="li-meta">200</span></li>
+            <li><a href="/il/mersin">Mersin</a>
+          <span class="li-meta">2.259</span></li>
+            <li><a href="/il/mugla">Muğla</a>
+          <span class="li-meta">1.360</span></li>
+            <li><a href="/il/mus">Muş</a>
+          <span class="li-meta">117</span></li>
+            <li><a href="/il/nevsehir">Nevşehir</a>
+          <span class="li-meta">1.030</span></li>
+            <li><a href="/il/nigde">Niğde</a>
+          <span class="li-meta">1.073</span></li>
+            <li><a href="/il/ordu">Ordu</a>
+          <span class="li-meta">1.180</span></li>
+            <li><a href="/il/osmaniye">Osmaniye</a>
+          <span class="li-meta">363</span></li>
+            <li><a href="/il/rize">Rize</a>
+          <span class="li-meta">346</span></li>
+            <li><a href="/il/sakarya">Sakarya</a>
+          <span class="li-meta">1.483</span></li>
+            <li><a href="/il/samsun">Samsun</a>
+          <span class="li-meta">1.373</span></li>
+            <li><a href="/il/siirt">Siirt</a>
+          <span class="li-meta">228</span></li>
+            <li><a href="/il/sinop">Sinop</a>
+          <span class="li-meta">2.301</span></li>
+            <li><a href="/il/sivas">Sivas</a>
+          <span class="li-meta">1.668</span></li>
+            <li><a href="/il/sanliurfa">Şanlıurfa</a>
+          <span class="li-meta">660</span></li>
+            <li><a href="/il/sirnak">Şırnak</a>
+          <span class="li-meta">99</span></li>
+            <li><a href="/il/tekirdag">Tekirdağ</a>
+          <span class="li-meta">969</span></li>
+            <li><a href="/il/tokat">Tokat</a>
+          <span class="li-meta">1.248</span></li>
+            <li><a href="/il/trabzon">Trabzon</a>
+          <span class="li-meta">1.223</span></li>
+            <li><a href="/il/tunceli">Tunceli</a>
+          <span class="li-meta">131</span></li>
+            <li><a href="/il/usak">Uşak</a>
+          <span class="li-meta">1.091</span></li>
+            <li><a href="/il/van">Van</a>
+          <span class="li-meta">388</span></li>
+            <li><a href="/il/yalova">Yalova</a>
+          <span class="li-meta">82</span></li>
+            <li><a href="/il/yozgat">Yozgat</a>
+          <span class="li-meta">2.220</span></li>
+            <li><a href="/il/zonguldak">Zonguldak</a>
+          <span class="li-meta">1.333</span></li>
+          </ul>
+
+    <h2 id="isimler">İsme Göre</h2>
+    <p>Aradığınız şehidimizin adının baş harfinden ilerleyebilirsiniz:</p>
+    <ul class="letter-strip">
+            <li><a href="/harf/a" title="21.145 isim">A</a></li>
+            <li><a href="/harf/b" title="2.312 isim">B</a></li>
+            <li><a href="/harf/c" title="958 isim">C · Ç</a></li>
+            <li><a href="/harf/d" title="1.287 isim">D</a></li>
+            <li><a href="/harf/e" title="2.208 isim">E</a></li>
+            <li><a href="/harf/f" title="888 isim">F</a></li>
+            <li><a href="/harf/g" title="309 isim">G · Ğ</a></li>
+            <li><a href="/harf/h" title="22.516 isim">H</a></li>
+            <li><a href="/harf/i" title="9.807 isim">I · İ</a></li>
+            <li><a href="/harf/j" title="2 isim">J</a></li>
+            <li><a href="/harf/k" title="1.700 isim">K</a></li>
+            <li><a href="/harf/l" title="147 isim">L</a></li>
+            <li><a href="/harf/m" title="28.618 isim">M</a></li>
+            <li><a href="/harf/n" title="1.306 isim">N</a></li>
+            <li><a href="/harf/o" title="7.095 isim">O · Ö</a></li>
+            <li><a href="/harf/p" title="84 isim">P</a></li>
+            <li><a href="/harf/r" title="1.976 isim">R</a></li>
+            <li><a href="/harf/s" title="8.069 isim">S · Ş</a></li>
+            <li><a href="/harf/t" title="1.017 isim">T</a></li>
+            <li><a href="/harf/u" title="227 isim">U · Ü</a></li>
+            <li><a href="/harf/v" title="1.147 isim">V</a></li>
+            <li><a href="/harf/y" title="2.652 isim">Y</a></li>
+            <li><a href="/harf/z" title="416 isim">Z</a></li>
+          </ul>
+
+    <h2 id="yontem">Bu Arşiv Nasıl Derleniyor?</h2>
+    <p>
+      Kaynaklar düzenli aralıklarla yeniden taranır. Aynı şehidimiz birden fazla resmî listede
+      geçtiğinde kayıtlar ad, baba adı, doğum yeri ve yılı üzerinden eşleştirilir: kayıt
+      çoğaltılmaz, yalnızca eksik alanlar ikinci kaynaktan tamamlanır. Ad kalitesi süzgecinden
+      geçemeyen bozuk satırlar arşive alınmaz. Yöntemin tamamı
+      <a href="/hakkinda">hakkında sayfasında</a> açıklanmıştır.
+    </p>
+    <p>
+      Kayıtların büyük çoğunluğu Soyadı Kanunu'ndan (1934) önceye aittir; o dönem soyadı
+      bulunmadığından resmî defterler <em>ad + baba adı</em> biçiminde tutulmuştur. Bu arşivde
+      babası Ahmet olan Mehmet, dönemin kendi geleneğiyle
+      <a href="/hakkinda#adlandirma">“Ahmetoğlu Mehmet”</a> olarak gösterilir.
+    </p>
+
+    <div class="icerik-alt">
+      <p>
+        Arşiv en son 19.10.2026 tarihinde güncellendi. Eksik ya da hatalı bir kayıt
+        görürseniz sağ üstteki “Veri Ekle” düğmesiyle bildirebilirsiniz.
+        — <a href="/arsiv">Şehit Arşivi</a> · <a href="/hakkinda">Hakkında ve Kaynaklar</a>
+      </p>
+      <p class="alt-eylemler">
+        <button type="button" class="metin-btn" id="btn-open-sources">Resmî Kaynakları Gör</button>
+              </p>
+    </div>
+  </div>
+</main>
+
+<script>
+// İçerik bölümü ekrandayken arka plan videosu duraklatılır (GPU/pil).
+document.addEventListener('DOMContentLoaded', () => {
+  const v = document.getElementById('main-bg-video');
+  const s = document.querySelector('.anit-spacer');
+  if (v && s && 'IntersectionObserver' in window) {
+    new IntersectionObserver((es) => {
+      es[0].isIntersecting ? v.play().catch(() => {}) : v.pause();
+    }).observe(s);
+  }
+});
+</script>
+
+<!-- GSAP -->
+<script>window.VERI_SURUM="1792435029";</script>
+<script src="/medya/gsap.min.js?v=1"></script>
+
+<script src="/medya/anit.js?v=41"></script>
+
+<img src="/_sk/g.gif" alt="" width="1" height="1" hidden>
+</body>
+</html>

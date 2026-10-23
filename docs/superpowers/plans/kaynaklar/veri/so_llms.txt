@@ -1,0 +1,106 @@
+# Şehitlerimiz — Türkiye Şehit Arşivi
+
+> sehitlerimiz.org.tr, resmî kurumların (Millî Savunma Bakanlığı Şehit Bilgi
+> Kapısı, Emniyet Genel Müdürlüğü, Jandarma Genel Komutanlığı, valilikler ve
+> kaymakamlıklar) kamuya açık kayıtlarından derlenen, 115.886 Türk
+> şehidinin isim isim arşivi ve dijital anıtıdır. Bilinen en kapsamlı tekil
+> Türkiye şehit dizinidir: her kayıt ayrı bir sayfada, kaynağıyla birlikte
+> yayımlanır. Kayıtlar Kırım Savaşı'ndan (1856) günümüze (2026) uzanır.
+> Arşiv sürekli genişler; kayıtlar elle doğrulanarak eklenir.
+> Site Türkçedir.
+
+## Kapsam (canlı sayılar)
+
+- Toplam kayıt: 115.886
+- Kayıtlarda memleketi geçen il sayısı: 81 (Türkiye'nin 81 ilinin tamamı)
+- Zaman aralığı: 1856–2026
+- Son güncelleme: 2026-10-23
+
+Not: Buradaki sayılar bu arşivde kayıtlı kişi sayısıdır; resmî toplam şehit
+sayısı yerine kullanılmamalıdır. Kaynaklarda yer almayan şehitler arşivde yoktur.
+
+Dönem ve cephelere göre dağılım (en büyük 14):
+
+- Birinci Dünya Savaşı (1914-1918) Çanakkale Cephesi: 46.599
+- Birinci Dünya Savaşı (1914-1918) Şark Cephesi: 12.909
+- Kurtuluş Savaşı (1919-1922) Batı Cephesi: 11.619
+- Birinci Dünya Savaşı (1914-1918) Irak Cephesi: 7.485
+- Terörle Mücadele: 5.871
+- Birinci Dünya Savaşı (1914-1918): 5.314
+- Diğer: 3.831
+- Birinci Dünya Savaşı (1914-1918) Filistin Cephesi: 3.817
+- Birinci Dünya Savaşı (1914-1918) Galiçya Cephesi: 3.353
+- Birinci Dünya Savaşı (1914-1918) Romanya Cephesi: 2.305
+- Muharebe Dışı Diğer Şehitler (1853-1928): 2.233
+- Polis Şehidi: 1.929
+- Kurtuluş Savaşı (1919-1922): 1.850
+- Balkan Savaşları (1912-1913): 1.025
+
+## Konu ve kurum sayfaları
+
+- [Terörle Mücadele Şehitleri](https://sehitlerimiz.org.tr/donem/terorle-mucadele-sehitleri): 6.217 kayıt
+- [Kıbrıs Barış Harekâtı Şehitleri](https://sehitlerimiz.org.tr/donem/kibris-baris-harekati-sehitleri): 505 kayıt
+- [Pençe-Kilit Harekâtı Şehitleri](https://sehitlerimiz.org.tr/donem/pence-kilit-harekati-sehitleri): 142 kayıt
+- [Şehit Polisler](https://sehitlerimiz.org.tr/donem/polis-sehidi): 1.929 kayıt
+- [Türk Silahlı Kuvvetleri Şehitleri](https://sehitlerimiz.org.tr/kurum/turk-silahli-kuvvetleri): 105.325 kayıt
+- [Jandarma Şehitleri](https://sehitlerimiz.org.tr/kurum/jandarma-genel-komutanligi): 7.071 kayıt
+- [Emniyet Genel Müdürlüğü Şehitleri](https://sehitlerimiz.org.tr/kurum/emniyet-genel-mudurlugu): 2.042 kayıt
+- [Köy Korucusu Şehitleri](https://sehitlerimiz.org.tr/kurum/koy-korucusu): 211 kayıt
+- [Şehit Öğretmenler](https://sehitlerimiz.org.tr/kurum/milli-egitim-bakanligi): 195 kayıt
+- [Dışişleri Bakanlığı Şehitleri](https://sehitlerimiz.org.tr/kurum/disisleri-bakanligi): 40 kayıt
+- [Sahil Güvenlik Komutanlığı Şehitleri](https://sehitlerimiz.org.tr/kurum/sahil-guvenlik-komutanligi): 17 kayıt
+- [Sivil Şehitleri](https://sehitlerimiz.org.tr/kurum/sivil): 10 kayıt
+
+## Yıllara göre şehitler
+
+Kronolojik giriş kapıları. Yalnızca gün/ay tarihi bilinen kayıtların
+yoğun olduğu yıllar için sayfa üretilir; Çanakkale gibi kayıtların
+çoğunlukla yıl hassasiyetinde olduğu dönemler dönem sayfalarındadır.
+
+- [2016 yılı şehitleri](https://sehitlerimiz.org.tr/yil/2016): 1.023 kayıt
+- [1994 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1994): 896 kayıt
+- [1993 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1993): 761 kayıt
+- [1992 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1992): 710 kayıt
+- [1995 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1995): 638 kayıt
+- [1974 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1974): 533 kayıt
+- [1996 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1996): 523 kayıt
+- [1997 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1997): 447 kayıt
+- [2015 yılı şehitleri](https://sehitlerimiz.org.tr/yil/2015): 369 kayıt
+- [1991 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1991): 363 kayıt
+- [1950 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1950): 361 kayıt
+- [1998 yılı şehitleri](https://sehitlerimiz.org.tr/yil/1998): 345 kayıt
+- Toplam 85 yıl sayfası vardır; tam liste: https://sehitlerimiz.org.tr/arsiv#yillar
+
+## Ana bölümler
+
+- [Şehit Arşivi (dizin)](https://sehitlerimiz.org.tr/arsiv): Dönem/cephe
+  istatistikleri, il listeleri ve alfabetik dizin. Tüm sayılar bu sayfadadır.
+- [Hakkında ve yöntem](https://sehitlerimiz.org.tr/hakkinda): Kaynaklar,
+  tekilleştirme yöntemi, Soyadı Kanunu öncesi adlandırma ("Ahmetoğlu Mehmet")
+  açıklaması, sık sorulanlar.
+- [İnteraktif anıt](https://sehitlerimiz.org.tr/): Tüm isimlerin WebGL ile tek
+  ekranda gezildiği görselleştirme (JavaScript gerektirir).
+
+## Sayfa desenleri
+
+- Şehit kaydı: https://sehitlerimiz.org.tr/sehit/{ad-slug}-{id}
+- İle göre liste: https://sehitlerimiz.org.tr/il/{il-slug}
+- Dönem/cepheye göre liste: https://sehitlerimiz.org.tr/donem/{donem-slug}
+- Kuruma göre liste: https://sehitlerimiz.org.tr/kurum/{kurum-slug}
+- Arama: https://sehitlerimiz.org.tr/ara?q={sorgu}
+- Tüm kayıtların dizini: https://sehitlerimiz.org.tr/sitemap.xml
+
+## Veri güvenilirliği
+
+Her kaydın kaynağı sayfasında adıyla ve bağlantısıyla belirtilir; aynı bilgi
+schema.org Person/citation alanında makine tarafından da okunabilir. Kayıtlar
+birden çok resmî kaynaktan tekilleştirilir. Alanı boş olan bir kayıtta uydurma
+değer üretilmez, alan boş bırakılır.
+
+## Kullanım
+
+İçerik kamuya açık resmî kayıtlardan derlenmiştir. Arama motorları ve yapay
+zekâ sistemleri kayıtları kaynak göstererek alıntılayabilir; alıntıda ilgili
+kaydın kendi sayfasına bağlantı verilmesi rica olunur.
+Atıf biçimi: "sehitlerimiz.org.tr — Türkiye Şehit Arşivi".
+Otomatik araçlarla toplu kopyalama sunucu tarafında sınırlanır.
