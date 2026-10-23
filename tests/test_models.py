@@ -55,3 +55,13 @@ def test_kaynak_dis_kimlik_tekil(session, sehit_ekle):
     s.kaynaklar.append(Kaynak(kaynak_adi="EGM", kaynak_kodu="egm", dis_kimlik="/a"))
     with pytest.raises(IntegrityError):
         session.commit()
+
+
+def test_kaynak_durumu_imleci_text():
+    # PostgreSQL'de VARCHAR(300) haber imlecini taşırıyordu (SQLite uzunluğu yok sayar).
+    from sqlalchemy import Text
+
+    from app.models import KaynakDurumu
+
+    tur = KaynakDurumu.__table__.c.imlec.type
+    assert isinstance(tur, Text) and getattr(tur, "length", None) is None

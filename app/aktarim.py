@@ -1,4 +1,5 @@
 """Aktarım çekirdeği: ham kaydı eşleştir, öncelikle birleştir, kaydet; kaldığı yerden devam et."""
+import hashlib
 import logging
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
@@ -25,6 +26,19 @@ ONCELIK: dict[str, int] = {
 
 _HASSASIYET_SIRASI = {Hassasiyet.bilinmiyor: 0, Hassasiyet.yil: 1, Hassasiyet.tam: 2}
 _DOLDURULACAK = ("soyad", "lakap", "gorev", "kurum", "memleket", "baba_adi", "dogum_yili", "donem")
+DIS_KIMLIK_SINIRI = 300  # Kaynak.dis_kimlik String(300)
+_OZET_UZUNLUGU = 16
+
+
+def dis_kimlik_sinirla(kimlik: str | None) -> str | None:
+    """300 karakteri aşan dış kimliğin kuyruğunu, tüm kimliğin kısa özetiyle değiştirir.
+
+    Sonuç kararlıdır (aynı kimlik hep aynı sonucu verir) ve farklı kimlikler ayrı kalır.
+    """
+    if kimlik is None or len(kimlik) <= DIS_KIMLIK_SINIRI:
+        return kimlik
+    ozet = hashlib.sha1(kimlik.encode("utf-8")).hexdigest()[:_OZET_UZUNLUGU]
+    return f"{kimlik[:DIS_KIMLIK_SINIRI - _OZET_UZUNLUGU - 1]}~{ozet}"
 
 
 @dataclass
@@ -217,7 +231,7 @@ def _kaynak_kaydi(sehit: Sehit, ham: HamKayit) -> Kaynak:
         metin=ham.metin,
         kaynak_adi=(ham.kaynak_adi or ham.kaynak_kodu)[:100],
         kaynak_kodu=ham.kaynak_kodu,
-        dis_kimlik=ham.dis_kimlik,
+        dis_kimlik=dis_kimlik_sinirla(ham.dis_kimlik),
     )
 
 
@@ -229,7 +243,8 @@ def kayit_aktar(s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda)
         with s.begin_nested():
             var = s.scalar(
                 select(Kaynak.id).where(
-                    Kaynak.kaynak_kodu == ham.kaynak_kodu, Kaynak.dis_kimlik == ham.dis_kimlik
+                    Kaynak.kaynak_kodu == ham.kaynak_kodu,
+                    Kaynak.dis_kimlik == dis_kimlik_sinirla(ham.dis_kimlik),
                 )
             )
             if var is not None:

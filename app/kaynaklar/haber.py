@@ -1,4 +1,5 @@
 """Haber siteleri: RSS akışları ve makale sayfaları (Hürriyet, Sabah, AA, TRT)."""
+import hashlib
 import json
 import logging
 import re
@@ -6,6 +7,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from urllib.parse import urlsplit, urlunsplit
 
 from selectolax.parser import HTMLParser
 
@@ -84,9 +86,23 @@ def _yayin_coz(deger: str) -> datetime:
     return yayin if yayin.tzinfo else yayin.replace(tzinfo=timezone.utc)
 
 
+def _url_normalize(url: str) -> str:
+    """Şema/alan adı küçük harf, #parça ve sondaki / atılır (aynı haberin yazım farkları)."""
+    p = urlsplit(url.strip())
+    return urlunsplit((p.scheme.lower(), p.netloc.lower(), p.path.rstrip("/"), p.query, ""))
+
+
 def _kimlik(url: str, guid: str) -> str:
+    """URL sonundaki sayısal kimlik; yoksa sayısal guid; o da yoksa normalize URL'nin kısa özeti.
+
+    Tam URL kimlik olarak kullanılmaz: `Kaynak.dis_kimlik` (300) ve imleç taşmasın.
+    """
     eslesme = _KIMLIK.search(url)
-    return eslesme.group(1) if eslesme else (guid or url)
+    if eslesme:
+        return eslesme.group(1)
+    if guid.isdigit():
+        return guid
+    return "u:" + hashlib.sha1(_url_normalize(url).encode("utf-8")).hexdigest()[:16]
 
 
 def rss_ayristir(xml: str, kaynak: HaberKaynagi) -> list[HaberOgesi]:

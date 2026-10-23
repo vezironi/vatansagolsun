@@ -40,7 +40,9 @@ def test_sabah_rss_arti_0300_ve_kimlik_url():
     ogeler = ayristir("sabah_sondakika.xml", "sabah")
     assert len(ogeler) == 4
     assert ogeler[0].yayin == datetime(2026, 10, 23, 10, 10, tzinfo=TR) and ogeler[0].yayin.utcoffset() == timedelta(hours=3)
-    assert ogeler[0].kimlik == ogeler[0].url  # URL'de sayısal kimlik yok: guid/URL
+    # URL'de sayısal kimlik yok: normalize URL'nin kısa özeti (dis_kimlik/imleç taşmasın)
+    assert ogeler[0].kimlik.startswith("u:") and len(ogeler[0].kimlik) <= 20
+    assert len({o.kimlik for o in ogeler}) == 4
     assert all(o.ozet and "<" not in o.ozet for o in ayristir("sabah_gundem.xml", "sabah"))
 
 
@@ -168,3 +170,27 @@ def test_ogeleri_getir_iki_akista_ayni_haberi_bir_kez_ve_yeniden_eskiye():
     assert len(kimlikler) == len(set(kimlikler)) == 5  # 4 + 3 öğeden 2 ortak
     assert [o.yayin for o in ogeler] == sorted((o.yayin for o in ogeler), reverse=True)
     assert ogeler[3].baslik.startswith("[SENTETİK]") and ogeler[-1].baslik == "Yeni dünya için tarihi adım"
+
+
+def test_url_kimligi_kisa_ve_kararli():
+    from app.kaynaklar.haber import _kimlik
+
+    url = "https://www.sabah.com.tr/gundem/2026/10/23/" + "cok-uzun-baslik-" * 30
+    k = _kimlik(url, url)
+    assert k.startswith("u:") and len(k) <= 20
+    # Aynı haber farklı yazımla gelse de (büyük harf alan adı, #parça, sondaki /) aynı kimlik
+    assert _kimlik("HTTPS://WWW.SABAH.COM.TR/gundem/2026/10/23/" + "cok-uzun-baslik-" * 30 + "/#yorumlar", "") == k
+    assert _kimlik("https://www.sabah.com.tr/gundem/baska-haber", "") != k
+
+
+def test_kimlik_sayisal_url_ve_sayisal_guid():
+    from app.kaynaklar.haber import _kimlik
+
+    assert _kimlik("https://www.hurriyet.com.tr/gundem/baslik-43351885", "x") == "43351885"
+    assert _kimlik("https://www.aa.com.tr/tr/gundem/baslik/4098028", "4098028") == "4098028"
+
+
+def test_sabah_gercek_ornek_kimlikleri_kisa():
+    xml = (Path(__file__).parent.parent / "docs/superpowers/plans/kaynaklar/haber/veri/s_son.xml").read_text(encoding="utf-8")
+    ogeler = rss_ayristir(xml, HABER_KAYNAKLARI["sabah"])
+    assert ogeler and all(len(o.kimlik) <= 20 for o in ogeler)

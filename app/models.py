@@ -126,7 +126,7 @@ class KaynakDurumu(Base):
     __tablename__ = "kaynak_durumlari"
 
     kaynak_kodu: Mapped[str] = mapped_column(String(50), primary_key=True)
-    imlec: Mapped[str | None] = mapped_column(String(300))
+    imlec: Mapped[str | None] = mapped_column(Text)  # haber imleci 3 günlük kimlik kümesi taşır
     tamamlandi: Mapped[bool] = mapped_column(Boolean, default=False)
     son_calisma: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     son_durum: Mapped[str | None] = mapped_column(String(20))

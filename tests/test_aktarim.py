@@ -362,3 +362,19 @@ def test_isimsiz_kayit_eslestirilmez(session):
     b = aktarim.kayit_aktar(session, ham(ad="İsimsiz", soyad=None, kaynak_kodu="haber", dk="h:2#isimsiz", isimsiz=True, tarih=None, hassasiyet=H.bilinmiyor, yil=None))
     assert (a.durum, b.durum) == ("yeni", "yeni") and a.sehit_id != b.sehit_id
     assert aktarim.kayit_aktar(session, ham(ad="İsimsiz", soyad=None, kaynak_kodu="haber", dk="h:1#isimsiz", isimsiz=True)).durum == "atlandi"
+
+
+def test_uzun_dis_kimlik_300_karaktere_ozetlenir(session):
+    from app.aktarim import DIS_KIMLIK_SINIRI, dis_kimlik_sinirla, kayit_aktar
+    from app.kaynaklar import HamKayit
+    from app.models import Kaynak
+
+    uzun = "haber:" + "x" * 400
+    kisa = dis_kimlik_sinirla(uzun)
+    assert len(kisa) == DIS_KIMLIK_SINIRI and kisa.startswith("haber:xxx") and kisa != uzun[:300]
+    assert dis_kimlik_sinirla(uzun) == kisa and dis_kimlik_sinirla(uzun + "y") != kisa
+    assert dis_kimlik_sinirla("kisa") == "kisa"
+    ham = HamKayit(kaynak_kodu="haber", dis_kimlik=uzun, ad="Ali", soyad="Kaya")
+    assert kayit_aktar(session, ham).durum == "yeni"
+    assert session.query(Kaynak).one().dis_kimlik == kisa
+    assert kayit_aktar(session, ham).durum == "atlandi"  # aynı uzun kimlik tekrar gelirse eşleşir
