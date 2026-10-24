@@ -214,3 +214,37 @@ def test_baska_alan_adina_giden_oge_atlanir(caplog):
 def test_kaynak_alan_adlari():
     assert {k: v.alan_adi for k, v in HABER_KAYNAKLARI.items()} == {
         "hurriyet": "hurriyet.com.tr", "sabah": "sabah.com.tr", "aa": "aa.com.tr", "trt": "trthaber.com"}
+
+
+def test_aa_makale_gercek_sayfa_spot_gövdenin_basinda():
+    # aa_makale.html: canlı AA sayfasının JSON-LD, h1 ve gövde düğümleri (2026-10-24)
+    m = makale_ayristir(oku("aa_makale.html"), HABER_KAYNAKLARI["aa"])
+    assert m.baslik == "Moody's Fransa'ya yönelik periyodik incelemesini tamamladı"
+    assert m.yayin == datetime(2026, 10, 24, 2, 30, 44, 953000, tzinfo=TR)  # saat dilimsiz: Türkiye
+    ilk, _, kalan = m.govde.partition("\n\n")
+    assert ilk.startswith("Uluslararası kredi derecelendirme kuruluşu Moody's")  # JSON-LD spotu
+    assert kalan.startswith('"Bütçe süreci protestolarla aynı döneme denk geldi"')
+    assert m.govde.endswith("incelemenin yeni bir kredi notu kararı anlamına gelmediği bildirildi.")
+
+
+def test_trt_makale_gercek_sayfa_spot_ve_kacisli_baslik():
+    # trt_makale.html: canlı TRT Haber sayfasının JSON-LD, h1, spot ve gövde düğümleri (2026-10-24)
+    m = makale_ayristir(oku("trt_makale.html"), HABER_KAYNAKLARI["trt"])
+    assert m.baslik == "Kurtuluş Savaşı'na katılan 5 askerin mirasçılarına İstiklal Madalyası verilecek"  # &#039; çözülür
+    assert m.yayin == datetime(2026, 10, 24, 1, 27, tzinfo=TR)
+    spot, _, kalan = m.govde.partition("\n\n")
+    assert spot.startswith("Kurtuluş Savaşı'nda hizmetleri tespit edilen 5 şehit") and "\u200b" not in spot
+    assert kalan.startswith("Cumhurbaşkanı Recep Tayyip Erdoğan'ın imzasıyla")
+    assert sehit_gecer_mi(m.baslik, m.govde)
+
+
+def test_spot_govdede_zaten_varsa_tekrarlanmaz():
+    html = ('<h2 class="news-spot">Aynı cümle.</h2>'
+            '<div class="news-content"><p>Aynı cümle.</p><p>Devamı.</p></div>')
+    assert makale_ayristir(html, HABER_KAYNAKLARI["trt"]).govde == "Aynı cümle.\n\nDevamı."
+
+
+def test_aa_ve_trt_varsayilan_olarak_acik():
+    from app.config import Settings
+    izinler = Settings(_env_file=None).kaynak_izinleri
+    assert {"aa", "trt", "hurriyet", "sabah"} <= set(izinler)

@@ -1,5 +1,6 @@
 """Haber siteleri: RSS akışları ve makale sayfaları (Hürriyet, Sabah, AA, TRT)."""
 import hashlib
+import html as html_kod
 import json
 import logging
 import re
@@ -26,6 +27,10 @@ _DTD = re.compile(r"<!\s*(?:DOCTYPE|ENTITY)", re.IGNORECASE)
 _DEVAMI = re.compile(r"\s*Devamı için tıklayınız\s*$")
 # JSON-LD `articleBody` yalnızca bu kaynaklarda güvenilir (Hürriyet'te çöp metin döner).
 _JSONLD_GOVDE_GUVENILIR = {"sabah"}
+# Spot (haberin ilk, en bilgili cümlesi) gövde kapsayıcısının dışında duran kaynaklar:
+# AA'da yalnızca JSON-LD `description` içinde, TRT'de gövdenin üstündeki başlıkta.
+_JSONLD_SPOT = {"aa"}
+_SPOT_SECICILERI = {"trt": "h2.news-spot"}
 
 
 @dataclass
@@ -67,11 +72,9 @@ HABER_KAYNAKLARI: dict[str, HaberKaynagi] = {
         ["https://www.sabah.com.tr/rss/sondakika.xml", "https://www.sabah.com.tr/rss/gundem.xml"],
         "div.newsBox",
     ),
-    # AA ve TRT makale gövde seçicileri örnek sayfa alınmadan yazıldı (araştırmada yalnızca RSS
-    # örnekleri var): DOĞRULANMADI. Bu kaynaklar varsayılan olarak kapalıdır; açmadan önce
-    # gerçek bir makale sayfasıyla denenmeli.
+    # AA ve TRT seçicileri 2026-10-24'te canlı makale sayfalarıyla doğrulandı.
     "aa": HaberKaynagi(
-        "aa", "Anadolu Ajansı", ["https://www.aa.com.tr/tr/rss/default?cat=guncel"], "div.detay-icerik"
+        "aa", "Anadolu Ajansı", ["https://www.aa.com.tr/tr/rss/default?cat=guncel"], "div.embed-responsive.prose"
     ),
     "trt": HaberKaynagi(
         "trt", "TRT Haber", ["https://www.trthaber.com/sondakika.rss"], "div.news-content"
@@ -196,6 +199,20 @@ def _json_ld(doc: HTMLParser) -> dict:
     return {}
 
 
+def _ld_metni(ld: dict, anahtar: str) -> str:
+    """JSON-LD metni; bazı siteler (TRT) içine HTML kaçışı (&#039;) koyar."""
+    deger = ld.get(anahtar)
+    return metin_temizle(html_kod.unescape(deger)) if isinstance(deger, str) else ""
+
+
+def _spot(doc: HTMLParser, ld: dict, kod: str) -> str:
+    if kod in _JSONLD_SPOT:
+        return _ld_metni(ld, "description")
+    secici = _SPOT_SECICILERI.get(kod)
+    dugum = doc.css_first(secici) if secici else None
+    return metin_temizle(dugum.text()) if dugum else ""
+
+
 def _govde_secicisinden(doc: HTMLParser, secici: str) -> str:
     parcalar = []
     for kap in doc.css(secici):
@@ -216,7 +233,10 @@ def makale_ayristir(html: str, kaynak: HaberKaynagi) -> Makale:
         govde = _govde_secicisinden(doc, kaynak.govde_secici)
     if not govde:
         raise KaynakHatasi(f"{kaynak.kod}: makale gövdesi bulunamadı")
-    baslik = metin_temizle(ld.get("headline"))
+    spot = _spot(doc, ld, kaynak.kod)
+    if spot and not govde.startswith(spot):
+        govde = f"{spot}\n\n{govde}"
+    baslik = _ld_metni(ld, "headline")
     if not baslik:
         h1 = doc.css_first("h1")
         baslik = metin_temizle(h1.text()) if h1 else ""

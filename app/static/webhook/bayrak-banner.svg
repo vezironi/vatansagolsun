@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400">
+  <!-- Türk bayrağı, bant oranında (3:1). Ay-yıldız resmî ölçülerle: G = 400 (bayrak yüksekliği). -->
+  <defs>
+    <linearGradient id="dalga" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="0.22" stop-color="#fff" stop-opacity="0.07"/>
+      <stop offset="0.45" stop-color="#000" stop-opacity="0.10"/>
+      <stop offset="0.7" stop-color="#fff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="#E30A17"/>
+  <g transform="translate(-12.5 0) scale(0.5)">
+    <circle cx="425" cy="400" r="200" fill="#fff"/>
+    <circle cx="475" cy="400" r="160" fill="#E30A17"/>
+    <polygon fill="#fff" points="583.334,400 764.235,458.779 652.431,304.894 652.431,495.106 764.235,341.221"/>
+  </g>
+  <rect width="1200" height="400" fill="url(#dalga)"/>
+</svg>

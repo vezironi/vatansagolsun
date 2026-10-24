@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from slowapi import Limiter
 from sqlalchemy.orm import Session
 
-from app import bannerlar, repo
+from app import bannerlar, repo, webhooks
 from app.config import get_settings
 from app.dates import bugun
 from app.db import get_session
@@ -283,5 +283,64 @@ def bildir_router_olustur(limiter: Limiter) -> APIRouter:
             s, mesaj=mesaj, iletisim=iletisim or None, sehit_id=kayit.id if kayit else None
         )
         return templates.TemplateResponse(request, "bildir_tesekkur.html", {})
+
+    return router
+
+
+WEBHOOK_SINIRI = "5/minute"
+
+
+def _webhook_ornekleri() -> dict:
+    """Sayfadaki örnek gövdeler: gerçek gövde üreticileriyle, uydurma bir kayıt üzerinden."""
+    ornek = webhooks.ornek_sehit()
+    site = get_settings().site_url.rstrip("/")
+    return {
+        "discord": json.dumps(webhooks.discord_govdesi(ornek, site), ensure_ascii=False, indent=2),
+        "genel": json.dumps(webhooks.genel_govde(ornek, site), ensure_ascii=False, indent=2),
+    }
+
+
+def _webhook_sayfasi(request: Request, *, hata: str | None = None, silme_sonucu: str | None = None,
+                     form: dict | None = None, status_code: int = 200):
+    return templates.TemplateResponse(request, "webhooks.html", {
+        "hata": hata, "silme_sonucu": silme_sonucu, "form": form or {}, "ornekler": _webhook_ornekleri(),
+        "imza_basligi": webhooks.IMZA_BASLIGI, "olay_basligi": webhooks.OLAY_BASLIGI,
+        "yeni_gun": webhooks.YENI_GUN_SAYISI, "hata_siniri": webhooks.HATA_SINIRI,
+    }, status_code=status_code)
+
+
+@router.get("/webhooks")
+def webhook_sayfasi(request: Request):
+    return _webhook_sayfasi(request)
+
+
+def webhook_router_olustur(limiter: Limiter) -> APIRouter:
+    router = APIRouter()
+
+    @router.post("/webhooks")
+    @limiter.limit(WEBHOOK_SINIRI)
+    def webhook_ekle(
+        request: Request,
+        s: Oturum,
+        url: Annotated[str, Form()] = "",
+        ad: Annotated[str, Form()] = "",
+        iletisim: Annotated[str, Form()] = "",
+    ):
+        form = {"url": url, "ad": ad, "iletisim": iletisim}
+        try:
+            kayit = webhooks.kayit_ekle(s, url=url, ad=ad, iletisim=iletisim)
+        except webhooks.WebhookHatasi as hata:
+            return _webhook_sayfasi(request, hata=str(hata), form=form, status_code=400)
+        return templates.TemplateResponse(request, "webhook_eklendi.html", {
+            "webhook": kayit.webhook, "silme_anahtari": kayit.silme_anahtari,
+            "genel": kayit.webhook.tur == webhooks.WebhookTuru.genel, "imza_basligi": webhooks.IMZA_BASLIGI,
+        })
+
+    @router.post("/webhooks/sil")
+    @limiter.limit(WEBHOOK_SINIRI)
+    def webhook_sil(request: Request, s: Oturum, anahtar: Annotated[str, Form()] = ""):
+        if webhooks.anahtarla_sil(s, anahtar):
+            return _webhook_sayfasi(request, silme_sonucu="Webhook silindi; artık bildirim gönderilmeyecek.")
+        return _webhook_sayfasi(request, hata="Bu silme anahtarına ait bir webhook bulunamadı.", status_code=400)
 
     return router

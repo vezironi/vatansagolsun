@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block baslik %}Webhook alındı — vatansagolsun{% endblock %}
+{% block meta %}<meta name="robots" content="noindex">{% endblock %}
+{% block icerik %}
+<div class="wrap page prose">
+  <h1 class="ptitle">Teşekkürler, webhook'unuz alındı</h1>
+  <p>Adresiniz <b>onay bekliyor</b>. Kontrol edip onayladığımızda kanalınıza bir deneme mesajı gelecek; o andan sonra her yeni şehidimiz için bildirim gönderilecek.</p>
+
+  <h2>Silme anahtarınız</h2>
+  <p>Webhook'u silmek isterseniz bu anahtar gerekir. <b>Yalnızca şimdi gösteriliyor</b>; güvenli bir yere kaydedin.</p>
+  <pre class="anahtar"><code>{{ silme_anahtari }}</code></pre>
+
+  {% if genel %}
+  <h2>İmza anahtarınız</h2>
+  <p>Gelen isteklerin bizden geldiğini <code>{{ imza_basligi }}</code> başlığındaki imzayla bu anahtarı kullanarak doğrulayabilirsiniz (ayrıntılar <a class="ul" href="/webhooks">Webhooks</a> sayfasında). Bu anahtar da yalnızca şimdi gösteriliyor.</p>
+  <pre class="anahtar"><code>{{ webhook.imza_anahtari }}</code></pre>
+  {% endif %}
+
+  <p class="pnote"><a class="ul" href="/webhooks">Webhooks sayfasına dön</a> · <a class="ul" href="/">Ana sayfa</a></p>
+</div>
+{% endblock %}

@@ -21,7 +21,8 @@ from app.text import isim_anahtari, katla
 logger = logging.getLogger(__name__)
 
 ONCELIK: dict[str, int] = {
-    "panel": 4, "egm": 3, "sg": 3, "sehitlerimiz": 2, "temmuz15": 2, "kahramanlar": 1, "haber": 0, "ornek": 0,
+    "panel": 4, "egm": 3, "sg": 3, "sehitlerimiz": 2, "temmuz15": 2, "kahramanlar": 1, "excel": 1,
+    "haber": 0, "ornek": 0,
 }
 
 _HASSASIYET_SIRASI = {Hassasiyet.bilinmiyor: 0, Hassasiyet.yil: 1, Hassasiyet.tam: 2}
@@ -262,8 +263,14 @@ def _kaynak_kaydi(sehit: Sehit, ham: HamKayit) -> Kaynak:
     )
 
 
-def kayit_aktar(s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda) -> Sonuc:
-    """Tek kaydı savepoint içinde işler; asla fırlatmaz. Commit çağırana aittir."""
+def kayit_aktar(
+    s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda,
+    ayni_kisi_olabilir: Callable[[Sehit, HamKayit], bool] | None = None,
+) -> Sonuc:
+    """Tek kaydı savepoint içinde işler; asla fırlatmaz. Commit çağırana aittir.
+
+    `ayni_kisi_olabilir` verilirse, eşleşen aday için False dönerse yeni kayıt açılır.
+    """
     if not any(c.isalpha() for c in ham.ad or ""):
         return Sonuc("hatali", None, f"Ad boş ya da harf içermiyor: {ham.ad!r}")
     try:
@@ -279,6 +286,8 @@ def kayit_aktar(s: Session, ham: HamKayit, *, yeni_durum: Durum = Durum.yayinda)
                 return Sonuc("atlandi", None)
             veri = ham_to_veri(ham)
             mevcut = None if ham.isimsiz else eslesen_bul(s, ham)
+            if mevcut is not None and ayni_kisi_olabilir is not None and not ayni_kisi_olabilir(mevcut, ham):
+                mevcut = None
             if mevcut is None:
                 sehit = repo.yeni_sehit(s, veri, durum=yeni_durum, commit=False)
                 s.add(_kaynak_kaydi(sehit, ham))

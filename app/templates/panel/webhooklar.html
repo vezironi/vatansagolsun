@@ -1,0 +1,41 @@
+{% extends "panel/base.html" %}
+{% block baslik %}Webhooklar{% endblock %}
+{% block icerik %}
+{% include "panel/_sekmeler.html" %}
+<h1 class="serif">Webhooklar</h1>
+<p class="sayilar">Ziyaretçilerin /webhooks sayfasından eklediği adresler. Onaylayınca adrese bir deneme mesajı gider; başarılıysa webhook aktif olur ve yeni şehitler oraya duyurulur.</p>
+<p class="sayilar"><b>Deneme şehit mesajı gönder</b>: gerçek bir yeni şehit duyurusunun aynısını, "deneme" olarak işaretleyip gönderir. Kayıt no boşsa uydurma örnek kayıt kullanılır; fotoğraflı küçük görseli görmek için fotoğrafı olan bir kaydın numarasını yazın.</p>
+{% if sonuc %}<p class="{{ 'tamam' if sonuc.tamam else 'hata' }}" role="status">{{ sonuc.metin }}</p>{% endif %}
+{% set etiketler = {"onay_bekliyor": "Onay bekleyenler", "aktif": "Aktif", "kapali": "Kendiliğinden kapananlar", "reddedildi": "Reddedilenler"} %}
+{% for durum, liste in gruplar %}
+<h2 class="serif">{{ etiketler[durum.value] }} <span class="sayilar">({{ liste|length }})</span></h2>
+{% for w in liste %}
+<article class="kart kayit">
+  <p><b>{{ w.ad or "Adsız" }}</b> <span class="rozet">{{ "Discord" if w.tur.value == "discord" else "JSON" }}</span></p>
+  <p class="sayilar"><code>{{ gizli_adres(w) }}</code></p>
+  <p class="sayilar">
+    Eklenme: {{ w.olusturma|istanbul_saati }}
+    {% if w.iletisim %} · İletişim: {{ w.iletisim }}{% endif %}
+    · Başarılı gönderim: {{ w.gonderim_sayisi }}
+    {% if w.son_gonderim %} · Son deneme: {{ w.son_gonderim|istanbul_saati }} — {{ w.son_sonuc }}{% endif %}
+  </p>
+  <div class="islemler">
+    {% if w.durum.value != "aktif" %}
+    <form method="post" action="/panel/webhooklar/{{ w.id }}/onayla"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">{{ "Onayla" if w.durum.value == "onay_bekliyor" else "Yeniden etkinleştir" }}</button></form>
+    {% endif %}
+    {% if w.durum.value in ("onay_bekliyor", "aktif") %}
+    <form method="post" action="/panel/webhooklar/{{ w.id }}/reddet"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">{{ "Reddet" if w.durum.value == "onay_bekliyor" else "Durdur" }}</button></form>
+    {% endif %}
+    <form method="post" action="/panel/webhooklar/{{ w.id }}/ornek" class="ornek-gonder" onsubmit="return confirm('Bu adrese deneme amaçlı bir yeni şehit mesajı gönderilsin mi? Mesaj deneme olarak işaretlenir.')">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="sehit_id" inputmode="numeric" placeholder="Kayıt no (isteğe bağlı)" aria-label="Deneme için kayıt no (boşsa örnek kayıt)">
+      <button type="submit" class="ikincil">Deneme şehit mesajı gönder</button>
+    </form>
+    <form method="post" action="/panel/webhooklar/{{ w.id }}/sil" onsubmit="return confirm('Bu webhook silinsin mi?')"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ikincil">Sil</button></form>
+  </div>
+</article>
+{% else %}
+<p class="sayilar">Yok.</p>
+{% endfor %}
+{% endfor %}
+{% endblock %}

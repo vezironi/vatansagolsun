@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block baslik %}Webhooks — vatansagolsun{% endblock %}
+{% block meta %}<meta name="description" content="Yeni bir şehidimiz yayına alındığında Discord kanalınıza ya da kendi sunucunuza otomatik bildirim gelsin.">{% endblock %}
+{% block icerik %}
+<div class="wrap page prose">
+  <h1 class="ptitle">Webhooks</h1>
+  <p>Yeni bir şehidimiz yayına alındığında <b>Discord kanalınıza</b> ya da <b>kendi sunucunuza</b> otomatik bildirim gelsin. Adresinizi bırakın; kontrol edip onayladıktan sonra bildirimler başlar.</p>
+  <ul>
+    <li>Yalnızca <b>yeni şehitler</b> için bildirim gider: şehadeti son {{ yeni_gun }} gün içinde olan ve doğrulanıp yayına alınan kayıtlar. Geçmiş kayıtlar için bildirim gönderilmez.</li>
+    <li>Adres <b>Discord webhook</b> adresiyse mesaj, görseller ve bilgilerle birlikte hazır bir Discord kartı olarak gelir.</li>
+    <li>Başka bir adresse şehit bilgileri <b>JSON nesnesi</b> olarak gönderilir.</li>
+  </ul>
+
+  {% if silme_sonucu %}<p class="tamam" role="status">{{ silme_sonucu }}</p>{% endif %}
+  {% if hata %}<p class="err" role="alert">{{ hata }}</p>{% endif %}
+
+  <h2>Webhook ekle</h2>
+  <form class="bform" method="post" action="/webhooks">
+    <label>Webhook adresi
+      <input type="url" name="url" required maxlength="500" value="{{ form.url or '' }}" placeholder="https://discord.com/api/webhooks/…" autocomplete="off" spellcheck="false">
+    </label>
+    <label>Ad (isteğe bağlı)
+      <input type="text" name="ad" maxlength="100" value="{{ form.ad or '' }}" placeholder="Örn. Sunucumuzun #duyurular kanalı">
+    </label>
+    <label>İletişim (isteğe bağlı)
+      <input type="text" name="iletisim" maxlength="200" value="{{ form.iletisim or '' }}" placeholder="Sorun olursa size ulaşabilmemiz için e-posta">
+    </label>
+    <button type="submit">Webhook ekle</button>
+  </form>
+  <p class="pnote">Discord'da: <b>Kanal ayarları → Entegrasyonlar → Webhook'lar → Yeni Webhook → Webhook URL'sini Kopyala</b>. Adres yalnızca <code>https://</code> olabilir; yerel ya da özel ağ adresleri kabul edilmez.</p>
+
+  <h2>Discord'da nasıl görünür?</h2>
+  <div class="dc" aria-label="Discord mesajı önizlemesi">
+    <img class="dc-avatar" src="/static/webhook/bayrak-ikon.png" alt="" width="40" height="40">
+    <div class="dc-govde">
+      <div class="dc-bas"><b>Vatan Sağ Olsun</b><span class="dc-bot">UYGULAMA</span><span class="dc-saat">Bugün 14:32</span></div>
+      <p class="dc-icerik"><b>Şehidimiz var.</b> Allah'tan rahmet, ailesine ve aziz milletimize başsağlığı diliyoruz.</p>
+      <div class="dc-embed">
+        <div class="dc-ust">
+          <div>
+            <div class="dc-yazar"><img src="/static/webhook/bayrak-ikon.png" alt="" width="24" height="24">Vatan Sağ Olsun</div>
+            <div class="dc-baslik">Piyade Uzman Çavuş Ahmet YILMAZ</div>
+            <p class="dc-aciklama">Örnek: Hakkâri'de terör örgütüne yönelik operasyonda şehit düştü.</p>
+            <div class="dc-alanlar">
+              <div><b>Şehadet tarihi</b>24.10.2026</div>
+              <div><b>Şehadet yeri</b>Hakkâri</div>
+              <div><b>Memleket</b>Sivas</div>
+              <div><b>Kurum</b>Türk Silahlı Kuvvetleri</div>
+            </div>
+          </div>
+          <div class="dc-kucuk" title="Küçük görsel"><span>Şehidin<br>fotoğrafı<br><small>(varsa)</small></span></div>
+        </div>
+        <img class="dc-buyuk" src="/static/webhook/bayrak-banner.png" alt="Türk bayrağı" width="1200" height="400">
+        <div class="dc-alt"><img src="/static/webhook/bayrak-ikon.png" alt="" width="20" height="20">Şehitlerimizi rahmet, minnet ve saygıyla anıyoruz · Vatan sağ olsun • Bugün 14:32</div>
+      </div>
+    </div>
+  </div>
+  <details>
+    <summary>Discord'a giden gövde (JSON)</summary>
+    <pre><code>{{ ornekler.discord }}</code></pre>
+  </details>
+
+  <h2>Discord dışındaki adresler</h2>
+  <p>Şehit bilgileri <code>POST</code> isteğiyle, <code>application/json</code> olarak gönderilir. İstek başlıkları:</p>
+  <ul>
+    <li><code>{{ olay_basligi }}</code>: <code>yeni_sehit</code> ya da onay sırasındaki <code>deneme</code>.</li>
+    <li><code>{{ imza_basligi }}</code>: <code>sha256=…</code>. Gövdenin, size verilen <b>imza anahtarıyla</b> HMAC-SHA256 imzası. İsteğin gerçekten bizden geldiğini bununla doğrulayın.</li>
+  </ul>
+  <details open>
+    <summary>Örnek gövde</summary>
+    <pre><code>{{ ornekler.genel }}</code></pre>
+  </details>
+  <details>
+    <summary>İmzayı doğrulama (Python)</summary>
+    <pre><code>import hashlib, hmac
+
+def dogru_mu(govde: bytes, imza_basligi: str, anahtar: str) -> bool:
+    beklenen = "sha256=" + hmac.new(anahtar.encode(), govde, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(beklenen, imza_basligi)</code></pre>
+  </details>
+  <p class="pnote">Örneklerdeki kayıt uydurmadır. Art arda {{ hata_siniri }} kez ulaşılamayan ya da Discord'da silinmiş webhooklar kendiliğinden kapatılır.</p>
+
+  <h2>Webhook sil</h2>
+  <form class="bform" method="post" action="/webhooks/sil">
+    <label>Silme anahtarı
+      <input type="text" name="anahtar" required maxlength="100" autocomplete="off" spellcheck="false" placeholder="Webhook eklediğinizde verilen anahtar">
+    </label>
+    <button type="submit">Sil</button>
+  </form>
+</div>
+{% endblock %}

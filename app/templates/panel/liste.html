@@ -9,6 +9,24 @@
 {% if mod == "bekleyen" %}
 <h1 class="serif">Onay bekleyenler</h1>
 <p class="sayilar"><b>{{ bekleyen_sayisi }}</b> bekleyen · <b>{{ yeni_bildirim }}</b> yeni bildirim</p>
+{% if sonuc %}<p class="tamam" role="status">{{ sonuc }}</p>{% endif %}
+{% if kayitlar %}
+<form id="toplu-islem" method="post" action="/panel/toplu-islem" class="kart toplu-islem">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="sec-dugmeleri">
+    <span class="soluk">Seç:</span>
+    <button type="button" class="ikincil" data-sec="hepsi">Tümü</button>
+    <button type="button" class="ikincil" data-sec="yüksek">Güveni yüksek</button>
+    <button type="button" class="ikincil" data-sec="yüksek orta">Yüksek + orta</button>
+    <button type="button" class="ikincil" data-sec="">Hiçbiri</button>
+  </div>
+  <div class="islemler">
+    <span class="sayilar"><b id="secili-sayi">0</b> kayıt seçili</span>
+    <button type="submit" name="islem" value="onayla">Seçilenleri onayla</button>
+    <button type="submit" name="islem" value="reddet" class="ikincil">Seçilenleri reddet</button>
+  </div>
+</form>
+{% endif %}
 {% else %}
 <h1 class="serif">Yayındakiler</h1>
 <form method="get" action="/panel/yayinda" class="ara">
@@ -19,9 +37,11 @@
 {% endif %}
 
 {% for k in kayitlar %}
+{% set ns = namespace(guven="") %}
+{% for ky in k.kaynaklar %}{% if ky.metin and "Güven: " in ky.metin %}{% set ns.guven = ky.metin.split("Güven: ")[1].split(" ")[0] %}{% endif %}{% endfor %}
 <article class="kart kayit">
   <header>
-    <h2 class="serif"><a href="/panel/sehit/{{ k.id }}">{{ k.gorunen_ad }}</a></h2>
+    <h2 class="serif">{% if mod == "bekleyen" %}<input type="checkbox" class="sec" name="id" value="{{ k.id }}" form="toplu-islem" data-guven="{{ ns.guven }}" aria-label="{{ k.gorunen_ad }} seç"> {% endif %}<a href="/panel/sehit/{{ k.id }}">{{ k.gorunen_ad }}</a></h2>
     <span class="rozetler">
       {% if k.isimsiz %}<span class="rozet uyari">İsimsiz</span>{% endif %}
       {% if not k.resmi_teyit %}<span class="rozet uyari">Resmî teyit yok</span>{% endif %}
@@ -55,6 +75,31 @@
 {% else %}
 <p class="soluk">{% if mod == "yayinda" %}Kayıt bulunamadı.{% else %}Onay bekleyen kayıt yok.{% endif %}</p>
 {% endfor %}
+
+{% if mod == "bekleyen" and kayitlar %}
+<script>
+(() => {
+  const form = document.getElementById("toplu-islem");
+  const kutular = [...document.querySelectorAll("input.sec")];
+  const sayi = document.getElementById("secili-sayi");
+  const guncelle = () => { sayi.textContent = kutular.filter((k) => k.checked).length; };
+  kutular.forEach((k) => k.addEventListener("change", guncelle));
+  form.querySelectorAll("[data-sec]").forEach((d) => d.addEventListener("click", () => {
+    const secim = d.dataset.sec;
+    kutular.forEach((k) => {
+      k.checked = secim === "hepsi" || (secim !== "" && secim.split(" ").includes(k.dataset.guven));
+    });
+    guncelle();
+  }));
+  form.addEventListener("submit", (e) => {
+    const n = kutular.filter((k) => k.checked).length;
+    const soru = e.submitter && e.submitter.value === "reddet" ? "reddedilsin mi?" : "yayına alınsın mı?";
+    if (!n) { e.preventDefault(); alert("Önce kayıt seçin."); return; }
+    if (!confirm(n + " kayıt " + soru)) e.preventDefault();
+  });
+})();
+</script>
+{% endif %}
 
 {% if mod == "yayinda" and toplam > sayfa * adet %}
 <p><a href="/panel/yayinda?q={{ q | urlencode }}&amp;sayfa={{ sayfa + 1 }}">Sonraki sayfa</a></p>

@@ -24,6 +24,18 @@ class Hassasiyet(StrEnum):
     bilinmiyor = "bilinmiyor"
 
 
+class WebhookDurumu(StrEnum):
+    onay_bekliyor = "onay_bekliyor"
+    aktif = "aktif"
+    kapali = "kapali"  # art arda hata verdiği ya da hedef silindiği için kendiliğinden kapandı
+    reddedildi = "reddedildi"
+
+
+class WebhookTuru(StrEnum):
+    discord = "discord"
+    genel = "genel"
+
+
 class Kategori(StrEnum):
     asker = "asker"
     jandarma = "jandarma"
@@ -69,6 +81,7 @@ class Sehit(Base):
     isimsiz: Mapped[bool] = mapped_column(Boolean, default=False)
     kaynak_kodu: Mapped[str] = mapped_column(String(50), index=True)
     elle_duzenlendi: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    webhook_duyurusu: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # bir kez duyurulur
     slug: Mapped[str] = mapped_column(String(300), default="")
     arama_metni: Mapped[str] = mapped_column(Text, default="", index=True)
     isim_anahtari: Mapped[str] = mapped_column(String(400), default="", index=True)
@@ -149,3 +162,23 @@ class Bildirim(Base):
     iletisim: Mapped[str | None] = mapped_column(String(200))
     kapandi: Mapped[bool] = mapped_column(Boolean, default=False)
     tarih: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+
+
+class Webhook(Base):
+    __tablename__ = "webhooklar"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    url: Mapped[str] = mapped_column(Text, unique=True)  # Discord adresi gizli anahtar içerir: herkese gösterilmez
+    tur: Mapped[WebhookTuru] = mapped_column(_enum(WebhookTuru))
+    ad: Mapped[str | None] = mapped_column(String(100))
+    iletisim: Mapped[str | None] = mapped_column(String(200))
+    durum: Mapped[WebhookDurumu] = mapped_column(
+        _enum(WebhookDurumu), default=WebhookDurumu.onay_bekliyor, index=True
+    )
+    silme_anahtari_ozeti: Mapped[str] = mapped_column(String(64))  # sha256; anahtarın kendisi saklanmaz
+    imza_anahtari: Mapped[str] = mapped_column(String(64))  # genel webhook gövdesini HMAC ile imzalar
+    olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_simdi)
+    son_gonderim: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    son_sonuc: Mapped[str | None] = mapped_column(String(300))
+    ardisik_hata: Mapped[int] = mapped_column(Integer, default=0)
+    gonderim_sayisi: Mapped[int] = mapped_column(Integer, default=0)

@@ -76,6 +76,7 @@ Evladını toprağa veren bir anne ya da baba, acısının en derin yerinde ço�
 - **Şehit penceresi ve kayıt sayfası.** Görev, şehadet tarihi ve yeri, memleket, baba adı, kurum, fotoğraf, şehadet anlatımı ve kaynak bağlantıları.
 - **Yıl dönümleri.** İstediğiniz günün şehitleri.
 - **Bannerlar.** Başka sitelerin kendi sayfalarına ekleyebileceği anma bannerları (HTML, React, Vue, Svelte, Angular).
+- **Webhooks.** Yeni bir şehidimiz yayına alındığında Discord kanallarına hazır bir kart, diğer adreslere JSON bildirimi gider. Eklenen her webhook önce sizin onayınızı bekler.
 - **Hatalı kayıt bildirimi.** Eksik ya da yanlış bir kaydı herkes bildirebilir.
 - **Açık API.** Anahtarsız ve ücretsiz: `/api/istatistik`, `/api/sehitler`, `/api/bugun`. Belgesi `/api/belgeler` adresinde.
 - **Yönetici paneli.** Kayıtları onaylama, düzenleme, birleştirme; toplayıcıyı ve yapay zekâ sağlayıcılarını izleme.
@@ -104,6 +105,7 @@ Bu bölüm teknik bilgisi olmayan biri için yazıldı: komutları olduğu gibi 
 [8. Yedek](#8-yedek-alma) ·
 [9. Geçmiş veriler](#9-geçmiş-verileri-aktarma) ·
 [10. Otomatik toplama](#10-yeni-şehitleri-otomatik-toplama) ·
+[11. Webhooklar](#11-webhooklar) ·
 [Geliştiriciler](#geliştiriciler-için)
 
 ---
@@ -265,7 +267,7 @@ Siteler, her istek arasında en az 2 saniye beklenerek, sunucularını yormadan 
 `.env` içindeki `KAYNAK_IZINLERI` satırı hangi kaynaklardan veri alınacağını belirler:
 
 ```
-KAYNAK_IZINLERI=["egm","sg","kahramanlar","sehitlerimiz","temmuz15","hurriyet","sabah"]
+KAYNAK_IZINLERI=["egm","sg","kahramanlar","sehitlerimiz","temmuz15","hurriyet","sabah","aa","trt"]
 ```
 
 Bir site itiraz ederse o kaynağın adını listeden **çıkarın** ve `docker compose up -d` çalıştırın; o kaynağa artık hiç istek gitmez. O kaynaktan gelmiş kayıtları API'den de gizlemek isterseniz adını `API_HARIC_KAYNAKLAR=["sehitlerimiz"]` satırına yazın.
@@ -328,6 +330,27 @@ docker compose exec app python -m app.cli sehitlerimiz-kontrol
 
 > Uygulama Docker'da **tek** süreç olarak çalışır. `uvicorn`'a `--workers` ekleyip birden fazla süreç çalıştırırsanız her süreç kendi zamanlayıcısını başlatır ve kontrol birden fazla kez yapılır.
 
+### Excel ile toplu ekleme
+
+Elinizde bir isim listesi varsa (ör. bir haber sitesinin derlediği liste) yönetici panelinde **Toplu ekle** sekmesini kullanın:
+
+1. **Boş şablonu indir** düğmesiyle şablonu alın. İlk satır başlıktır, yalnızca **Ad** zorunludur. Diğer sütunlar: Soyad, Görev, Kategori, Kurum, Memleket, Şehadet tarihi (GG.AA.YYYY ya da yalnız yıl), Şehadet yeri, Şehadet olayı, Doğum yılı, Baba adı, Dönem, Fotoğraf URL, Kaynak URL (birden çok olabilir), Not. Sütunların sırası önemli değildir.
+2. Dosyayı seçin. Yeni kayıtların **onay bekliyor** olarak mı yoksa **doğrudan yayında** mı ekleneceğini seçip **Yükle ve ekle**'ye basın.
+3. Sayfa kaç kaydın eklendiğini, kaçının sitede zaten olduğunu ve hangi satırların neden eklenemediğini (satır numarasıyla) gösterir.
+
+- Sitede zaten olan kişi yeniden eklenmez, yalnızca boş bilgileri doldurulur; resmî kaynaktan gelen bilgi ezilmez.
+- Aynı adı taşıyan ama rütbesi ya da kurumu açıkça farklı (ör. polis ile er, astsubay ile uzman çavuş) iki kişi birleştirilmez.
+- **Aynı dosyayı yeniden yüklemek güvenlidir:** önceki satırlar yeni kayıt açmaz, yalnızca kayıtta boş kalan bilgileri doldurur. Böylece önce yalnızca isimlerle bir liste yükleyip bilgiler bulundukça güncel dosyayı yeniden yükleyebilirsiniz. Bunun için satırdaki **ad, soyad ve görevi değiştirmeyin**; yazım düzeltmesini panelde yapın.
+- "Not" ve (varsa) "Güven" sütunu panelde kaynağın altında görünür, sitede gösterilmez.
+- Kayıtlar resmî teyitsiz sayılır. Doğrudan yayına alınan ve şehadeti son 7 gün içinde olan kayıtlar webhooklara duyurulur.
+
+**Toplu onay:** Onay bekleyenler sayfasında her kaydın yanında bir seçim kutusu vardır. Üstteki çubuktan **Tümü**, **Güveni yüksek** ya da **Yüksek + orta** ile seçip **Seçilenleri onayla** veya **Seçilenleri reddet** düğmesine basın; işlemden önce kaç kayıt etkileneceği sorulur.
+
+2015'te başlayan hendek operasyonları dönemine ait 722 isimlik liste (`veri/hendek-2015.txt`) iki dosyaya ayrılmıştır:
+
+- `veri/hendek-2015.xlsx`: internette araştırılan 188 kişi. Bulunanların ayrıntıları kaynak linkleriyle doldurulmuştur. "Güven" sütunu: **yüksek**, **orta** ya da **bulunamadı** (arandı, uygun kişi çıkmadı; yalnızca isim ve rütbe).
+- `veri/hendek-2015-kalan.txt`: henüz araştırılmamış 534 isim, özgün listeyle aynı biçimde ("ŞEHİT RÜTBE AD SOYAD").
+
 ---
 
 ## 10. Yeni şehitleri otomatik toplama
@@ -335,8 +358,9 @@ docker compose exec app python -m app.cli sehitlerimiz-kontrol
 Site **30 dakikada bir** (sunucu açıldıktan 2 dakika sonra ilk tur) yeni şehit haberlerini kendisi arar. Bunun için `.env` içinde `ZAMANLAYICI_AKTIF=true` olmalıdır (`docker-compose.yml` bunu zaten açar). Her tur şunlara bakar:
 
 - **Resmî sayfalar:** Emniyet (`egm`) ve Sahil Güvenlik (`sg`) sitelerinin en yeni kayıtları.
-- **Haber siteleri:** **Hürriyet** ve **Sabah**. Bu sitelerin haber akışında şehitlikle ilgili haberler yapay zekâyla (OpenAI, Gemini veya Claude) okunur; haberde geçen şehitlerin adı, görevi ve şehadet tarihi çıkarılır. Her haber yalnızca bir kez okunur.
-- **AA ve TRT** de desteklenir ama **varsayılan olarak kapalıdır**. Açmak için `.env` içindeki `KAYNAK_IZINLERI` listesine `"aa"` ve/veya `"trt"` ekleyip `docker compose up -d` çalıştırın.
+- **Haber siteleri:** **Hürriyet**, **Sabah**, **Anadolu Ajansı** (`aa`) ve **TRT Haber** (`trt`). Bu sitelerin haber akışında şehitlikle ilgili haberler yapay zekâyla (OpenAI, Gemini veya Claude) okunur; haberde geçen şehitlerin adı, görevi ve şehadet tarihi çıkarılır. Her haber yalnızca bir kez okunur.
+
+> **Önceden kurulmuş bir sunucuda** `.env` dosyanızda `KAYNAK_IZINLERI` satırı varsa AA ve TRT kendiliğinden açılmaz: satırın sonuna `"aa","trt"` ekleyin (yukarıdaki bölüm 9'daki örnek gibi) ve `docker compose up -d` çalıştırın. Satır hiç yoksa bir şey yapmanız gerekmez.
 
 **Toplayıcı hiçbir kaydı kendi başına yayına almaz.** Bulduğu her yeni kayıt panelde **onay bekleyenler** arasına düşer; siz bakıp onaylayınca yayınlanır.
 
@@ -401,6 +425,29 @@ docker compose exec app python -m app.cli topla
 - Emniyet ve Sahil Güvenlik sayfaları, o kaynağın **toplu aktarımı yapılmadan taranmaz** (aksi hâlde yüzlerce eski kayıt onay bekleyenlere düşerdi). Önce bölüm 9'daki `aktar egm` ve `aktar sg` komutlarını çalıştırın; o zamana kadar durum "önce aktar çalıştırın" yazar.
 - Sunucu bir süre kapalı kalırsa toplayıcı, açıldığında **en fazla 3 gün** geriye giderek kaçırılan haberleri telafi eder.
 - X (Twitter) hesapları kaynak olarak **kullanılmaz**: X otomatik okumaya izin vermiyor ve ücretli API gerektiriyor. Ayrıca doğrulanmamış paylaşımlar bu site için güvenilir değildir.
+
+---
+
+## 11. Webhooklar
+
+Ziyaretçiler sitedeki **Webhooks** sayfasından (`/webhooks`) bir adres bırakabilir. Yeni bir şehidimiz yayına alındığında o adrese bildirim gider:
+
+- **Discord webhook adresi** (`https://discord.com/api/webhooks/…`) ise hazır bir Discord kartı gönderilir: üstte "Şehidimiz var" mesajı; kartta yazar (Vatan Sağ Olsun), şehidin rütbesi ve adı, nasıl şehit düştüğü, şehadet tarihi, yeri, memleketi ve kurumu; **büyük görsel olarak Türk bayrağı**, **küçük görsel olarak şehidin fotoğrafı** (varsa) ve anma yazılı alt bilgi.
+- **Başka bir adres** ise şehit bilgileri JSON nesnesi olarak `POST` edilir. İstek, webhook'a özel bir anahtarla imzalanır (`X-Vatansagolsun-Imza` başlığı); ayrıntılar ve örnek gövde Webhooks sayfasında.
+
+**Ne zaman gider?** Yalnızca siz panelde bir kaydı onaylayıp yayına aldığınızda ve şehadet tarihi **son 7 gün içindeyse**. Toplu aktarımla gelen geçmiş kayıtlar, yılı belli olup tarihi belli olmayan kayıtlar ve "İsimsiz" kayıtlar duyurulmaz. Her kayıt **yalnızca bir kez** duyurulur; yayından kaldırıp yeniden onaylasanız da ikinci kez gitmez.
+
+**Onay:** Eklenen her webhook paneldeki **Webhooklar** sekmesine **onay bekliyor** olarak düşer. Siz onaylayana kadar o adrese hiçbir istek gönderilmez. **Onayla** düğmesine basınca adrese bir deneme mesajı gider; başarılıysa webhook aktif olur, başarısızsa hata yazılır ve onay bekliyor olarak kalır. Aynı sekmeden webhook'ları durdurabilir, reddedebilir ya da silebilirsiniz. Discord adreslerindeki gizli anahtar panelde de gösterilmez.
+
+**Deneme şehit mesajı:** Her webhook'un yanındaki **Deneme şehit mesajı gönder** düğmesi, gerçek bir yeni şehit duyurusunun aynısını gönderir; böylece kartın nasıl göründüğünü kendi kanalınızda görürsünüz. Mesaj "🧪 Deneme mesajı — gerçek bir duyuru değildir" diye başlar; JSON adreslerinde olay adı `yeni_sehit_deneme` olur ki karşı taraf bunu gerçek kayıt olarak işlemesin. Kayıt no boş bırakılırsa uydurma bir örnek kayıt kullanılır; şehidin fotoğrafının küçük görselde nasıl durduğunu görmek için fotoğrafı olan bir kaydın numarasını yazın. Deneme, webhook'u onaylamaz ve kaydı "duyuruldu" saymaz.
+
+**Kendiliğinden kapanma:** Discord'da silinmiş bir webhook ya da art arda 5 kez ulaşılamayan bir adres kendiliğinden kapatılır ("Kendiliğinden kapananlar"); isterseniz **Yeniden etkinleştir** düğmesiyle açarsınız.
+
+**Silme:** Webhook'u ekleyen kişiye bir kez **silme anahtarı** gösterilir; Webhooks sayfasının altındaki formdan bu anahtarla kendi webhook'unu silebilir.
+
+**Güvenlik:** Yalnızca `https://` adresleri kabul edilir. Yerel ya da özel ağa (ör. `127.0.0.1`, `10.x.x.x`, `192.168.x.x`, bulut meta veri adresi) çözülen adresler hem eklenirken hem gönderirken reddedilir; istek, doğrulanan IP adresine sabitlenerek atılır ve yönlendirmeler izlenmez. Form IP başına dakikada 5 istekle sınırlıdır ve en fazla 200 webhook aynı anda onay bekleyebilir.
+
+> **Önemli:** Discord'daki görseller (bayrak ve simge) sitenizden yüklenir. `.env` içindeki `SITE_URL` gerçek alan adınız olmalıdır (ör. `https://ornek.com`); `localhost` kalırsa Discord görselleri gösteremez.
 
 ---
 

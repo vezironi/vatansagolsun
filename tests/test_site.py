@@ -211,7 +211,13 @@ def test_bannerlar_kose_secici(client):
     assert t.count('class="varyant"') >= 14  # 10 bannerın her biri + köşe kurdelesinin 4 köşesi
 
 
-def test_muzik_calar_sol_altta(client):
+def test_muzik_calar_sol_altta(client, monkeypatch):
+    from app.config import get_settings
+
+    # Yerel .env'deki MUZIK_* ayarları testi etkilemesin: varsayılanlar açıkça kurulur.
+    for alan, deger in (("muzik_aktif", True), ("muzik_dosyasi", "/public/kolaydegildir.mp3"),
+                        ("muzik_basligi", "Duman — Kolay Değildir"), ("muzik_baslangic_sesi", 0.4)):
+        monkeypatch.setattr(get_settings(), alan, deger)
     t = client.get("/hakkinda").text
     assert 'id="muzik"' in t and 'data-ses="0.4"' in t
     assert '<audio id="muzik-ses-dosyasi" src="/public/kolaydegildir.mp3" preload="auto" loop>' in t

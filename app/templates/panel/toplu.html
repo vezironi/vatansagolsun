@@ -1,0 +1,48 @@
+{% extends "panel/base.html" %}
+{% block baslik %}Toplu ekle{% endblock %}
+{% block icerik %}
+{% include "panel/_sekmeler.html" %}
+<h1 class="serif">Toplu şehit ekle</h1>
+<p class="sayilar">Excel (.xlsx) dosyasındaki her satır bir kayıt olur. Sitede zaten olan kişi yeniden eklenmez, yalnızca boş bilgileri doldurulur. Aynı satır ikinci kez yüklenirse yeni kayıt açılmaz; kayıtta boş kalan bilgiler doldurulur. Böylece önce yalnızca isimlerle yüklediğiniz bir listeyi, bilgiler bulundukça yeniden yükleyebilirsiniz.</p>
+<p class="sayilar">İlk satır başlıktır; yalnızca <b>Ad</b> zorunludur. En çok {{ en_cok_mb }} MB ve {{ en_cok_satir }} satır.</p>
+<p><a class="dugme" href="/panel/toplu/sablon.xlsx" download>Boş şablonu indir</a></p>
+
+{% if hata %}<p class="hata" role="alert">{{ hata }}</p>{% endif %}
+{% if ozet %}
+<article class="kart kayit" role="status">
+  <p><b>{{ dosya_adi or "Dosya" }}</b>: {{ ozet.toplam }} satır işlendi.</p>
+  <p class="tamam">{{ ozet.eklenen }} yeni kayıt eklendi{% if ozet.eklenen %} ({{ "yayına alındı" if durum == "yayinda" else "onay bekliyor" }}){% endif %}.</p>
+  {% if ozet.birlesen %}<p class="sayilar">{{ ozet.birlesen }} kişi sitede zaten vardı: boş bilgileri dolduruldu, kaynak eklendi.</p>{% endif %}
+  {% if ozet.tamamlanan %}<p class="sayilar">{{ ozet.tamamlanan }} satır daha önce yüklenmişti: kayıttaki boş bilgiler dolduruldu.</p>{% endif %}
+  {% if ozet.atlanan %}<p class="sayilar">{{ ozet.atlanan }} satır daha önce yüklenmişti, yeni bilgi yok: atlandı.</p>{% endif %}
+  {% if ozet.hatali %}
+  <p class="hata">{{ ozet.hatali }} satır eklenemedi:</p>
+  <ul class="sayilar">{% for h in ozet.hatalar %}<li>{{ h }}</li>{% endfor %}</ul>
+  {% if ozet.hatali > ozet.hatalar|length %}<p class="sayilar">… ve {{ ozet.hatali - ozet.hatalar|length }} satır daha.</p>{% endif %}
+  {% endif %}
+  {% if ozet.eklenen and durum != "yayinda" %}<p><a class="dugme" href="/panel">Onay bekleyenlere git</a></p>{% endif %}
+</article>
+{% endif %}
+
+<form method="post" action="/panel/toplu" enctype="multipart/form-data" class="kart duzenle">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Excel dosyası <input type="file" name="dosya" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required></label>
+  <label>Yeni kayıtlar
+    <select name="durum">
+      <option value="onay_bekliyor"{% if durum != "yayinda" %} selected{% endif %}>Onay bekliyor olarak eklensin (önerilen)</option>
+      <option value="yayinda"{% if durum == "yayinda" %} selected{% endif %}>Doğrudan yayına alınsın</option>
+    </select>
+  </label>
+  <div class="islemler">
+    <button type="submit">Yükle ve ekle</button>
+  </div>
+</form>
+
+<details class="kart">
+  <summary>Sütunlar</summary>
+  <ul class="sayilar">
+    {% for baslik, alan, aciklama in sutunlar %}<li><b>{{ baslik }}</b>{% if aciklama %}: {{ aciklama }}{% endif %}</li>{% endfor %}
+  </ul>
+  <p class="sayilar">Excel'de ayrıca bir <b>Güven</b> sütunu varsa değeri panelde kaynağın altında not olarak görünür.</p>
+</details>
+{% endblock %}

@@ -6,20 +6,20 @@ from typing import Annotated
 from urllib.parse import urlparse
 
 import bcrypt
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from slowapi import Limiter
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app import repo
+from app import repo, toplu, webhooks
 from app.analiz import VARSAYILAN_SIRA, analiz_yapilandirildi_mi, park_temizle, saglayici_tablosu
 from app.dates import TZ, bugun
 from app.db import get_session
 from app.kaynaklar import haber
-from app.models import Bildirim, Durum, Hassasiyet, Kategori, KaynakDurumu, Sehit
+from app.models import Bildirim, Durum, Hassasiyet, Kategori, KaynakDurumu, Sehit, Webhook, WebhookDurumu
 from app.toplayici import RESMI_KAYNAKLAR, SAYAC_KODU, toplayici_calisiyor_mu, toplayici_kodu
 from app.schemas import SehitVeri
 from app.statik import statik
@@ -270,6 +270,15 @@ def _duzenle_sayfasi(
     )
 
 
+def _yayina_alindi(request: Request, arka: BackgroundTasks, s: Session, sehit: Sehit) -> None:
+    """Yeni şehitse webhook duyurusunu yanıt döndükten sonra arka planda başlatır."""
+    if webhooks.duyuru_hazirla(s, sehit, bugun()):
+        arka.add_task(webhooks.duyur, request.app.state.session_factory, sehit.id)
+
+
+_WEBHOOK_SIRASI = (WebhookDurumu.onay_bekliyor, WebhookDurumu.aktif, WebhookDurumu.kapali, WebhookDurumu.reddedildi)
+
+
 def panel_router_olustur(limiter: Limiter) -> APIRouter:
     # Yönlendirici her uygulama için yeniden kurulur: sınırlayıcı sızmaz (R6).
     router = APIRouter(prefix="/panel")
@@ -321,6 +330,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         )
         return _liste_sayfasi(
             request, kullanici, mod="bekleyen", kayitlar=bekleyenler,
+            sonuc=request.session.pop("panel_sonuc", None),
             bekleyen_sayisi=len(bekleyenler), yeni_bildirim=yeni_bildirim, q="",
             toplayici_hatasi=_toplayici_hatasi_var_mi(s, request.app.state.settings.kaynak_izinleri),
         )
@@ -359,6 +369,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
     @router.post("/sehit/{sehit_id:int}")
     def duzenle_kaydet(
         request: Request, kullanici: Yonetici, s: Oturum, sehit_id: int, ham: FormVerisi,
+        arka: BackgroundTasks,
         csrf: Annotated[str, Form()] = "",
         islem: Annotated[str, Form()] = "",
     ):
@@ -371,6 +382,7 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         repo.sehit_guncelle(s, sehit, veri, elle=True)
         if islem == "onayla":
             repo.durum_degistir(s, sehit, Durum.yayinda)
+            _yayina_alindi(request, arka, s, sehit)
             return RedirectResponse("/panel", status_code=303)
         return RedirectResponse(f"/panel/sehit/{sehit.id}", status_code=303)
 
@@ -471,15 +483,143 @@ def panel_router_olustur(limiter: Limiter) -> APIRouter:
         s.commit()
         return RedirectResponse("/panel/bildirimler", status_code=303)
 
+    @router.post("/toplu-islem")
+    def toplu_islem(
+        request: Request, _: Yonetici, s: Oturum, arka: BackgroundTasks,
+        csrf: Annotated[str, Form()] = "", islem: Annotated[str, Form()] = "",
+        id: Annotated[list[int], Form()] = [],  # noqa: B006 - FastAPI form listesi
+    ):
+        csrf_dogrula(request, csrf)
+        hedef = {"onayla": Durum.yayinda, "reddet": Durum.reddedildi}.get(islem)
+        if hedef is None:
+            raise HTTPException(status_code=400, detail="Geçersiz işlem")
+        kimlikler = {i for i in id if 0 < i <= INT4_EN_COK}
+        secilenler = list(s.scalars(
+            select(Sehit).where(Sehit.id.in_(kimlikler), Sehit.durum == Durum.onay_bekliyor)
+        )) if kimlikler else []
+        for sehit in secilenler:  # yalnızca hâlâ onay bekleyenler: başka sekmede işlenmiş olan atlanır
+            sehit.durum = hedef
+            sehit.alanlari_yenile()
+        s.commit()
+        if hedef == Durum.yayinda:
+            for sehit in secilenler:
+                _yayina_alindi(request, arka, s, sehit)
+        ad = "yayına alındı" if hedef == Durum.yayinda else "reddedildi"
+        request.session["panel_sonuc"] = f"{len(secilenler)} kayıt {ad}."
+        return RedirectResponse("/panel", status_code=303)
+
     def _durum_rotasi(yol: str, durum: Durum) -> None:
         @router.post(f"/sehit/{{sehit_id:int}}/{yol}", name=yol)
         def _islem(
-            request: Request, _: Yonetici, s: Oturum, sehit_id: int,
+            request: Request, _: Yonetici, s: Oturum, sehit_id: int, arka: BackgroundTasks,
             csrf: Annotated[str, Form()] = "",
         ):
             csrf_dogrula(request, csrf)
-            repo.durum_degistir(s, _sehit_getir(s, sehit_id), durum)
+            sehit = _sehit_getir(s, sehit_id)
+            repo.durum_degistir(s, sehit, durum)
+            if durum == Durum.yayinda:
+                _yayina_alindi(request, arka, s, sehit)
             return RedirectResponse("/panel", status_code=303)
+
+    def _toplu_sayfasi(request: Request, kullanici: str, status_code: int = 200, **baglam):
+        return templates.TemplateResponse(
+            request, "panel/toplu.html",
+            {"kullanici": kullanici, "csrf": csrf_token(request), "mod": "toplu",
+             "sutunlar": toplu.SUTUNLAR, "en_cok_mb": toplu.DOSYA_EN_COK_BAYT // (1024 * 1024),
+             "en_cok_satir": toplu.SATIR_EN_COK, **baglam},
+            status_code=status_code,
+        )
+
+    @router.get("/toplu")
+    def toplu_formu(request: Request, kullanici: Yonetici):
+        return _toplu_sayfasi(request, kullanici)
+
+    @router.get("/toplu/sablon.xlsx")
+    def toplu_sablon(_: Yonetici):
+        return Response(
+            toplu.sablon(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": 'attachment; filename="toplu-sehit-sablonu.xlsx"'},
+        )
+
+    @router.post("/toplu")
+    def toplu_yukle(
+        request: Request, kullanici: Yonetici, s: Oturum, arka: BackgroundTasks,
+        dosya: Annotated[UploadFile, File()], csrf: Annotated[str, Form()] = "",
+        durum: Annotated[str, Form()] = Durum.onay_bekliyor.value,
+    ):
+        csrf_dogrula(request, csrf)
+        hedef = Durum.yayinda if durum == Durum.yayinda.value else Durum.onay_bekliyor
+        veri = dosya.file.read(toplu.DOSYA_EN_COK_BAYT + 1)  # eşzamanlı rota: DB işi olay döngüsünü tıkamaz
+        try:
+            satirlar = toplu.oku(veri)
+        except toplu.DosyaHatasi as hata:
+            return _toplu_sayfasi(request, kullanici, 400, hata=str(hata), durum=hedef.value)
+        ozet = toplu.aktar(s, satirlar, durum=hedef)
+        if hedef == Durum.yayinda:
+            for sehit_id in ozet.yeni_kayitlar:
+                _yayina_alindi(request, arka, s, s.get(Sehit, sehit_id))
+        return _toplu_sayfasi(request, kullanici, ozet=ozet, dosya_adi=dosya.filename, durum=hedef.value)
+
+    @router.get("/webhooklar")
+    def webhooklar(request: Request, kullanici: Yonetici, s: Oturum):
+        hepsi = list(s.scalars(select(Webhook).order_by(Webhook.olusturma.desc(), Webhook.id.desc())))
+        gruplar = [(d, [w for w in hepsi if WebhookDurumu(w.durum) == d]) for d in _WEBHOOK_SIRASI]
+        return templates.TemplateResponse(
+            request, "panel/webhooklar.html",
+            {"kullanici": kullanici, "csrf": csrf_token(request), "mod": "webhook", "gruplar": gruplar,
+             "gizli_adres": webhooks.gizli_adres, "sonuc": request.session.pop("webhook_sonuc", None)},
+        )
+
+    def _webhook_getir(s: Session, webhook_id: int) -> Webhook:
+        webhook = s.get(Webhook, webhook_id) if 0 < webhook_id <= INT4_EN_COK else None
+        if webhook is None:
+            raise HTTPException(status_code=404, detail="Webhook bulunamadı")
+        return webhook
+
+    @router.post("/webhooklar/{webhook_id:int}/onayla")
+    def webhook_onayla(request: Request, _: Yonetici, s: Oturum, webhook_id: int, csrf: Annotated[str, Form()] = ""):
+        csrf_dogrula(request, csrf)
+        basarili, mesaj = webhooks.onayla(s, _webhook_getir(s, webhook_id))
+        metin = "Deneme mesajı gönderildi; webhook aktif." if basarili else f"Deneme mesajı gönderilemedi: {mesaj}"
+        request.session["webhook_sonuc"] = {"metin": metin, "tamam": basarili}
+        return RedirectResponse("/panel/webhooklar", status_code=303)
+
+    @router.post("/webhooklar/{webhook_id:int}/ornek")
+    def webhook_ornek(
+        request: Request, _: Yonetici, s: Oturum, webhook_id: int,
+        csrf: Annotated[str, Form()] = "", sehit_id: Annotated[str, Form()] = "",
+    ):
+        csrf_dogrula(request, csrf)
+        webhook = _webhook_getir(s, webhook_id)
+        sehit = None
+        ham = sehit_id.strip()
+        if ham:
+            if not (ham.isascii() and ham.isdigit()) or len(ham) > HEDEF_ID_EN_COK_HANE:
+                metin, basarili = "Kayıt no bir sayı olmalı.", False
+            elif (sehit := repo.getir(s, int(ham), sadece_yayinda=False)) is None:
+                metin, basarili = f"{ham} numaralı kayıt bulunamadı.", False
+        if not ham or sehit is not None:
+            basarili, mesaj = webhooks.ornek_gonder(s, webhook, sehit)
+            ad = sehit.gorunen_ad if sehit else "örnek kayıt (Ahmet YILMAZ)"
+            metin = (f"Deneme şehit mesajı gönderildi: {ad}." if basarili
+                     else f"Deneme şehit mesajı gönderilemedi: {mesaj}")
+        request.session["webhook_sonuc"] = {"metin": metin, "tamam": basarili}
+        return RedirectResponse("/panel/webhooklar", status_code=303)
+
+    @router.post("/webhooklar/{webhook_id:int}/reddet")
+    def webhook_reddet(request: Request, _: Yonetici, s: Oturum, webhook_id: int, csrf: Annotated[str, Form()] = ""):
+        csrf_dogrula(request, csrf)
+        _webhook_getir(s, webhook_id).durum = WebhookDurumu.reddedildi
+        s.commit()
+        return RedirectResponse("/panel/webhooklar", status_code=303)
+
+    @router.post("/webhooklar/{webhook_id:int}/sil")
+    def webhook_sil(request: Request, _: Yonetici, s: Oturum, webhook_id: int, csrf: Annotated[str, Form()] = ""):
+        csrf_dogrula(request, csrf)
+        s.delete(_webhook_getir(s, webhook_id))
+        s.commit()
+        return RedirectResponse("/panel/webhooklar", status_code=303)
 
     _durum_rotasi("onayla", Durum.yayinda)
     _durum_rotasi("reddet", Durum.reddedildi)
