@@ -189,10 +189,12 @@ def guncel_adresi(b: Banner, site_url: str = "") -> str:
 
 
 def _guncel_iframe(b: Banner, site_url: str) -> _El:
+    """Kart dar kolonda oranını koruyarak küçülür (iç sayfa da genişliğe göre ölçeklenir)."""
     if b.bicim == "kart":
-        stil = {"width": f"{KART_EN}px", "height": f"{KART_BOY}px", "max-width": "100%", "border": "0", "display": "block"}
+        stil = {"width": f"{KART_EN}px", "max-width": "100%", "height": "auto", "aspect-ratio": f"{KART_EN} / {KART_BOY}",
+                "border": "0", "display": "block"}
     else:
-        stil = {"width": "100%", "height": f"{BANT_BOY}px", "border": "0", "display": "block"}
+        stil = {"width": "100%", "max-width": "100%", "height": f"{BANT_BOY}px", "border": "0", "display": "block"}
     return _El("iframe", {"src": guncel_adresi(b, site_url), "title": "Şehitlerimizi anıyoruz", "loading": "lazy"}, stil)
 
 

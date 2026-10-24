@@ -25,16 +25,26 @@
   .bant .ust { font-size: 13px; font-weight: 400; opacity: .85; margin-right: 6px; }
   .bant .yazi { font-weight: 400; margin-left: 6px; opacity: .92; }
   @media (max-width: 640px) { .bant .yazi { display: none; } .bant .orta { font-size: 15px; } }
+  /* dar ekranda (mobil) yazı kesilmesin: iki satıra iner, yazı ve ay-yıldız küçülür */
+  @media (max-width: 520px) {
+    .bant { gap: 8px; padding: 0 8px; }
+    .bant .ay-yildiz { width: 22px; height: 15px; }
+    .bant .orta { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                  font-size: clamp(11.5px, 3.7vw, 15px); line-height: 1.2; text-align: center; letter-spacing: 0; }
+    .bant .ust { font-size: .85em; margin-right: 4px; }
+  }
+  @media (max-width: 300px) { .bant .ay-yildiz.ters { display: none; } }
 
-  /* kart: 300×250 */
-  .kart { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-          padding: 18px; text-align: center; {% if renk.vurgu %}border: 2px solid {{ renk.vurgu }};{% endif %} }
-  .kart .ciftler { display: flex; gap: 18px; }
-  .kart .ay-yildiz { width: 40px; height: 28px; }
-  .kart .ust { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .85; }
-  .kart .ad { font-size: 21px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .kart .yazi { font-size: 13.5px; line-height: 1.4; opacity: .92; }
-  .kart .imza { font-size: 11px; letter-spacing: 1px; opacity: .7; margin-top: 2px; }
+  /* kart: 300×250 tasarımı; ölçüler vw ile verilir (iframe içinde 1vw = iframe genişliğinin %1'i),
+     böylece kart dar kolonda bir görsel gibi orantılı küçülür */
+  .kart { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3.3vw;
+          padding: 6vw; text-align: center; overflow: hidden; {% if renk.vurgu %}border: 2px solid {{ renk.vurgu }};{% endif %} }
+  .kart .ciftler { display: flex; gap: 6vw; }
+  .kart .ay-yildiz { width: 13.3vw; height: 9.3vw; }
+  .kart .ust { font-size: 4vw; letter-spacing: .5vw; text-transform: uppercase; opacity: .85; }
+  .kart .ad { font-size: 6.5vw; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .kart .yazi { font-size: 4.5vw; line-height: 1.4; opacity: .92; }
+  .kart .imza { font-size: 3.7vw; letter-spacing: .33vw; opacity: .7; margin-top: .7vw; }
 </style>
 </head>
 <body>

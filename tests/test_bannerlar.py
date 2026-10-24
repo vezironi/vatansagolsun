@@ -28,7 +28,10 @@ def test_bant_ve_kart_bicimleri():
     kart = bn.html_kodu(bn.banner_bul("anma-kart"), site_url=URL)
     assert "width:300px" in kart and "height:250px" in kart and "flex-direction:column" in kart
     gk = bn.html_kodu(bn.banner_bul("guncel-kart"), site_url=URL)
-    assert "width:300px" in gk and "height:250px" in gk
+    assert "width:300px" in gk and "max-width:100%" in gk  # dar kolonda oranını koruyarak küçülür
+    assert "height:auto" in gk and "aspect-ratio:300 / 250" in gk
+    gb = bn.html_kodu(bn.banner_bul("guncel-bant"), site_url=URL)
+    assert "width:100%" in gb and "height:44px" in gb
 
 
 def test_react_jsx():
