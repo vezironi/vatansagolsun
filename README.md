@@ -95,7 +95,7 @@ Bu bölüm teknik bilgisi olmayan biri için yazıldı: komutları olduğu gibi 
 
 **İçindekiler:**
 [1. Kendi bilgisayarınızda deneme](#1-kendi-bilgisayarınızda-deneme) ·
-[2. Sunucu kiralama](#2-sunucu-vps-kiralama) ·
+[2. Sunucu kiralama](#2-sunucu-vds-kiralama) ·
 [3. Alan adı](#3-alan-adını-sunucuya-yönlendirme) ·
 [4. Docker](#4-sunucuya-docker-kurma-ve-projeyi-kopyalama) ·
 [5. `.env`](#5-env-dosyasını-doldurma) ·
@@ -129,11 +129,25 @@ Yerelde yönetici paneli için `.env` dosyası gerekir (bkz. bölüm 5).
 
 ---
 
-## 2. Sunucu (VPS) kiralama
+## 2. Sunucu (VDS) kiralama
 
-1. https://www.hetzner.com/cloud adresinde hesap açın ve bir sunucu kiralayın (örnek: **CX22**, işletim sistemi **Ubuntu 24.04**). Aylık birkaç euro yeterlidir.
-2. Kurulum sırasında bir SSH anahtarı ekleyin ya da e-postanıza gelen root şifresini kullanın.
-3. Sunucunun **IP adresini** not alın (örnek: `203.0.113.10`).
+Önerimiz **[White Bilişim](https://whitebilisim.com/)** VDS sunucuları. Sunucular **İstanbul'da** (Datacasa veri merkezi) olduğu için sitemiz Türkiye'deki ziyaretçilere hızlı açılır. Diskler NVMe, bağlantı 10 Gbit/s; her pakette DDoS koruması var.
+
+| Paket | İşlemci | RAM | Aylık | Ne zaman? |
+|---|---|---|---|---|
+| **ENT-2** (Xeon) | 2 çekirdek | 4 GB | ₺240 | **Önerilen.** Site, veritabanı ve toplu aktarım rahatça çalışır. |
+| ENT-1 (Xeon) | 2 çekirdek | 2 GB | ₺160 | En düşük bütçe. Çalışır ama `docker compose up --build` ve uzun aktarımlarda sıkışabilir. |
+| PRO-1 (Ryzen) | 2 çekirdek | 4 GB | ₺400 | Daha hızlı işlemci isterseniz. Bu proje için şart değildir. |
+
+> Fiyatlar Ekim 2026'da White Bilişim'in sayfalarında görülen fiyatlardır ve değişebilir. Satın almadan önce sipariş sayfasından güncel fiyatı ve disk boyutunu kontrol edin. Bu site için 20 GB disk bile yeter.
+
+Kiralama adımları:
+
+1. https://whitebilisim.com/ adresinde hesap açın ve **Xeon VDS** sayfasından **ENT-2** paketini seçin.
+2. İşletim sistemi olarak **Ubuntu 24.04** seçin (listede yoksa en yeni **Ubuntu LTS** sürümünü seçin).
+3. Ödeme tamamlanınca sunucunun **IP adresi** ve **root şifresi** müşteri panelinize ve e-postanıza gelir. IP adresini not alın (örnek: `203.0.113.10`).
+
+> VDS sunucular "yönetimsiz" olarak verilir: sunucunun kurulumu ve güncellenmesi size aittir. Bu rehberdeki adımlar tam olarak bunun içindir. White Bilişim'in sunduğu ücretsiz günlük yedeğe güvenmeyin, "en iyi çaba" esasıyla verilir. Bölüm 8'deki veritabanı yedeğini siz de alın.
 
 ## 3. Alan adını sunucuya yönlendirme
 
