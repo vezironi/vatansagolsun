@@ -1,10 +1,114 @@
-# Vatan Sağ Olsun
+<div align="center">
 
-Şehitlerimizi anan, herkesin görebileceği bir site ve açık (anahtarsız) bir API. Bu belge teknik bilgisi olmayan biri için yazıldı: komutları olduğu gibi kopyalayıp yapıştırmanız yeterli.
+# VATAN SAĞ OLSUN
+
+**Şehitlerimiz için dijital bir anıt**
+
+*Bastığın yerleri "toprak!" diyerek geçme, tanı:*<br>
+*Düşün altındaki binlerce kefensiz yatanı.*<br>
+— İstiklal Marşı, Mehmet Âkif Ersoy
+
+<br>
+
+![Vatan Sağ Olsun ana sayfası](docs/ekran/ana-sayfa.png)
+
+</div>
 
 ---
 
-## 1. Kendi bilgisayarınızda denemek
+## Bir isim, bir hayat, bir vatan
+
+Bu topraklarda bir söz vardır: **"Her Türk asker doğar."** Bu söz savaşı övmek için söylenmez. Gerektiğinde vatanı için her şeyini verebilecek bir milletin sözüdür. Bu milletin evlatları Çanakkale'de, Sakarya'da, Kore'de, Kıbrıs'ta, dağ başlarında, karakollarda, sınır boylarında ve 15 Temmuz gecesi köprülerde bu sözün hakkını canlarıyla verdi.
+
+Evladını toprağa veren bir anne ya da baba, acısının en derin yerinde çoğu zaman tek bir cümle kurar: **"Vatan sağ olsun."** Türkçenin en ağır ve en onurlu cümlelerinden biridir. Bu site adını o cümleden aldı.
+
+**Vatan Sağ Olsun**, Türk askerlerini, polislerini, jandarmalarını, korucularını, öğretmenlerini ve görev başında hayatını kaybeden bütün şehitlerimizi **isim isim** anmak için kuruldu. Hiçbir isim bir rakama dönüşmesin, hiçbir fedakârlık unutulmasın, hiçbir yıl dönümü sessiz geçmesin diye.
+
+> *Şehitler ölmez, vatan bölünmez.*
+
+---
+
+## Sözler
+
+> *Sana dar gelmeyecek makberi kimler kazsın?*<br>
+> *"Gömelim gel seni tarihe!" desem, sığmazsın.*
+>
+> — Mehmet Âkif Ersoy, *Çanakkale Şehitlerine*
+
+> *Ey, bu topraklar için toprağa düşmüş asker!*<br>
+> *Gökten ecdâd inerek öpse o pâk alnı değer.*
+>
+> — Mehmet Âkif Ersoy, *Çanakkale Şehitlerine*
+
+> *Allah yolunda öldürülenlere "ölüler" demeyin. Hayır, onlar diridirler; fakat siz farkında olmazsınız.*
+>
+> — Bakara Sûresi, 154. âyet (meal)
+
+> *Her Türk asker doğar.*
+>
+> — Halk sözü
+
+---
+
+## Görünüm
+
+<table>
+<tr>
+<td width="50%"><img src="docs/ekran/arama.png" alt="Canlı arama"><br><b>Canlı arama.</b> İsim, il ya da görev yazdıkça liste yenilenir; yazı silinince kendiliğinden sıfırlanır.</td>
+<td width="50%"><img src="docs/ekran/sehit-penceresi.png" alt="Şehit penceresi"><br><b>Şehit penceresi.</b> Bir isme tıklayınca açılır. Kaynakta varsa fotoğraf, şehadet yeri ve nasıl şehit düştüğü de burada görünür.</td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/ekran/yil-donumleri.png" alt="Yıl dönümleri"><br><b>Yıl dönümleri.</b> Herhangi bir günü seçin; o gün şehit düşenleri görün.</td>
+<td width="50%" align="center"><img src="docs/ekran/mobil.png" alt="Telefon görünümü" width="260"><br><b>Telefonda da</b> aynı özen.</td>
+</tr>
+</table>
+
+<sub>Görüntülerdeki isimler deneme amaçlı üretilmiş <b>örnek verilerdir</b>; gerçek kişilere ait değildir.</sub>
+
+---
+
+## Neler var?
+
+- **Anma bandı.** Her sayfanın en üstünde: *Şehitlerimizi rahmet, minnet ve saygıyla anıyoruz · Vatan sağ olsun.*
+- **Bugün.** Ana sayfa, bugünün tarihinde şehit düşenleri ve kaçıncı yıl dönümü olduğunu gösterir.
+- **Yıllara göre liste.** 2000'den bugüne her yıl için bir sekme, ayrıca "2000 öncesi" ve "Tümü".
+- **Canlı arama.** Enter'a basmak gerekmez, aramayı silmek listeyi sıfırlar, **×** düğmesi ya da Esc tuşu temizler.
+- **Şehit penceresi ve kayıt sayfası.** Görev, şehadet tarihi ve yeri, memleket, baba adı, kurum, fotoğraf, şehadet anlatımı ve kaynak bağlantıları.
+- **Yıl dönümleri.** İstediğiniz günün şehitleri.
+- **Bannerlar.** Başka sitelerin kendi sayfalarına ekleyebileceği anma bannerları (HTML, React, Vue, Svelte, Angular).
+- **Hatalı kayıt bildirimi.** Eksik ya da yanlış bir kaydı herkes bildirebilir.
+- **Açık API.** Anahtarsız ve ücretsiz: `/api/istatistik`, `/api/sehitler`, `/api/bugun`. Belgesi `/api/belgeler` adresinde.
+- **Yönetici paneli.** Kayıtları onaylama, düzenleme, birleştirme; toplayıcıyı ve yapay zekâ sağlayıcılarını izleme.
+- **Otomatik toplama.** Resmî sayfalar ve haber siteleri 30 dakikada bir taranır. **Hiçbir kayıt elle onaylanmadan yayına girmez.**
+
+## Kayıtlar nereden geliyor?
+
+Geçmiş kayıtlar, resmî kurumların kamuya açık verilerinden derlenen arşivlerden alınır: **Emniyet Genel Müdürlüğü**, **Sahil Güvenlik Komutanlığı**, **sehitlerimiz.org.tr**, **kahramanlar.org.tr** ve **15temmuzsehitleri.com**. Aynı kişi birden fazla kaynakta geçiyorsa tek kayıtta birleştirilir ve bütün kaynakları kaydın altında gösterilir.
+
+Sitedeki sayı arşivimizdeki kayıt sayısıdır, **resmî toplam değildir**. Her bir isim bir hayattır; eksik ya da hatalı bir kayıt görürseniz lütfen sitedeki **Hatalı kayıt bildir** formunu kullanın.
+
+---
+
+# Kurulum ve işletme rehberi
+
+Bu bölüm teknik bilgisi olmayan biri için yazıldı: komutları olduğu gibi kopyalayıp yapıştırmanız yeterli.
+
+**İçindekiler:**
+[1. Kendi bilgisayarınızda deneme](#1-kendi-bilgisayarınızda-deneme) ·
+[2. Sunucu kiralama](#2-sunucu-vps-kiralama) ·
+[3. Alan adı](#3-alan-adını-sunucuya-yönlendirme) ·
+[4. Docker](#4-sunucuya-docker-kurma-ve-projeyi-kopyalama) ·
+[5. `.env`](#5-env-dosyasını-doldurma) ·
+[6. Başlatma](#6-siteyi-başlatma) ·
+[7. Güncelleme](#7-güncelleme) ·
+[8. Yedek](#8-yedek-alma) ·
+[9. Geçmiş veriler](#9-geçmiş-verileri-aktarma) ·
+[10. Otomatik toplama](#10-yeni-şehitleri-otomatik-toplama) ·
+[Geliştiriciler](#geliştiriciler-için)
+
+---
+
+## 1. Kendi bilgisayarınızda deneme
 
 Python 3.12 gerekir (https://www.python.org/downloads/).
 
@@ -33,7 +137,7 @@ Yerelde yönetici paneli için `.env` dosyası gerekir (bkz. bölüm 5).
 
 ## 3. Alan adını sunucuya yönlendirme
 
-Alan adını aldığınız firmanın (GoDaddy, Natro, Cloudflare vb.) DNS ayarlarına girin ve şu kaydı ekleyin:
+Alan adını aldığınız firmanın (GoDaddy, Natro, Cloudflare vb.) DNS ayarlarına girin ve şu kayıtları ekleyin:
 
 | Tür | Ad | Değer |
 |-----|----|-------|
@@ -64,13 +168,13 @@ Doldurmanız gerekenler:
 
 - `ALAN_ADI` ve `SITE_URL`: kendi alan adınız (`ornek.com` / `https://ornek.com`).
 - `OTURUM_HTTPS=true`: olduğu gibi bırakın (sunucuda HTTPS ile çalışır). Yalnızca bilgisayarınızda HTTP ile deneyecekseniz `OTURUM_HTTPS=false` yazın (ya da satırı silin).
-- `SECRET_KEY`: **en az 32 rastgele karakter olmalıdır.** Kısa ya da `degistir` kalırsa **yönetici paneli kilitli kalır**. Üretmek için:
+- `SECRET_KEY`: **en az 32 rastgele karakter olmalıdır.** Kısa kalırsa ya da `degistir` olarak bırakılırsa **yönetici paneli kilitli kalır**. Üretmek için:
 
   ```bash
   python3 -c "import secrets; print(secrets.token_urlsafe(48))"
   ```
 
-  Çıkan metni `SECRET_KEY=` satırına yapıştırın. (Bilgisayarınızda Windows ise `python` yazın.)
+  Çıkan metni `SECRET_KEY=` satırına yapıştırın. (Bilgisayarınız Windows ise `python` yazın.)
 - `POSTGRES_PASSWORD`: uzun bir şifre yazın (yalnızca harf ve rakam kullanın).
 - `ADMIN_KULLANICI`: panele girişte kullanacağınız ad.
 - `ADMIN_SIFRE_HASH`: panel şifrenizin güvenli (şifrelenmiş) hâli. Şifrenizi **düz yazmayın**; şu komutla üretin:
@@ -85,7 +189,7 @@ Doldurmanız gerekenler:
   ADMIN_SIFRE_HASH='$2b$12$abc...'
   ```
 
-  Bu satırı **tek tırnaklarla birlikte, olduğu gibi** `.env` içindeki `ADMIN_SIFRE_HASH=` satırının yerine yapıştırın. Tek tırnaklar önemlidir: Docker Compose, tırnaksız `$` işaretini değişken sanıp şifreyi bozar. Tek tırnaklı hâli hem Docker'da hem yerel çalıştırmada denendi ve doğru çalışıyor.
+  Bu satırı **tek tırnaklarla birlikte, olduğu gibi** `.env` içindeki `ADMIN_SIFRE_HASH=` satırının yerine yapıştırın. Tek tırnaklar önemlidir: Docker Compose, tırnaksız `$` işaretini değişken sanıp şifreyi bozar. Tek tırnaklı hâli hem Docker'da hem yerel çalıştırmada doğru çalışır.
 
 `.env` dosyasını kimseyle paylaşmayın, GitHub'a yüklemeyin.
 
@@ -95,11 +199,11 @@ Doldurmanız gerekenler:
 docker compose up -d --build
 ```
 
-İlk seferde birkaç dakika sürer. Bittiğinde `https://alanadiniz.com` açılır. Kontrol: `curl https://alanadiniz.com/api/istatistik` bir sayı döndürmelidir. Tabloları uygulama açılırken kendisi oluşturur.
+İlk seferde birkaç dakika sürer. Bittiğinde `https://alanadiniz.com` açılır. Kontrol için `curl https://alanadiniz.com/api/istatistik` komutu bir sayı döndürmelidir. Veritabanı tablolarını uygulama açılırken kendisi oluşturur ve günceller.
 
-Panele giriş: `https://alanadiniz.com/panel` adresine gidin, `.env` içindeki kullanıcı adı ve (hash'i üretirken yazdığınız) şifre ile girin. Giremiyorsanız `SECRET_KEY` en az 32 karakter mi diye bakın.
+**Panele giriş:** `https://alanadiniz.com/panel` adresine gidin; `.env` içindeki kullanıcı adı ve (hash'i üretirken yazdığınız) şifreyle girin. Giremiyorsanız `SECRET_KEY` değerinin en az 32 karakter olup olmadığına bakın.
 
-Logları görmek: `docker compose logs -f app`
+Logları görmek için: `docker compose logs -f app`
 
 ## 7. Güncelleme
 
@@ -110,13 +214,13 @@ git pull && docker compose up -d --build
 
 ## 8. Yedek alma
 
-Veritabanının yedeğini alın (düzenli olarak, örneğin haftada bir):
+Veritabanının yedeğini düzenli olarak (örneğin haftada bir) alın:
 
 ```bash
 docker compose exec -T db pg_dump --clean --if-exists -U vatansagolsun vatansagolsun > yedek-$(date +%F).sql
 ```
 
-Yedeği geri yüklemek için önce uygulamayı durdurun, yükleyin, sonra yeniden başlatın:
+Yedeği geri yüklemek için önce uygulamayı durdurun, yedeği yükleyin, sonra yeniden başlatın:
 
 ```bash
 docker compose stop app
@@ -124,29 +228,39 @@ docker compose exec -T db psql -U vatansagolsun vatansagolsun < yedek-2026-01-01
 docker compose start app
 ```
 
-Yedek dosyasını sunucudan başka bir yere (kendi bilgisayarınıza) kopyalamayı unutmayın.
+Yedek dosyasını sunucudan başka bir yere (örneğin kendi bilgisayarınıza) kopyalamayı unutmayın.
 
 ---
 
 ## 9. Geçmiş verileri aktarma
 
-Site, kamuya açık resmî arşivlerden geçmiş şehit kayıtlarını kendisi toplayabilir. Kaynaklar: `egm` (Emniyet), `sg` (Sahil Güvenlik), `kahramanlar` (kahramanlar.org.tr, 2000 öncesi), `sehitlerimiz` (sehitlerimiz.org.tr, 2000 sonrası). Siteler her istek arasında en az 2 saniye beklenerek, nazikçe taranır.
+Site, kamuya açık resmî arşivlerden geçmiş şehit kayıtlarını kendisi toplayabilir:
+
+| Kod | Kaynak |
+|---|---|
+| `egm` | Emniyet Genel Müdürlüğü |
+| `sg` | Sahil Güvenlik Komutanlığı |
+| `kahramanlar` | kahramanlar.org.tr (2000 öncesi) |
+| `sehitlerimiz` | sehitlerimiz.org.tr (2000 sonrası) |
+| `temmuz15` | 15temmuzsehitleri.com (15 Temmuz şehitleri) |
+
+Siteler, her istek arasında en az 2 saniye beklenerek, sunucularını yormadan taranır.
 
 ### Kaynakları açıp kapatma
 
 `.env` içindeki `KAYNAK_IZINLERI` satırı hangi kaynaklardan veri alınacağını belirler:
 
 ```
-KAYNAK_IZINLERI=["egm","sg","kahramanlar","sehitlerimiz"]
+KAYNAK_IZINLERI=["egm","sg","kahramanlar","sehitlerimiz","temmuz15","hurriyet","sabah"]
 ```
 
-Bir site itiraz ederse o kaynağın adını listeden **çıkarın** (örnek: `["egm","sg","kahramanlar"]`) ve `docker compose up -d` çalıştırın; o kaynağa artık hiç istek gitmez. O kaynaktan gelmiş kayıtları API'den de gizlemek isterseniz adını `API_HARIC_KAYNAKLAR=["sehitlerimiz"]` satırına yazın.
+Bir site itiraz ederse o kaynağın adını listeden **çıkarın** ve `docker compose up -d` çalıştırın; o kaynağa artık hiç istek gitmez. O kaynaktan gelmiş kayıtları API'den de gizlemek isterseniz adını `API_HARIC_KAYNAKLAR=["sehitlerimiz"]` satırına yazın.
 
 ### Komutlar
 
 ```bash
 docker compose exec app python -m app.cli aktar hepsi     # tüm kaynakları sırayla aktarır
-docker compose exec app python -m app.cli aktar egm       # tek kaynak: egm | sg | kahramanlar | sehitlerimiz
+docker compose exec app python -m app.cli aktar egm       # tek kaynak: egm | sg | kahramanlar | sehitlerimiz | temmuz15
 docker compose exec app python -m app.cli aktarim-durumu  # her kaynak için sayılar ve son durum
 ```
 
@@ -154,7 +268,7 @@ Toplu aktarımla gelen kayıtlar doğrudan yayına girer. Aynı kayıt iki kez e
 
 ### Fotoğraf ve şehadet ayrıntısı
 
-Şehit penceresinde ve kayıt sayfasında, kaynak veriyorsa fotoğraf, şehadet yeri ve "Şehadeti" (nasıl şehit düştüğü) gösterilir:
+Şehit penceresinde ve kayıt sayfasında, kaynak veriyorsa fotoğraf, şehadet yeri ve "Şehadeti" (nasıl şehit düştüğü) bölümü de gösterilir:
 
 | Kaynak | Fotoğraf | Şehadet yeri | Şehadeti |
 |---|---|---|---|
@@ -164,20 +278,21 @@ Toplu aktarımla gelen kayıtlar doğrudan yayına girer. Aynı kayıt iki kez e
 | `sehitlerimiz` | | ✓ | |
 | haber taraması | | | ✓ (yapay zekâ olay özeti) |
 
-Fotoğraflar kaynağın kendi sunucusundan gösterilir; açılmayan fotoğraf gizlenir. Yönetici panelinde her kayıt için bu üç alan elle de girilebilir. Bu özellikten önce aktarılmış kayıtlar için kaynağı baştan okuyun; yalnızca boş olan bu üç alan doldurulur, başka alana dokunulmaz:
+Fotoğraflar kaynağın kendi sunucusundan gösterilir; açılmayan fotoğraf gizlenir. Yönetici panelinde her kayıt için bu üç alan elle de girilebilir. Bu özellikten önce aktarılmış kayıtlar için kaynağı baştan okuyun. Bu sırada yalnızca bu üç alandan boş olanlar doldurulur, başka hiçbir alana dokunulmaz:
 
 ```bash
 docker compose exec app python -m app.cli aktar temmuz15 --bastan
 docker compose exec app python -m app.cli aktar egm --bastan
+docker compose exec app python -m app.cli aktar sg --bastan
 ```
 
 ### Ne kadar sürer?
 
-- `egm` ve `sg`: birkaç dakika.
-- `kahramanlar`: yaklaşık 1.850 istek x 2 saniye, yani **yaklaşık 1 saat**.
-- `sehitlerimiz`: 2000 sonrası her kaydın kendi sayfası alınır; yüzlerce, hatta binlerce istek demektir ve **saatler sürebilir**.
+- `egm`, `sg` ve `temmuz15`: birkaç dakika.
+- `kahramanlar`: yaklaşık 1.850 istek × 2 saniye, yani **yaklaşık 1 saat**.
+- `sehitlerimiz`: 2000 sonrası her kaydın kendi sayfası alınır. Bu yüzlerce, hatta binlerce istek demektir ve **saatler sürebilir**.
 
-Komut yarıda kesilirse (bağlantı koptu, Ctrl+C, sunucu yeniden başladı) **aynı komutu tekrar çalıştırın**; kaldığı yerden devam eder. Uzun işleri bağlantınız kopsa da sürsün diye arka planda çalıştırın:
+Komut yarıda kesilirse (bağlantı koptu, Ctrl+C'ye basıldı, sunucu yeniden başladı) **aynı komutu tekrar çalıştırın**; kaldığı yerden devam eder. Uzun işlerin bağlantınız kopsa da sürmesi için onları arka planda çalıştırın:
 
 ```bash
 docker compose exec -d app python -m app.cli aktar hepsi
@@ -187,13 +302,13 @@ docker compose exec -d app python -m app.cli aktar hepsi
 
 ### 12 saatlik otomatik kontrol
 
-`sehitlerimiz` kaynağı açıkken site, 12 saatte bir sehitlerimiz.org.tr'nin "son eklenenler" listesine bakar (sunucu açıldıktan 5 dakika sonra ilk kontrol yapılır). Yeni bir kayıt bulursa onu **yayına almaz**; yönetici panelinde **onay bekleyenler** arasına düşer, siz onaylayınca yayınlanır. Elle tek seferlik çalıştırmak için:
+`sehitlerimiz` kaynağı açıkken site, 12 saatte bir sehitlerimiz.org.tr'nin "son eklenenler" listesine bakar (sunucu açıldıktan 5 dakika sonra ilk kontrol yapılır). Yeni bir kayıt bulursa onu **yayına almaz**; kayıt yönetici panelinde **onay bekleyenler** arasına düşer ve siz onaylayınca yayınlanır. Elle tek seferlik çalıştırmak için:
 
 ```bash
 docker compose exec app python -m app.cli sehitlerimiz-kontrol
 ```
 
-> Toplu aktarım (`aktar sehitlerimiz` ya da `aktar hepsi`) sürerken `sehitlerimiz-kontrol`'ü elle çalıştırmayın: ikisi aynı siteye aynı anda istek atar ve aynı kayıtları farklı durumlarla (toplu aktarım yayında, kontrol onay bekliyor) almaya çalışır. Aktarım bitince çalıştırın.
+> Toplu aktarım (`aktar sehitlerimiz` ya da `aktar hepsi`) sürerken `sehitlerimiz-kontrol` komutunu elle çalıştırmayın: ikisi aynı siteye aynı anda istek atar ve aynı kayıtları farklı durumlarla (toplu aktarım yayında, kontrol onay bekliyor) almaya çalışır. Aktarım bitince çalıştırın.
 
 İlk çalıştırmada kontrol yalnızca "şu an sitedeki en son kayıt" noktasını işaretler, geçmişi getirmez (geçmiş için yukarıdaki `aktar` komutu vardır). Bu kontrol `docker-compose.yml` içindeki `ZAMANLAYICI_AKTIF=true` ayarıyla çalışır; yerelde kapalıdır.
 
@@ -203,52 +318,60 @@ docker compose exec app python -m app.cli sehitlerimiz-kontrol
 
 ## 10. Yeni şehitleri otomatik toplama
 
-Site, **30 dakikada bir** (sunucu açıldıktan 2 dakika sonra ilk tur) yeni şehit haberlerini kendisi arar. Bunun için `.env` içinde `ZAMANLAYICI_AKTIF=true` olmalıdır (`docker-compose.yml` bunu zaten açar). Her tur şunlara bakar:
+Site **30 dakikada bir** (sunucu açıldıktan 2 dakika sonra ilk tur) yeni şehit haberlerini kendisi arar. Bunun için `.env` içinde `ZAMANLAYICI_AKTIF=true` olmalıdır (`docker-compose.yml` bunu zaten açar). Her tur şunlara bakar:
 
-- Resmî sayfalar: Emniyet (`egm`) ve Sahil Güvenlik (`sg`) sitelerinin en yeni kayıtları.
-- Haber siteleri: **Hürriyet** ve **Sabah**. Bu sitelerin haber akışındaki, şehitlik içeren haberler yapay zekâ (OpenAI, Gemini veya Claude) ile okunur; haberde geçen şehitlerin adı, görevi, tarihi çıkarılır. Her haber yalnızca bir kez okunur.
-- AA ve TRT de desteklenir ama **varsayılan kapalıdır**. Açmak için `.env` içindeki `KAYNAK_IZINLERI` listesine `"aa"` ve/veya `"trt"` ekleyip `docker compose up -d` çalıştırın.
+- **Resmî sayfalar:** Emniyet (`egm`) ve Sahil Güvenlik (`sg`) sitelerinin en yeni kayıtları.
+- **Haber siteleri:** **Hürriyet** ve **Sabah**. Bu sitelerin haber akışında şehitlikle ilgili haberler yapay zekâyla (OpenAI, Gemini veya Claude) okunur; haberde geçen şehitlerin adı, görevi ve şehadet tarihi çıkarılır. Her haber yalnızca bir kez okunur.
+- **AA ve TRT** de desteklenir ama **varsayılan olarak kapalıdır**. Açmak için `.env` içindeki `KAYNAK_IZINLERI` listesine `"aa"` ve/veya `"trt"` ekleyip `docker compose up -d` çalıştırın.
 
 **Toplayıcı hiçbir kaydı kendi başına yayına almaz.** Bulduğu her yeni kayıt panelde **onay bekleyenler** arasına düşer; siz bakıp onaylayınca yayınlanır.
 
 ### Yapay zekâ analizi (OpenAI, Gemini, Claude)
 
-Haber okuma için en az bir yapay zekâ anahtarı gerekir. Üç sağlayıcı desteklenir ve **sırayla** denenir: önce **OpenAI**, o kullanılamazsa **Gemini**, o da olmazsa **Claude**. Hepsini girmeniz gerekmez; anahtarını girdiğiniz sağlayıcılar kullanılır, anahtarı olmayan atlanır. Hiç anahtar yoksa haber analizi yapılmaz, yalnızca resmî sayfalar taranır (panelde "API anahtarı yok" görünür ve "Toplayıcıda hata var" uyarısı çıkar; bu beklenen bir durumdur, anahtar ekleyince kaybolur).
+Haberleri okumak için en az bir yapay zekâ anahtarı gerekir. Üç sağlayıcı desteklenir ve **sırayla** denenir: önce **OpenAI**, o kullanılamazsa **Gemini**, o da olmazsa **Claude**. Hepsini girmeniz gerekmez; anahtarını girdiğiniz sağlayıcılar kullanılır, anahtarı olmayanlar atlanır. Hiç anahtar yoksa haber analizi yapılmaz, yalnızca resmî sayfalar taranır. Bu durumda panelde "API anahtarı yok" ve "Toplayıcıda hata var" uyarıları görünür; bu beklenen bir durumdur ve anahtar ekleyince kaybolur.
 
 **1. OpenAI (ücretli, kullandıkça kredi düşer)**
 
 1. https://platform.openai.com adresinde hesap açın, **Billing** bölümünden kredi yükleyin.
-2. **API keys** bölümünden yeni anahtar oluşturup kopyalayın (yalnızca bir kez gösterilir).
+2. **API keys** bölümünden yeni bir anahtar oluşturup kopyalayın (yalnızca bir kez gösterilir).
 3. `.env` dosyasına yapıştırın: `OPENAI_API_KEY=sk-...`
 
-Dikkat: ChatGPT uygulamasındaki abonelik veya bakiye API'de **geçmez**. API için platform.openai.com'a ayrıca kredi yüklemeniz gerekir.
+Dikkat: ChatGPT uygulamasındaki abonelik ya da bakiye API'de **geçmez**. API için platform.openai.com'a ayrıca kredi yüklemeniz gerekir.
 
 **2. Gemini (ücretsiz katmanı var)**
 
 1. https://aistudio.google.com adresine Google hesabınızla girin, **Get API key** düğmesiyle anahtar oluşturun.
 2. `.env` dosyasına yapıştırın: `GEMINI_API_KEY=...`
 
-Ücretsiz katmanın günlük sınırı vardır; kalan hakkınızı AI Studio'da görürsünüz. Sınır dolunca Gemini "tükendi" sayılır ve günlük hak sıfırlanana dek (Pasifik saatiyle gece yarısı, Türkiye saatiyle kabaca 10:00) denenmez. Ücretsiz katmanda gönderilen metinler Google tarafından ürün geliştirmede kullanılabilir; ancak gönderilenler zaten herkese açık haber metinleridir.
+Ücretsiz katmanın günlük bir sınırı vardır; kalan hakkınızı AI Studio'da görebilirsiniz. Sınır dolunca Gemini "tükendi" sayılır ve günlük hak sıfırlanana dek (Pasifik saatiyle gece yarısı, Türkiye saatiyle kabaca 10:00) denenmez. Ücretsiz katmanda gönderilen metinler Google tarafından ürün geliştirmede kullanılabilir; ancak gönderilenler zaten herkese açık haber metinleridir.
 
 **3. Claude**
 
 1. https://console.anthropic.com adresinde hesap açın, faturalandırma bilgisi ekleyin.
-2. **API Keys** bölümünden yeni anahtar oluşturup kopyalayın (yalnızca bir kez gösterilir).
+2. **API Keys** bölümünden yeni bir anahtar oluşturup kopyalayın (yalnızca bir kez gösterilir).
 3. `.env` dosyasına yapıştırın: `ANTHROPIC_API_KEY=sk-ant-...`
 
-Anahtarları ekledikten sonra `docker compose up -d` ile yeniden başlatın. `GOOGLE_API_KEY` ve `ANTHROPIC_AUTH_TOKEN` ayarlar dosyasından değil gerçek ortam değişkenlerinden okunur (Docker, `.env` içeriğini kapsayıcıya aktarır). Anahtarları kimseyle paylaşmayın; panelde de gösterilmez, yalnızca "var" ya da "yok" yazar.
+Anahtarları ekledikten sonra `docker compose up -d` ile yeniden başlatın. `GOOGLE_API_KEY` ve `ANTHROPIC_AUTH_TOKEN` ayar dosyasından değil, gerçek ortam değişkenlerinden okunur (Docker, `.env` içeriğini kapsayıcıya aktarır). Anahtarları kimseyle paylaşmayın; panelde de gösterilmezler, yalnızca "var" ya da "yok" yazar.
 
-**Sırayı değiştirmek:** `.env` dosyasındaki `ANALIZ_SIRASI` satırını düzenleyin; örneğin Claude'u öne almak için `ANALIZ_SIRASI=["claude","openai","gemini"]`. Her sağlayıcının modeli `OPENAI_MODELI`, `GEMINI_MODELI` ve `ANALIZ_MODELI` (Claude) ile değiştirilebilir; varsayılanlar ucuz modellerdir, değiştirmeniz gerekmez.
+**Sırayı değiştirmek:** `.env` dosyasındaki `ANALIZ_SIRASI` satırını düzenleyin; örneğin Claude'u öne almak için `ANALIZ_SIRASI=["claude","openai","gemini"]`. Her sağlayıcının modeli `OPENAI_MODELI`, `GEMINI_MODELI` ve `ANALIZ_MODELI` (Claude) ayarlarıyla değiştirilebilir. Varsayılanlar ucuz modellerdir; değiştirmeniz gerekmez.
 
-**Otomatik geçiş nasıl çalışır:** Bir haber için sırayla sağlayıcılar denenir. Geçici bir sorun olursa (internet kesintisi, yoğunluk) aynı haber sıradaki sağlayıcıya verilir. Bir sağlayıcının kredisi ya da günlük hakkı bittiyse veya anahtarı geçersizse panelde **"tükendi"** yazar; sistem onu panelde yazan zamana kadar hiç denemez ve haberleri sıradakilere verir. Tükenme süresi 24 saattir; Gemini'nin günlük hakkı bittiyse bir sonraki günlük sıfırlanmaya kadar sürer. Süre dolunca sistem kendiliğinden tekrar dener. Kredi yüklediyseniz beklemek zorunda değilsiniz: panelde ilgili sağlayıcının yanındaki **"Yeniden dene"** düğmesi tükenmeyi hemen kaldırır. Model adı yanlışsa ya da model desteklenmiyorsa sağlayıcı da "tükendi" görünür (ileti: "model bulunamadı veya desteklenmiyor"); `.env` içindeki model adını düzeltip **"Yeniden dene"** deyin. Geçici hatalar sağlayıcıyı tükenmiş saymaz; son geçici hata ve zamanı tabloda "son hata" olarak görünür. Tüm sağlayıcılar tükenmişse haberler bekletilir, kredi yükleyince ya da süre dolunca işlenir.
+**Otomatik geçiş nasıl çalışır?** Bir haber için sağlayıcılar sırayla denenir.
 
-**Tahmini maliyet:** günde birkaç düzine haber okunur ve ucuz modeller kullanılır; olağan bir ayda maliyet birkaç doların altında kalır. Gemini ücretsiz katmanı yetiyorsa hiç ödemeyebilirsiniz. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır; haber başına bir sayılır.
+- **Geçici sorun** (internet kesintisi, yoğunluk): aynı haber sıradaki sağlayıcıya verilir. Geçici hatalar sağlayıcıyı tükenmiş saymaz; son geçici hata ve zamanı tabloda "son hata" olarak görünür.
+- **Kredi ya da günlük hak bitti, anahtar geçersiz:** panelde **"tükendi"** yazar. Sistem o sağlayıcıyı panelde yazan zamana kadar denemez ve haberleri sıradakilere verir. Tükenme süresi 24 saattir; Gemini'nin günlük hakkı bittiyse bir sonraki günlük sıfırlanmaya kadar sürer. Süre dolunca sistem kendiliğinden tekrar dener.
+- **Kredi yüklediyseniz** beklemeniz gerekmez: panelde ilgili sağlayıcının yanındaki **"Yeniden dene"** düğmesi tükenmeyi hemen kaldırır.
+- **Model adı yanlışsa** ya da model desteklenmiyorsa sağlayıcı yine "tükendi" görünür (ileti: "model bulunamadı veya desteklenmiyor"). `.env` içindeki model adını düzeltip **"Yeniden dene"** düğmesine basın.
+- **Tüm sağlayıcılar tükenmişse** haberler bekletilir; kredi yükleyince ya da süre dolunca işlenir.
 
-**Üst sınır:** yoğun bir dönemde her gün 200 sınırına ulaşılır ve haberler uzunsa, ücretli sağlayıcılarda aylık maliyet **onlarca dolara** çıkabilir. Daha düşük bir tavan için `.env` dosyasında `GUNLUK_ANALIZ_SINIRI` değerini küçültün (örneğin `GUNLUK_ANALIZ_SINIRI=50`) ve `docker compose up -d` ile yeniden başlatın. Sınır dolunca o günün kalan haberleri ertesi güne kalır (3 güne kadar telafi edilir). Ayrıca sağlayıcıların sitelerinde aylık harcama limiti koymanızı öneririz.
+**Tahmini maliyet:** günde birkaç düzine haber okunur ve ucuz modeller kullanılır. Olağan bir ayda maliyet birkaç doların altında kalır; Gemini'nin ücretsiz katmanı yetiyorsa hiç ödemeyebilirsiniz. Güvenlik için günlük okuma sayısı `GUNLUK_ANALIZ_SINIRI` (varsayılan 200) ile sınırlıdır; her haber bir sayılır.
+
+**Üst sınır:** yoğun bir dönemde her gün 200 sınırına ulaşılırsa ve haberler uzunsa, ücretli sağlayıcılarda aylık maliyet **onlarca dolara** çıkabilir. Daha düşük bir tavan için `.env` dosyasında `GUNLUK_ANALIZ_SINIRI` değerini küçültün (örneğin `GUNLUK_ANALIZ_SINIRI=50`) ve `docker compose up -d` ile yeniden başlatın. Sınır dolunca o günün kalan haberleri ertesi güne kalır (3 güne kadar telafi edilir). Ayrıca sağlayıcıların sitelerinde aylık harcama limiti koymanızı öneririz.
 
 ### Panelde izleme
 
-Panelde **Toplayıcı** sekmesi her kaynağın son çalışma zamanını, durumunu ve kaç kayıt eklediğini gösterir; bugün kaç haberin okunduğunu da yazar. **Analiz sağlayıcıları** tablosu her sağlayıcının sırasını, anahtarının var olup olmadığını (anahtarın kendisi görünmez), modelini, durumunu ("kullanılabilir" ya da "tükendi — ... kadar") ve son başarılı kullanımını gösterir. **Şimdi çalıştır** düğmesi turu beklemeden başlatır (bir tur zaten sürüyorsa "Toplayıcı zaten çalışıyor; bittiğinde tekrar deneyin" yazar). Eklenen/Birleşen/Atlanan/Hatalı sütunları ilk çalışmadan bu yana **toplam** sayılardır. Toplayıcıda hata varsa ana panelin üstünde kısa bir uyarı çıkar. Zamanlayıcı kapalıysa elle çalıştırın:
+Paneldeki **Toplayıcı** sekmesi her kaynağın son çalışma zamanını, durumunu ve kaç kayıt eklediğini gösterir; bugün kaç haberin okunduğunu da yazar. **Analiz sağlayıcıları** tablosu her sağlayıcının sırasını, anahtarının olup olmadığını (anahtarın kendisi görünmez), modelini, durumunu ("kullanılabilir" ya da "tükendi — ... kadar") ve son başarılı kullanımını gösterir.
+
+**Şimdi çalıştır** düğmesi turu beklemeden başlatır (bir tur zaten sürüyorsa "Toplayıcı zaten çalışıyor; bittiğinde tekrar deneyin" yazar). Eklenen, Birleşen, Atlanan ve Hatalı sütunları ilk çalışmadan bu yana **toplam** sayılardır. Toplayıcıda hata varsa ana panelin üstünde kısa bir uyarı çıkar. Zamanlayıcı kapalıysa toplayıcıyı elle çalıştırın:
 
 ```bash
 docker compose exec app python -m app.cli topla
@@ -256,14 +379,14 @@ docker compose exec app python -m app.cli topla
 
 ### Rozetler
 
-- **Resmî teyit yok**: kayıt yalnızca haberden çıkarıldı; haberde resmî bir kurum (bakanlık, Emniyet vb.) açıklaması geçmiyor. Onaylamadan önce kaynağı kontrol edin.
-- **İsimsiz**: haber şehit olduğunu söylüyor ama isimleri henüz açıklanmamış. Kayıt tek bir "İsimsiz" taslağı olarak gelir; isimler açıklanınca düzenleyip adı yazabilir ya da gerçek kayıtla birleştirebilirsiniz.
+- **Resmî teyit yok:** kayıt yalnızca haberden çıkarıldı; haberde resmî bir kurumun (bakanlık, Emniyet vb.) açıklaması geçmiyor. Onaylamadan önce kaynağı kontrol edin.
+- **İsimsiz:** haber şehit olduğunu söylüyor ama isimler henüz açıklanmamış. Kayıt tek bir "İsimsiz" taslağı olarak gelir. İsimler açıklanınca kaydı düzenleyip adı yazabilir ya da gerçek kayıtla birleştirebilirsiniz.
 
 ### Bilmeniz gerekenler
 
-- Emniyet ve Sahil Güvenlik sayfaları, o kaynağın **toplu aktarımı yapılmadan taranmaz** (aksi halde yüzlerce eski kayıt onay bekleyene düşerdi). Önce bölüm 9'daki `aktar egm` ve `aktar sg` komutlarını çalıştırın; o zamana kadar durum "önce aktar çalıştırın" yazar.
+- Emniyet ve Sahil Güvenlik sayfaları, o kaynağın **toplu aktarımı yapılmadan taranmaz** (aksi hâlde yüzlerce eski kayıt onay bekleyenlere düşerdi). Önce bölüm 9'daki `aktar egm` ve `aktar sg` komutlarını çalıştırın; o zamana kadar durum "önce aktar çalıştırın" yazar.
 - Sunucu bir süre kapalı kalırsa toplayıcı, açıldığında **en fazla 3 gün** geriye giderek kaçırılan haberleri telafi eder.
-- X (Twitter) hesapları kaynak olarak **kullanılmaz**: X, otomatik okumaya izin vermiyor ve ücretli API gerektiriyor; ayrıca doğrulanmamış paylaşımlar bu site için güvenilir değil.
+- X (Twitter) hesapları kaynak olarak **kullanılmaz**: X otomatik okumaya izin vermiyor ve ücretli API gerektiriyor. Ayrıca doğrulanmamış paylaşımlar bu site için güvenilir değildir.
 
 ---
 
@@ -271,4 +394,16 @@ docker compose exec app python -m app.cli topla
 
 - Testler: `.venv/Scripts/python -m pytest`
 - API belgesi: `/api/belgeler`
-- İstek sınırı IP başınadır (`ISTEK_SINIRI`); uygulama yalnızca Caddy arkasında çalıştırılır ve `X-Forwarded-For` başlığına güvenir. Uygulama portunu (8000) internete açmayın.
+- İstek sınırı IP başınadır (`ISTEK_SINIRI`). Uygulama yalnızca Caddy arkasında çalıştırılır ve `X-Forwarded-For` başlığına güvenir; uygulama portunu (8000) internete açmayın.
+- Ekran görüntüleri `docs/ekran/` klasöründedir ve örnek veriyle alınmıştır.
+
+---
+
+<div align="center">
+
+*Bu vatan, uğrunda can verenlerin emanetidir.*
+
+**Şehitlerimizi rahmet, minnet ve saygıyla anıyoruz.**<br>
+**Mekânları cennet olsun. Vatan sağ olsun.**
+
+</div>
